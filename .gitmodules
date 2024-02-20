@@ -1,0 +1,3 @@
+[submodule "lipsanen-project-management-spec"]
+	path = lipsanen-project-management-spec
+	url = https://github.com/Metatavu/lipsanen-project-management-spec.git
