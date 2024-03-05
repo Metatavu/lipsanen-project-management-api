@@ -16,6 +16,8 @@ import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
  */
 class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenTestBuilder<ApiClient>() {
 
+    var user = createTestBuilderAuthentication(username = "user", password = "userPassword")
+
     override fun createTestBuilderAuthentication(
         abstractTestBuilder: AbstractTestBuilder<ApiClient, AccessTokenProvider>,
         authProvider: AccessTokenProvider

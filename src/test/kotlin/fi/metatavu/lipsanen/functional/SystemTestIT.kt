@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
  */
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
-class SystemTestIT {
+class SystemTestIT : AbstractFunctionalTest() {
 
     @Test
     fun testPing() {

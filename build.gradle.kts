@@ -17,6 +17,7 @@ val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 val jaxrsFunctionalTestBuilderVersion: String by project
 val okhttpVersion: String by project
+val xmlJacksonVersion: String by project
 
 dependencies {
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
@@ -35,6 +36,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:${xmlJacksonVersion}")
 
     implementation("io.vertx:vertx-core")
     implementation("io.vertx:vertx-lang-kotlin")
