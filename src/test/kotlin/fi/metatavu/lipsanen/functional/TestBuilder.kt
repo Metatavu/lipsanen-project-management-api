@@ -7,6 +7,7 @@ import fi.metatavu.jaxrs.test.functional.builder.auth.AuthorizedTestBuilderAuthe
 import fi.metatavu.jaxrs.test.functional.builder.auth.KeycloakAccessTokenProvider
 import fi.metatavu.lipsanen.functional.auth.TestBuilderAuthentication
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
+import org.eclipse.microprofile.config.ConfigProvider
 
 /**
  * Abstract test builder class
@@ -33,8 +34,8 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
      * @return test builder authenticatior for given user
      */
     private fun createTestBuilderAuthentication(username: String, password: String): TestBuilderAuthentication {
-        val serverUrl = config["quarkus.oidc.auth-server-url"]!!.substringBeforeLast("/").substringBeforeLast("/")
-        val realm: String = config["quarkus.keycloak.devservices.realm-name"].toString()
+        val serverUrl = ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String::class.java).substringBeforeLast("/").substringBeforeLast("/")
+        val realm: String = ConfigProvider.getConfig().getValue("quarkus.keycloak.devservices.realm-name", String::class.java)
         val clientId = "test"
         val clientSecret = "secret"
         return TestBuilderAuthentication(this, KeycloakAccessTokenProvider(serverUrl, realm, clientId, username, password, clientSecret))
