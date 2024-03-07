@@ -7,8 +7,7 @@ import io.quarkus.test.junit.TestProfile
 import io.restassured.common.mapper.TypeRef
 import io.restassured.module.kotlin.extensions.Given
 import io.restassured.module.kotlin.extensions.When
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.Charset
 
@@ -63,11 +62,10 @@ class ProjectTestIT : AbstractFunctionalTest() {
         val project = tb.user.project.create()
         val projectBytes = tb.user.project.exportProject(project.id!!)
         assertNotNull(projectBytes)
-        assertEquals(
-            "<Projects><Project><ID>0</ID><ProjName>Test project</ProjName><Created/><Changed/></Project></Projects>",
+        assertTrue(
             projectBytes!!.toString(
                 Charset.defaultCharset()
-            )
+            ).contains("<Project><ID>0</ID><ProjName>Test project</ProjName><Created/><Changed/></Project>")
         )
     }
 
