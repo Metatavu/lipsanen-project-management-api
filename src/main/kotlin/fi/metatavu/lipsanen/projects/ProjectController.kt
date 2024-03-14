@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.lipsanen.api.model.Project
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
@@ -56,6 +57,16 @@ class ProjectController {
     }
 
     /**
+     * Finds a project by tocoman id
+     *
+     * @param tocomanId tocoman id
+     * @return found project or null if not found
+     */
+    suspend fun findProjectByTocomanId(tocomanId: Int): ProjectEntity? {
+        return projectRepository.find("tocomanId", tocomanId).firstResult<ProjectEntity>().awaitSuspending()
+    }
+
+    /**
      * Lists all projects
      *
      * @return list of projects
@@ -75,6 +86,20 @@ class ProjectController {
     suspend fun updateProject(existingProject: ProjectEntity, project: Project, userId: UUID): ProjectEntity {
         existingProject.name = project.name
         existingProject.tocomanId = project.tocomanId
+        existingProject.lastModifierId = userId
+        return projectRepository.persistSuspending(existingProject)
+    }
+
+    /**
+     * Updates a project
+     *
+     * @param existingProject existing project
+     * @param name project name
+     * @param userId user id
+     * @return updated project
+     */
+    suspend fun updateProject(existingProject: ProjectEntity, name: String, userId: UUID): ProjectEntity {
+        existingProject.name = name
         existingProject.lastModifierId = userId
         return projectRepository.persistSuspending(existingProject)
     }

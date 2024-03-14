@@ -4,9 +4,6 @@ import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
-import io.restassured.common.mapper.TypeRef
-import io.restassured.module.kotlin.extensions.Given
-import io.restassured.module.kotlin.extensions.When
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.Charset
@@ -20,38 +17,38 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test
     fun listProjects() = createTestBuilder().use { tb ->
-        tb.user.project.create()
-        val projects = tb.user.project.listProjects()
+        tb.admin.project.create()
+        val projects = tb.admin.project.listProjects()
         assertNotNull(projects)
         assertEquals(1, projects.size)
     }
 
     @Test
     fun createProject() = createTestBuilder().use { tb ->
-        val project = tb.user.project.create()
+        val project = tb.admin.project.create()
         assertNotNull(project)
     }
 
     @Test
     fun findProject() = createTestBuilder().use { tb ->
-        val project = tb.user.project.create()
-        val foundProject = tb.user.project.findProject(project.id!!)
+        val project = tb.admin.project.create()
+        val foundProject = tb.admin.project.findProject(project.id!!)
         assertNotNull(foundProject)
     }
 
     @Test
     fun updateProject() = createTestBuilder().use { tb ->
-        val project = tb.user.project.create()
-        val updatedProject = tb.user.project.updateProject(project.id!!, Project("Updated project"))
+        val project = tb.admin.project.create()
+        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project"))
         assertNotNull(updatedProject)
         assertEquals("Updated project", updatedProject.name)
     }
 
     @Test
     fun deleteProject() = createTestBuilder().use { tb ->
-        val project = tb.user.project.create()
-        tb.user.project.deleteProject(project.id!!)
-        val projects = tb.user.project.listProjects()
+        val project = tb.admin.project.create()
+        tb.admin.project.deleteProject(project.id!!)
+        val projects = tb.admin.project.listProjects()
         assertNotNull(projects)
         projects.forEach { println(it.id) }
         assertEquals(0, projects.size)
@@ -59,8 +56,8 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test
     fun exportProject() = createTestBuilder().use { tb ->
-        val project = tb.user.project.create()
-        val projectBytes = tb.user.project.exportProject(project.id!!)
+        val project = tb.admin.project.create()
+        val projectBytes = tb.admin.project.exportProject(project.id!!)
         assertNotNull(projectBytes)
         assertTrue(
             projectBytes!!.toString(
@@ -71,27 +68,16 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test
     fun testImport(): Unit = createTestBuilder().use { tb ->
-        this.javaClass.classLoader.getResourceAsStream("tocoman_project.xml").use {
-            val parsed = Given {
-                header("Authorization", "Bearer ${tb.user.accessTokenProvider.accessToken}")
-                contentType("application/xml")
-                body(it!!.readAllBytes())
-            }.When { post("/v1/projects/import") }
-                .then()
-                .extract()
-                .body().`as`(object : TypeRef<Project?>() {})
-            assertNotNull(parsed)
-            try {
-                val projects = tb.user.project.listProjects()
-                assertNotNull(projects)
-                assertEquals(1, projects.size)
-                assertNotNull(projects[0].id)
-                assertNotNull(projects[0].tocomanId)
-                assertNotNull(projects[0].name)
-            } finally {
-                tb.user.project.deleteProject(parsed!!.id!!)
-            }
+        val imported1 = tb.admin.project.importProject("tocoman_project.xml")
+        assertNotNull(imported1)
 
-        }
+        var project = tb.admin.project.findProject(imported1!!.id!!)
+        assertEquals(1, project.tocomanId)
+        assertEquals("As.Oy Esimerkki",project.name)
+
+        val imported2 = tb.admin.project.importProject("tocoman_project2.xml")
+        project = tb.admin.project.findProject(imported2!!.id!!)
+        assertEquals(1, project.tocomanId)
+        assertEquals("Project 2", project.name)
     }
 }

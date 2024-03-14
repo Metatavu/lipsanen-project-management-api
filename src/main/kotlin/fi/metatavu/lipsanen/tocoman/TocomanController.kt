@@ -45,12 +45,25 @@ class TocomanController {
                 file.readBytes(),
                 object: com.fasterxml.jackson.core.type.TypeReference<Projects>() {}
             )
-            projects.project!!.let {
-                projectController.createProject(
-                    name = it.projName ?: "project",
-                    tocomanId = it.id ?: 0,
-                    userId = userId
-                )
+            projects.project?.let {
+                if (it.projName == null) {
+                    logger.error("Missing project name")
+                    return null
+                }
+                val existingProject = projectController.findProjectByTocomanId(it.id)
+                if (existingProject == null) {
+                    projectController.createProject(
+                        name = it.projName!!,
+                        tocomanId = it.id,
+                        userId = userId
+                    )
+                } else {
+                    projectController.updateProject(
+                        existingProject = existingProject,
+                        name = it.projName!!,
+                        userId = userId
+                    )
+                }
             }
         } catch (e: Exception) {
             logger.error("Error parsing XML: ${e.message}")

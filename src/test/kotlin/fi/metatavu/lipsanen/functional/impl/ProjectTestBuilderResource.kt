@@ -6,6 +6,7 @@ import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.test.client.apis.ProjectsApi
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.models.Project
+import io.restassured.common.mapper.TypeRef
 import io.restassured.module.kotlin.extensions.Given
 import io.restassured.module.kotlin.extensions.When
 import java.util.*
@@ -69,5 +70,19 @@ class ProjectTestBuilderResource(
         }.When {
             get("v1/projects/$projectId/export")
         }.then().extract().body().asByteArray()
+    }
+
+    fun importProject(fileName: String): Project? {
+        this.javaClass.classLoader.getResourceAsStream(fileName).use {
+            val created = Given {
+                header("Authorization", "Bearer ${accessTokenProvider!!.accessToken}")
+                contentType("application/xml")
+                body(it!!.readAllBytes())
+            }.When { post("/v1/projects/import") }
+                .then()
+                .extract()
+                .body().`as`(object : TypeRef<Project?>() {})
+            return addClosable(created)
+        }
     }
 }
