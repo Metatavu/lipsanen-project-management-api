@@ -19,7 +19,7 @@ import java.util.*
  * @param apiClient api client
  */
 class ProjectTestBuilderResource(
-    testBuilder: TestBuilder,
+    private val testBuilder: TestBuilder,
     private val accessTokenProvider: AccessTokenProvider?,
     apiClient: ApiClient
 ) : ApiTestBuilderResource<Project, ProjectsApi>(testBuilder, apiClient) {
@@ -72,7 +72,10 @@ class ProjectTestBuilderResource(
         }.then().extract().body().asByteArray()
     }
 
-    fun importProject(fileName: String): Project? {
+    // List for storing imported projects in order to avoid adding multiple closeables for the same imported project
+    private val importedProjects = mutableListOf<UUID>()
+
+    fun importProject(fileName: String): Project {
         this.javaClass.classLoader.getResourceAsStream(fileName).use {
             val created = Given {
                 header("Authorization", "Bearer ${accessTokenProvider!!.accessToken}")
@@ -82,7 +85,11 @@ class ProjectTestBuilderResource(
                 .then()
                 .extract()
                 .body().`as`(object : TypeRef<Project?>() {})
-            return addClosable(created)
+            if (!importedProjects.contains(created!!.id)){
+                addClosable(created)
+                importedProjects.add(created.id!!)
+            }
+            return created
         }
     }
 }
