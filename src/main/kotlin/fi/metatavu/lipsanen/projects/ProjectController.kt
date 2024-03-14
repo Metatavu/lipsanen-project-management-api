@@ -86,6 +86,5 @@ class ProjectController {
      */
     suspend fun deleteProject(projectEntity: ProjectEntity) {
         projectRepository.deleteSuspending(projectEntity)
-        println("Deleted project with id: ${projectEntity.id}")
     }
 }
