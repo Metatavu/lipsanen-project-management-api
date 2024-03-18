@@ -7,11 +7,11 @@ import io.quarkus.test.junit.QuarkusIntegrationTest
 import io.quarkus.test.junit.TestProfile
 
 /**
- * Native tests for Project API
+ * Native tests for User API
  */
 @QuarkusIntegrationTest
 @TestProfile(DefaultTestProfile::class)
 @QuarkusTestResource.List(
     QuarkusTestResource(KeycloakResource::class),
 )
-class NativeProjectTestIT: ProjectTestIT()
+class NativeUserTestIT: UserTestIT()

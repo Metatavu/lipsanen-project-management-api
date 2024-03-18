@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.lipsanen.api.model.Project
+import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -71,8 +72,8 @@ class ProjectController {
      *
      * @return list of projects
      */
-    suspend fun listProjects(): Pair<List<ProjectEntity>, Long> {
-        return projectRepository.listAllSuspending(null, null)
+    suspend fun listProjects(first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+        return projectRepository.listAllSuspending(first, max, Sort.descending("createdAt"))
     }
 
     /**

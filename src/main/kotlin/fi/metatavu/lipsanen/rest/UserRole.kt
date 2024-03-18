@@ -9,4 +9,8 @@ sealed class UserRole {
     data object USER : UserRole() {
         const val NAME = "user"
     }
+
+    data object USER_MANAGEMENT_ADMIN : UserRole() {
+        const val NAME = "user-management-admin"
+    }
 }

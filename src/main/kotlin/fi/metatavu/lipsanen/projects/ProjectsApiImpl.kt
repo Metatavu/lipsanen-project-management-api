@@ -39,8 +39,8 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
-    override fun listProjects(): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val (projects, count) = projectController.listProjects()
+    override fun listProjects(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val (projects, count) = projectController.listProjects(first, max)
         return@async createOk(projects.map { projectTranslator.translate(it) }, count)
     }.asUni()
 

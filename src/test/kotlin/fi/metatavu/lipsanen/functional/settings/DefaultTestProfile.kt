@@ -7,8 +7,7 @@ import io.quarkus.test.junit.QuarkusTestProfile
  */
 class DefaultTestProfile: QuarkusTestProfile {
 
-    override fun getConfigOverrides(): MutableMap<String, String> {
-        val config: MutableMap<String, String> = HashMap()
-        return config
+    override fun getConfigOverrides(): Map<String, String> {
+        return emptyMap()
     }
 }

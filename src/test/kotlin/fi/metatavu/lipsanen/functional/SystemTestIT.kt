@@ -1,6 +1,8 @@
 package fi.metatavu.lipsanen.functional
 
+import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
+import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.module.kotlin.extensions.When
@@ -12,6 +14,9 @@ import org.junit.jupiter.api.Test
  */
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
+@QuarkusTestResource.List(
+    QuarkusTestResource(KeycloakResource::class),
+)
 class SystemTestIT : AbstractFunctionalTest() {
 
     @Test
