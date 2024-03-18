@@ -211,6 +211,8 @@ abstract class AbstractApi {
         const val FORBIDDEN = "Forbidden"
         const val MISSING_REQUEST_BODY = "Missing request body"
         const val INVALID_REQUEST_BODY = "Invalid request body"
+
+        const val PROJECT = "project"
     }
 
 }
