@@ -12,7 +12,7 @@ import org.junit.jupiter.api.fail
 import java.util.*
 
 /**
- * Test builder resource for users
+ * Test builder resource for users API
  */
 class UserTestBuilderResource (
     testBuilder: TestBuilder,
@@ -28,14 +28,33 @@ class UserTestBuilderResource (
         return UsersApi(ApiTestSettings.apiBasePath)
     }
 
+    /**
+     * Creates a new user
+     *
+     * @param user user
+     * @return created user
+     */
     fun create(user: User): User {
         return addClosable(api.createUser(user))
     }
 
+    /**
+     * Finds a user
+     *
+     * @param userId user id
+     * @return found user
+     */
     fun findUser(userId: UUID): User {
         return api.findUser(userId)
     }
 
+    /**
+     * Lists users
+     *
+     * @param first first
+     * @param max max
+     * @return list of users
+     */
     fun listUsers(
         first: Int? = null,
         max: Int? = null
@@ -43,10 +62,22 @@ class UserTestBuilderResource (
         return api.listUsers(first = first, max = max)
     }
 
+    /**
+     * Updates a user
+     *
+     * @param userId user id
+     * @param user user
+     * @return updated user
+     */
     fun updateUser(userId: UUID, user: User): User {
         return api.updateUser(userId, user)
     }
 
+    /**
+     * Deletes a user
+     *
+     * @param userId user id
+     */
     fun deleteUser(userId: UUID) {
         api.deleteUser(userId)
         removeCloseable { closable: Any ->
@@ -57,6 +88,12 @@ class UserTestBuilderResource (
         }
     }
 
+    /**
+     * Asserts that create fails with expected status
+     *
+     * @param expectedStatus expected status
+     * @param user user
+     */
     fun assertCreateFailStatus(
         expectedStatus: Int,
         user: User
@@ -69,6 +106,12 @@ class UserTestBuilderResource (
         }
     }
 
+    /**
+     * Asserts that find fails with expected status
+     *
+     * @param expectedStatus expected status
+     * @param userId user id
+     */
     fun assertFindFailStatus(
         expectedStatus: Int,
         userId: UUID
@@ -81,6 +124,13 @@ class UserTestBuilderResource (
         }
     }
 
+    /**
+     * Asserts that update fails with expected status
+     *
+     * @param expectedStatus expected status
+     * @param userId user id
+     * @param user user
+     */
     fun assertUpdateFailStatus(
         expectedStatus: Int,
         userId: UUID,
@@ -94,6 +144,12 @@ class UserTestBuilderResource (
         }
     }
 
+    /**
+     * Asserts that delete fails with expected status
+     *
+     * @param expectedStatus expected status
+     * @param userId user id
+     */
     fun assertDeleteFailStatus(
         expectedStatus: Int,
         userId: UUID
@@ -106,6 +162,11 @@ class UserTestBuilderResource (
         }
     }
 
+    /**
+     * Asserts that list fails with expected status
+     *
+     * @param expectedStatus expected status
+     */
     fun assertListFailStatus(
         expectedStatus: Int
     ) {

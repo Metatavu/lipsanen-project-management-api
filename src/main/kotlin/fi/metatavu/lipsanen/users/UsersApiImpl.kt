@@ -20,7 +20,6 @@ import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
-@WithSession
 class UsersApiImpl: UsersApi, AbstractApi() {
 
     @Inject

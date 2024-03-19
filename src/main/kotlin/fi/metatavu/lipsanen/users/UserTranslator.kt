@@ -11,6 +11,9 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.*
 
+/**
+ * Translates UserRepresentation to User
+ */
 @ApplicationScoped
 class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
 
