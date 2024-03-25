@@ -1,7 +1,9 @@
 package fi.metatavu.lipsanen.functional
 
+import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
+import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import org.junit.jupiter.api.Assertions.*
@@ -13,6 +15,9 @@ import java.nio.charset.Charset
  */
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
+@QuarkusTestResource.List(
+    QuarkusTestResource(KeycloakResource::class),
+)
 class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test

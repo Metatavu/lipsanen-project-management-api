@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.persistence
 
 import io.quarkus.hibernate.reactive.panache.PanacheQuery
 import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase
+import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 
 /**
@@ -69,12 +70,12 @@ abstract class AbstractRepository<Entity, Id> : PanacheRepositoryBase<Entity, Id
      * @param maxResults max
      * @return entities
      */
-    open suspend fun listAllSuspending(firstIndex: Int?, maxResults: Int?): Pair<List<Entity>, Long> {
+    open suspend fun listAllSuspending(firstIndex: Int?, maxResults: Int?, sort: Sort?): Pair<List<Entity>, Long> {
         val count = findAll().count().awaitSuspending()
         return if (firstIndex != null && maxResults != null) {
-            Pair(findAll().range<Entity>(firstIndex,  maxResults + firstIndex - 1).list<Entity>().awaitSuspending(), count)
+            Pair(findAll(sort).range<Entity>(firstIndex,  maxResults + firstIndex - 1).list<Entity>().awaitSuspending(), count)
         } else
-            Pair(listAll().awaitSuspending(), count)
+            Pair(listAll(sort).awaitSuspending(), count)
     }
 
     /**

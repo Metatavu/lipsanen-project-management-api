@@ -17,8 +17,8 @@ import org.eclipse.microprofile.config.ConfigProvider
  */
 class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenTestBuilder<ApiClient>() {
 
-    var user = createTestBuilderAuthentication(username = "user", password = "userPassword")
-    var admin = createTestBuilderAuthentication(username = "admin", password = "adminPassword")
+    val admin = createTestBuilderAuthentication(username = "admin", password = "test")
+    val user = createTestBuilderAuthentication(username = "user", password = "test")
 
     override fun createTestBuilderAuthentication(
         abstractTestBuilder: AbstractTestBuilder<ApiClient, AccessTokenProvider>,
@@ -34,12 +34,12 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
      * @param password password
      * @return test builder authenticatior for given user
      */
-    private fun createTestBuilderAuthentication(username: String, password: String): TestBuilderAuthentication {
-        val serverUrl = ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String::class.java).substringBeforeLast("/").substringBeforeLast("/")
-        val realm: String = ConfigProvider.getConfig().getValue("quarkus.keycloak.devservices.realm-name", String::class.java)
-        val clientId = "test"
-        val clientSecret = "secret"
-        return TestBuilderAuthentication(this, KeycloakAccessTokenProvider(serverUrl, realm, clientId, username, password, clientSecret))
+    fun createTestBuilderAuthentication(username: String, password: String): TestBuilderAuthentication {
+        val serverUrl = ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String::class.java).substringBefore("/realms")
+        val realm: String = ConfigProvider.getConfig().getValue("lipsanen.keycloak.admin.realm", String::class.java)
+        val clientId = "api"
+        val secret: String = ConfigProvider.getConfig().getValue("lipsanen.keycloak.admin.secret", String::class.java)
+        return TestBuilderAuthentication(this, KeycloakAccessTokenProvider(serverUrl, realm, clientId, username, password, secret))
     }
 
 }

@@ -4,6 +4,7 @@ import fi.metatavu.jaxrs.test.functional.builder.auth.AccessTokenProvider
 import fi.metatavu.jaxrs.test.functional.builder.auth.AccessTokenTestBuilderAuthentication
 import fi.metatavu.lipsanen.functional.TestBuilder
 import fi.metatavu.lipsanen.functional.impl.ProjectTestBuilderResource
+import fi.metatavu.lipsanen.functional.impl.UserTestBuilderResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 
@@ -22,6 +23,7 @@ class TestBuilderAuthentication(
 ) : AccessTokenTestBuilderAuthentication<ApiClient>(testBuilder, accessTokenProvider) {
 
     val project = ProjectTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
+    val user = UserTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
 
     override fun createClient(authProvider: AccessTokenProvider): ApiClient {
         val result = ApiClient(ApiTestSettings.apiBasePath)

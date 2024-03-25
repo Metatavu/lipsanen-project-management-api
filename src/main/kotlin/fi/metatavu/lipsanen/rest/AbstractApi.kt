@@ -212,7 +212,8 @@ abstract class AbstractApi {
         const val MISSING_REQUEST_BODY = "Missing request body"
         const val INVALID_REQUEST_BODY = "Invalid request body"
 
-        const val PROJECT = "project"
+        const val PROJECT = "Project"
+        const val USER = "User"
     }
 
 }
