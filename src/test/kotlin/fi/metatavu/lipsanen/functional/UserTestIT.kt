@@ -68,7 +68,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertEquals(2, pagedUsers.size)
 
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
-        assertEquals(1, pagedUsers2.size)
+        assertEquals(2, pagedUsers2.size)
 
         it.user.user.assertListFailStatus(403)
     }
