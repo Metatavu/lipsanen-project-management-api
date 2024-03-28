@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.functional
 
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
+import fi.metatavu.lipsanen.test.client.models.Project
 import fi.metatavu.lipsanen.test.client.models.User
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
@@ -21,15 +22,18 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testCreateUser() = createTestBuilder().use {
+        val project = it.admin.project.create()
         val userData = User(
             firstName = "Test",
             lastName = "User",
-            email = "user1@example.com"
+            email = "user1@example.com",
+            projectIds = arrayOf(project.id!!)
         )
         val createdUser = it.admin.user.create(userData)
         assertEquals(userData.firstName, createdUser.firstName)
         assertEquals(userData.lastName, createdUser.lastName)
         assertEquals(userData.email, createdUser.email)
+        assertEquals(userData.projectIds!![0], createdUser.projectIds!![0])
         assertNotNull(createdUser.id)
         assertNull(createdUser.lastLoggedIn)
 
@@ -50,14 +54,15 @@ class UserTestIT: AbstractFunctionalTest() {
 
         //cannot create user with same email
         it.admin.user.assertCreateFailStatus(409, userData)
-
         it.user.user.assertCreateFailStatus(403, userData.copy(email = "newemail"))
+
+        it.admin.user.assertCreateFailStatus(404, userData.copy(projectIds = arrayOf(UUID.randomUUID()), email = "newemail@example.com"))
     }
 
     @Test
     fun testListUsers() = createTestBuilder().use {
         val users = it.admin.user.listUsers()
-        assertEquals(3, users.size)
+        assertEquals(4, users.size)
 
         val pagedUsers = it.admin.user.listUsers(first = 0, max = 2)
         assertEquals(2, pagedUsers.size)
@@ -81,24 +86,33 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testUpdateUser() = createTestBuilder().use {
+        val project = it.admin.project.create()
+        val project2 = it.admin.project.create(Project("Project 2"))
         val userData = User(
             firstName = "Test",
             lastName = "User",
-            email = "user1@example.com"
+            email = "user1@example.com",
+            projectIds = arrayOf(project.id!!)
         )
         val createdUser = it.admin.user.create(userData)
 
         val updatedUserData = createdUser.copy(
             firstName = "Updated",
             lastName = "User",
+            projectIds = arrayOf(project2.id!!)
         )
 
         val updatedUser = it.admin.user.updateUser(createdUser.id!!, updatedUserData)
         assertEquals(updatedUserData.firstName, updatedUser.firstName)
         assertEquals(updatedUserData.lastName, updatedUser.lastName)
+        assertEquals(updatedUserData.email, updatedUser.email)
+        assertEquals(updatedUserData.projectIds!![0], updatedUser.projectIds!![0])
 
         it.admin.user.assertUpdateFailStatus(404, UUID.randomUUID(), updatedUserData)
         it.user.user.assertUpdateFailStatus(403, createdUser.id, updatedUserData)
+
+        // cannot update with invalid project id
+        it.admin.user.assertUpdateFailStatus(404, createdUser.id, updatedUserData.copy(projectIds = arrayOf(UUID.randomUUID())))
     }
 
     @Test

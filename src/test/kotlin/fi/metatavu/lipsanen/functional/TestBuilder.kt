@@ -19,6 +19,7 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
 
     val admin = createTestBuilderAuthentication(username = "admin", password = "test")
     val user = createTestBuilderAuthentication(username = "user", password = "test")
+    val user2 = createTestBuilderAuthentication(username = "user2", password = "test")
 
     override fun createTestBuilderAuthentication(
         abstractTestBuilder: AbstractTestBuilder<ApiClient, AccessTokenProvider>,
@@ -34,7 +35,7 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
      * @param password password
      * @return test builder authenticatior for given user
      */
-    fun createTestBuilderAuthentication(username: String, password: String): TestBuilderAuthentication {
+    private fun createTestBuilderAuthentication(username: String, password: String): TestBuilderAuthentication {
         val serverUrl = ConfigProvider.getConfig().getValue("quarkus.oidc.auth-server-url", String::class.java).substringBefore("/realms")
         val realm: String = ConfigProvider.getConfig().getValue("lipsanen.keycloak.admin.realm", String::class.java)
         val clientId = "api"

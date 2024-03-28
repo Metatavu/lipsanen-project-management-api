@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.rest
 
 import fi.metatavu.lipsanen.api.model.Error
+import io.quarkus.security.identity.SecurityIdentity
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
 import org.eclipse.microprofile.jwt.JsonWebToken
@@ -15,6 +16,18 @@ abstract class AbstractApi {
 
     @Inject
     private lateinit var jsonWebToken: JsonWebToken
+
+    @Inject
+    lateinit var identity: SecurityIdentity
+
+    /**
+     * Checks if user is manager
+     *
+     * @return if user is manager
+     */
+    protected fun isAdmin(): Boolean {
+        return identity.hasRole(UserRole.ADMIN.NAME)
+    }
 
     /**
      * Returns logged user id
@@ -214,6 +227,8 @@ abstract class AbstractApi {
 
         const val PROJECT = "Project"
         const val USER = "User"
+
+        const val NO_PROJECT_RIGHTS = "User does not have access to project"
     }
 
 }

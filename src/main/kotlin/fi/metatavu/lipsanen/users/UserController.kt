@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.EventRepresentation
+import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
 import fi.metatavu.keycloak.adminclient.models.UserRepresentation
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
@@ -20,6 +21,25 @@ class UserController {
 
     @Inject
     lateinit var logger: Logger
+
+    /**
+     * Lists user groups
+     *
+     * @param userId user id
+     * @return user groups
+     */
+    suspend fun listUserGroups(userId: UUID): Array<GroupRepresentation> {
+        return try {
+            keycloakAdminClient.getUserApi().realmUsersIdGroupsGet(
+                realm = keycloakAdminClient.getRealm(),
+                id = userId.toString(),
+                briefRepresentation = true
+            )
+            } catch (e: Exception) {
+            logger.error("Failed to list user groups", e)
+            emptyArray()
+        }
+    }
 
     /**
      * Lists users
@@ -45,10 +65,11 @@ class UserController {
      * email with reset password action to the user
      *
      * @param user user
+     * @param groupIds user group ids to assign to
      * @return created user
      */
-    suspend fun createUser(user: User): UserRepresentation? {
-        return try {
+    suspend fun createUser(user: User, groupIds: List<UUID>?): UserRepresentation? {
+        val createdUser = try {
             keycloakAdminClient.getUsersApi().realmUsersPost(
                 realm = keycloakAdminClient.getRealm(),
                 userRepresentation = UserRepresentation(
@@ -59,23 +80,33 @@ class UserController {
                     enabled = true
                 )
             )
-            val createdUser = keycloakAdminClient.getUsersApi().realmUsersGet(
+
+            val foundUser = keycloakAdminClient.getUsersApi().realmUsersGet(
                 realm = keycloakAdminClient.getRealm(),
                 email = user.email
             ).firstOrNull() ?: return null
 
+            assignUserToGroups(foundUser, emptyArray(), groupIds)
+            foundUser
+        } catch (e: Exception) {
+            logger.error("Failed to create user:", e)
+            return null
+        }
+
+        try {
             keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
                 realm = keycloakAdminClient.getRealm(),
                 id = createdUser.id!!,
                 requestBody = arrayOf("UPDATE_PASSWORD"),
                 lifespan = null
             )
-
-            createdUser
         } catch (e: Exception) {
-            logger.error("Failed to create user:", e)
-            null
+            logger.error("Failed sending email to user", e)
+            // Delete the user if the email sending fails
+            deleteUser(UUID.fromString(createdUser.id))
         }
+
+        return createdUser
     }
 
 
@@ -103,9 +134,11 @@ class UserController {
      * @param userId user id
      * @param existingUser existing user
      * @param updateData user
+     * @param updateGroups new user groups
+     *
      * @return updated user
      */
-    suspend fun updateUser(userId: UUID, existingUser: UserRepresentation, updateData: User): UserRepresentation? {
+    suspend fun updateUser(userId: UUID, existingUser: UserRepresentation, updateData: User, updateGroups: List<UUID>?): UserRepresentation? {
         val updatedRepresentation = existingUser.copy(
             firstName = updateData.firstName,
             lastName = updateData.lastName,
@@ -116,6 +149,8 @@ class UserController {
                 id = userId.toString(),
                 userRepresentation = updatedRepresentation
             )
+
+            assignUserToGroups(existingUser, existingUser.groups, updateGroups)
             keycloakAdminClient.getUserApi().realmUsersIdGet(
                 realm = keycloakAdminClient.getRealm(),
                 id = userId.toString()
@@ -176,6 +211,40 @@ class UserController {
         } catch (e: Exception) {
             logger.error("Failed to get user's last login", e)
             null
+        }
+    }
+
+    /**
+     * Assigns user to groups
+     *
+     * @param currentGroups current groups
+     * @param updateGroups new groups
+     */
+    private suspend fun assignUserToGroups(
+        existingUser: UserRepresentation,
+        currentGroups: Array<String>?,
+        updateGroups: List<UUID>?
+    ) {
+        // if group is present in current but not in update then unassign
+        currentGroups?.forEach { currentGroupId ->
+            if (updateGroups?.find { it.toString() == currentGroupId } == null) {
+                keycloakAdminClient.getUserApi().realmUsersIdGroupsGroupIdDelete(
+                    realm = keycloakAdminClient.getRealm(),
+                    id = existingUser.id!!,
+                    groupId = currentGroupId
+                )
+            }
+        }
+
+        // if group is present in update but not in current then assign
+        updateGroups?.forEach { groupId ->
+            if (currentGroups?.find { it == groupId.toString() } == null) {
+                keycloakAdminClient.getUserApi().realmUsersIdGroupsGroupIdPut(
+                    realm = keycloakAdminClient.getRealm(),
+                    id = existingUser.id!!,
+                    groupId = groupId.toString()
+                )
+            }
         }
     }
 }
