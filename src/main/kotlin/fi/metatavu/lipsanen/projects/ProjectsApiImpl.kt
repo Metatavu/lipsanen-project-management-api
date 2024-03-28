@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.spec.ProjectsApi
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.tocoman.TocomanController
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -36,11 +37,21 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     lateinit var tocomanController: TocomanController
 
     @Inject
+    lateinit var userController: UserController
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
     override fun listProjects(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val (projects, count) = projectController.listProjects(first, max)
+        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        val keycloakGroupIds = if (isAdmin()) {
+            null
+        } else {
+            userController.listUserGroups(userId).map { UUID.fromString(it.id) }
+        }
+
+        val (projects, count) = projectController.listProjects(keycloakGroupIds, first, max)
         return@async createOk(projects.map { projectTranslator.translate(it) }, count)
     }.asUni()
 
@@ -48,18 +59,23 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     @WithTransaction
     override fun createProject(project: Project): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val created = projectController.createProject(project, userId)
+        if (projectController.findProjectByName(project.name) != null) return@async createConflict("Project with given name already exists!")
+        val created = projectController.createProject(project, userId) ?: return@async createInternalServerError("Failed to create a project")
         return@async createOk(projectTranslator.translate(created))
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
     override fun findProject(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val existingProject = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
                 PROJECT,
                 projectId
             )
         )
+        if (!isAdmin() && !projectController.hasAccessToProject(existingProject, userId)) {
+            return@async createForbidden(NO_PROJECT_RIGHTS)
+        }
         return@async createOk(projectTranslator.translate(existingProject))
     }.asUni()
 
@@ -74,20 +90,32 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
                     projectId
                 )
             )
-            val updated = projectController.updateProject(existingProject, project, userId)
+            if (!projectController.hasAccessToProject(existingProject, userId)) {
+                return@async createForbidden(NO_PROJECT_RIGHTS)
+            }
+            val updated = projectController.updateProject(existingProject, project, userId) ?: return@async createInternalServerError(
+                "Failed to update a project"
+            )
             return@async createOk(projectTranslator.translate(updated))
         }.asUni()
 
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun deleteProject(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val existingProject = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
                 PROJECT,
                 projectId
             )
         )
-        projectController.deleteProject(existingProject)
+        if (!projectController.hasAccessToProject(existingProject, userId)) {
+            return@async createForbidden(NO_PROJECT_RIGHTS)
+        }
+        val error = projectController.deleteProject(existingProject)
+        if (error != null) {
+            return@async createInternalServerError("Failed to delete a project")
+        }
         return@async createNoContent()
     }.asUni()
 
@@ -98,18 +126,22 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
         if (body == null) {
             return@async createBadRequest(MISSING_REQUEST_BODY)
         }
-        val imported = tocomanController.importProjects(body, userId) ?: return@async createBadRequest("Failed to parse xml")
+        val imported = tocomanController.importProjects(body, userId) ?: return@async createBadRequest("Failed to import a project")
         createOk(projectTranslator.translate(imported))
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
     override fun exportProject(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val existingProject = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
                 PROJECT,
                 projectId
             )
         )
+        if (!isAdmin() && !projectController.hasAccessToProject(existingProject, userId)) {
+            return@async createForbidden(NO_PROJECT_RIGHTS)
+        }
         val stream = tocomanController.exportProject(existingProject)
         return@async Response.ok(stream)
             .header("Content-Type", "application/xml")

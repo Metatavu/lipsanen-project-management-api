@@ -12587,6 +12587,9 @@
             "additionalProperties": {
               "type": "boolean"
             }
+          },
+          "subGroupCount" : {
+            "type": "integer"
           }
         }
       },

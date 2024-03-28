@@ -5,10 +5,13 @@ import fi.metatavu.lipsanen.functional.TestBuilder
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.test.client.apis.ProjectsApi
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
+import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.Project
 import io.restassured.common.mapper.TypeRef
 import io.restassured.module.kotlin.extensions.Given
 import io.restassured.module.kotlin.extensions.When
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.fail
 import java.util.*
 
 /**
@@ -45,12 +48,49 @@ class ProjectTestBuilderResource(
         return api.findProject(projectId)
     }
 
+    fun assertFindFail(
+        expectedStatus: Int,
+        projectId: UUID
+    ) {
+        try {
+            api.findProject(projectId)
+            fail(String.format("Expected find to fail with status %d", expectedStatus))
+        } catch (e: ClientException) {
+            Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
+        }
+    }
+
     fun listProjects(): Array<Project> {
         return api.listProjects()
     }
 
     fun updateProject(projectId: UUID, project: Project): Project {
         return api.updateProject(projectId, project)
+    }
+
+    fun assertUpdateFail(
+        expectedStatus: Int,
+        projectId: UUID,
+        project: Project
+    ) {
+        try {
+            api.updateProject(projectId, project)
+            fail(String.format("Expected update to fail with status %d", expectedStatus))
+        } catch (e: ClientException) {
+            Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
+        }
+    }
+
+    fun assertDeleteFail(
+        expectedStatus: Int,
+        projectId: UUID
+    ) {
+        try {
+            api.deleteProject(projectId)
+            fail(String.format("Expected delete to fail with status %d", expectedStatus))
+        } catch (e: ClientException) {
+            Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
+        }
     }
 
     fun deleteProject(projectId: UUID) {
