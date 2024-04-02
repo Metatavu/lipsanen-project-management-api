@@ -21,9 +21,9 @@ abstract class AbstractApi {
     lateinit var identity: SecurityIdentity
 
     /**
-     * Checks if user is manager
+     * Checks if user is admin
      *
-     * @return if user is manager
+     * @return if user is admin
      */
     protected fun isAdmin(): Boolean {
         return identity.hasRole(UserRole.ADMIN.NAME)
