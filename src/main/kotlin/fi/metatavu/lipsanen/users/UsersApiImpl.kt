@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.users
 
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
+import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -20,6 +21,7 @@ import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
+@WithSession
 class UsersApiImpl: UsersApi, AbstractApi() {
 
     @Inject
@@ -27,6 +29,9 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @Inject
     lateinit var userTranslator: UserTranslator
+
+    @Inject
+    lateinit var projectController: ProjectController
 
     @Inject
     lateinit var vertx: Vertx
@@ -43,7 +48,10 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         if (existingUsers > 0) {
             return@async createConflict("User with given email ${user.email} already exists!")
         }
-        val createdUser = userController.createUser(user) ?: return@async createInternalServerError("Failed to create user")
+        val keycloakGroupIds = user.projectIds?.map {
+            projectController.findProject(it)?.keycloakGroupId ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
+        }
+        val createdUser = userController.createUser(user, keycloakGroupIds) ?: return@async createInternalServerError("Failed to create user")
         createOk(userTranslator.translate(createdUser))
     }.asUni()
 
@@ -56,10 +64,14 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
     override fun updateUser(userId: UUID, user: User): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val existingUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
+        val keycloakGroupIds = user.projectIds?.map {
+            projectController.findProject(it)?.keycloakGroupId ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
+        }
         val updatedUser = userController.updateUser(
             userId = userId,
             existingUser = existingUser,
-            updateData = user
+            updateData = user,
+            updateGroups = keycloakGroupIds
         ) ?: return@async createInternalServerError("Failed to update user")
         createOk(userTranslator.translate(updatedUser))
     }.asUni()

@@ -20,4 +20,11 @@
             <column name="modifiedat" type="datetime(6)"/>
         </createTable>
     </changeSet>
+
+    <changeSet id="project_groups" author="katja danilova">
+        <addUniqueConstraint tableName="project" columnNames="name"/>
+        <addColumn tableName="project">
+            <column name="keycloakgroupid" type="binary(16)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

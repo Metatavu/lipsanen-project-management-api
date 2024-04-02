@@ -18,12 +18,15 @@ class ProjectEntity : Metadata() {
     @Id
     lateinit var id: UUID
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     @NotEmpty
     lateinit var name: String
 
     @Column
     var tocomanId: Int? = null
+
+    @Column(nullable = false)
+    lateinit var keycloakGroupId: UUID
 
     override lateinit var creatorId: UUID
 

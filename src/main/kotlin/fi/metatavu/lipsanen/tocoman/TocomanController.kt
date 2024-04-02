@@ -66,7 +66,7 @@ class TocomanController {
                 }
             }
         } catch (e: Exception) {
-            logger.error("Error parsing XML: ${e.message}")
+            logger.error("Error creating project: ${e.message}")
             null
         }
     }

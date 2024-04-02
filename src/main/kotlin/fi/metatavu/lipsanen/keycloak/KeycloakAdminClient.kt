@@ -1,14 +1,12 @@
 package fi.metatavu.lipsanen.keycloak
-import fi.metatavu.keycloak.adminclient.apis.RealmAdminApi
+
+import fi.metatavu.keycloak.adminclient.apis.*
+import fi.metatavu.keycloak.adminclient.models.UserRepresentation
 import io.smallrye.mutiny.Uni
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.util.*
-
-import fi.metatavu.keycloak.adminclient.apis.UserApi
-import fi.metatavu.keycloak.adminclient.apis.UsersApi
-import fi.metatavu.keycloak.adminclient.models.UserRepresentation
 
 /**
  * Controller for accessing Keycloak as admin user
@@ -64,6 +62,34 @@ class KeycloakAdminClient : KeycloakClient() {
     suspend fun getUserApi(): UserApi {
         val baseUrl = getBaseUrl()
         return UserApi(
+            basePath = "${baseUrl}/admin/realms",
+            accessToken = getAccessToken(),
+            vertx = vertxCore
+        )
+    }
+
+    /**
+     * Gets groups api with valid access token
+     *
+     * @return Api with valid access token
+     */
+    suspend fun getGroupsApi(): GroupsApi {
+        val baseUrl = getBaseUrl()
+        return GroupsApi(
+            basePath = "${baseUrl}/admin/realms",
+            accessToken = getAccessToken(),
+            vertx = vertxCore
+        )
+    }
+
+    /**
+     * Gets group api
+     *
+     * @return group api
+     */
+    suspend fun getGroupApi(): GroupApi {
+        val baseUrl = getBaseUrl()
+        return GroupApi(
             basePath = "${baseUrl}/admin/realms",
             accessToken = getAccessToken(),
             vertx = vertxCore
