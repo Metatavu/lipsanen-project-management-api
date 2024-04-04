@@ -227,6 +227,7 @@ abstract class AbstractApi {
 
         const val PROJECT = "Project"
         const val USER = "User"
+        const val COMPANY = "Company"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
     }

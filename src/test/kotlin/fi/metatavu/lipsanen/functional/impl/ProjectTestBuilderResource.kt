@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.test.client.apis.ProjectsApi
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.Project
+import fi.metatavu.lipsanen.test.client.models.ProjectStatus
 import io.restassured.common.mapper.TypeRef
 import io.restassured.module.kotlin.extensions.Given
 import io.restassured.module.kotlin.extensions.When
@@ -41,7 +42,7 @@ class ProjectTestBuilderResource(
     }
 
     fun create(): Project {
-        return create(Project("Test project"))
+        return create(Project("Test project", status = ProjectStatus.PLANNING))
     }
 
     fun findProject(projectId: UUID): Project {

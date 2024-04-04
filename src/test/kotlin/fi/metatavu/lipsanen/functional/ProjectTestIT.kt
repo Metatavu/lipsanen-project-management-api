@@ -1,12 +1,18 @@
 package fi.metatavu.lipsanen.functional
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import fi.metatavu.invalid.InvalidValueTestScenarioBuilder
+import fi.metatavu.invalid.InvalidValueTestScenarioPath
+import fi.metatavu.invalid.InvalidValues
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
+import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
-import fi.metatavu.lipsanen.test.client.models.User
+import fi.metatavu.lipsanen.test.client.models.ProjectStatus
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
+import io.restassured.http.Method
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.Charset
@@ -23,8 +29,8 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test
     fun listProjects() = createTestBuilder().use { tb ->
-        val project1 = tb.admin.project.create(Project("Project 1"))
-        val project2 = tb.admin.project.create(Project("Project 2"))
+        val project1 = tb.admin.project.create(Project("Project 1", status = ProjectStatus.PLANNING))
+        val project2 = tb.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
         val projects = tb.admin.project.listProjects()
         assertNotNull(projects)
         assertEquals(2, projects.size)
@@ -66,18 +72,60 @@ class ProjectTestIT : AbstractFunctionalTest() {
         assertNotNull(updatedUser1)
         assertEquals(1, updatedUser1.projectIds!!.size)
         assertNotNull(tb.user.project.findProject(project.id))
+    }
 
-        tb.user2.project.assertFindFail(403, project.id)
+    @Test
+    fun findProjectFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        tb.user2.project.assertFindFail(403, project.id!!)
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}",
+            method = Method.POST,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404
+                )
+            )
+            .build()
+            .test()
     }
 
     @Test
     fun updateProject() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project"))
+        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project", status = ProjectStatus.PLANNING))
         assertNotNull(updatedProject)
         assertEquals("Updated project", updatedProject.name)
 
-        tb.user.project.assertUpdateFail(403, project.id, Project("Updated project"))
+        tb.user.project.assertUpdateFail(403, project.id, updatedProject)
+    }
+
+    @Test
+    fun updateProjectFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}",
+            method = Method.PUT,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+            body = jacksonObjectMapper().writeValueAsString(project)
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404
+                )
+            )
+            .build()
+            .test()
     }
 
     @Test
@@ -90,6 +138,25 @@ class ProjectTestIT : AbstractFunctionalTest() {
         val projects = tb.admin.project.listProjects()
         assertNotNull(projects)
         assertEquals(0, projects.size)
+    }
+
+    @Test
+    fun deleteProjectFail() = createTestBuilder().use { tb ->
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}",
+            method = Method.DELETE,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404
+                )
+            )
+            .build()
+            .test()
     }
 
     @Test
