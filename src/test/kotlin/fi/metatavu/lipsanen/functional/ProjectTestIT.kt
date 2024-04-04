@@ -81,7 +81,7 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}",
-            method = Method.POST,
+            method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
         )
