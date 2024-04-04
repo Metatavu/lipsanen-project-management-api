@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 @QuarkusTestResource.List(
     QuarkusTestResource(KeycloakResource::class),
 )
-class CompaniesTestIT : AbstractFunctionalTest() {
+class CompanyTestIT : AbstractFunctionalTest() {
 
     @Test
     fun testCreateCompany() = createTestBuilder().use {
