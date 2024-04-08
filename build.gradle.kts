@@ -97,6 +97,7 @@ sourceSets["main"].java {
 
 sourceSets["test"].java {
     srcDir("build/generated/api-client/src/main/kotlin")
+    srcDir("quarkus-invalid-param-test/src/main/kotlin")
 }
 
 val generateApiSpec = tasks.register("generateApiSpec", GenerateTask::class){

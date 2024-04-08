@@ -1,13 +1,19 @@
 package fi.metatavu.lipsanen.functional
 
+import fi.metatavu.invalid.InvalidValueTestScenarioBuilder
+import fi.metatavu.invalid.InvalidValueTestScenarioPath
+import fi.metatavu.invalid.InvalidValues
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
+import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
+import fi.metatavu.lipsanen.test.client.models.ProjectStatus
 import fi.metatavu.lipsanen.test.client.models.User
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.RestAssured
+import io.restassured.http.Method
 import org.eclipse.microprofile.config.ConfigProvider
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -23,16 +29,19 @@ class UserTestIT: AbstractFunctionalTest() {
     @Test
     fun testCreateUser() = createTestBuilder().use {
         val project = it.admin.project.create()
+        val createdCompany = it.admin.company.create()
         val userData = User(
             firstName = "Test",
             lastName = "User",
             email = "user1@example.com",
-            projectIds = arrayOf(project.id!!)
+            projectIds = arrayOf(project.id!!),
+            companyId = createdCompany.id
         )
         val createdUser = it.admin.user.create(userData)
         assertEquals(userData.firstName, createdUser.firstName)
         assertEquals(userData.lastName, createdUser.lastName)
         assertEquals(userData.email, createdUser.email)
+        assertEquals(userData.companyId, createdUser.companyId)
         assertEquals(userData.projectIds!![0], createdUser.projectIds!![0])
         assertNotNull(createdUser.id)
         assertNull(createdUser.lastLoggedIn)
@@ -57,6 +66,7 @@ class UserTestIT: AbstractFunctionalTest() {
         it.user.user.assertCreateFailStatus(403, userData.copy(email = "newemail"))
 
         it.admin.user.assertCreateFailStatus(404, userData.copy(projectIds = arrayOf(UUID.randomUUID()), email = "newemail@example.com"))
+        it.admin.user.assertCreateFailStatus(404, userData.copy(companyId = UUID.randomUUID(), email = "newemail@example.com"))
     }
 
     @Test
@@ -70,6 +80,13 @@ class UserTestIT: AbstractFunctionalTest() {
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
         assertEquals(2, pagedUsers2.size)
 
+        // Filter by company
+        val company = it.admin.company.create()
+        it.admin.user.updateUser(users[0].id!!, users[0].copy(companyId = company.id))
+        val companyUsers = it.admin.user.listUsers(companyId = company.id)
+        assertEquals(1, companyUsers.size)
+        it.admin.user.updateUser(users[0].id!!, users[0].copy(companyId = null))
+
         it.user.user.assertListFailStatus(403)
     }
 
@@ -79,15 +96,34 @@ class UserTestIT: AbstractFunctionalTest() {
         val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
         val foundUser = it.admin.user.findUser(adminId)
         assertNotNull(foundUser.lastLoggedIn)
+    }
 
-        it.admin.user.assertFindFailStatus(404, UUID.randomUUID())
+    @Test
+    fun testFindUserFail() = createTestBuilder().use {
+        val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
         it.user.user.assertFindFailStatus(403, adminId)
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/users/{userId}",
+            method = Method.GET,
+            token = it.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "userId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404
+                )
+            )
+            .build()
+            .test()
     }
 
     @Test
     fun testUpdateUser() = createTestBuilder().use {
         val project = it.admin.project.create()
-        val project2 = it.admin.project.create(Project("Project 2"))
+        val project2 = it.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
         val userData = User(
             firstName = "Test",
             lastName = "User",
@@ -124,13 +160,30 @@ class UserTestIT: AbstractFunctionalTest() {
         )
         val createdUser = it.admin.user.create(userData)
 
-        //access rights
-        it.user.user.assertDeleteFailStatus(403, createdUser.id!!)
-
         it.admin.user.deleteUser(createdUser.id!!)
         it.admin.user.assertFindFailStatus(404, createdUser.id)
+    }
 
-        it.admin.user.assertDeleteFailStatus(404, UUID.randomUUID())
+    @Test
+    fun testDeleteUserFail() = createTestBuilder().use {
+        val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
+        it.user.user.assertDeleteFailStatus(403, adminId)
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/users/{userId}",
+            method = Method.DELETE,
+            token = it.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "userId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404
+                )
+            )
+            .build()
+            .test()
     }
 
 }

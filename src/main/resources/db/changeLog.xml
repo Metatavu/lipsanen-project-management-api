@@ -27,4 +27,19 @@
             <column name="keycloakgroupid" type="binary(16)"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="companies" author="katja danilova">
+        <createTable tableName="company">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

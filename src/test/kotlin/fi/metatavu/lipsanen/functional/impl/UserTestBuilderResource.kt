@@ -56,10 +56,11 @@ class UserTestBuilderResource (
      * @return list of users
      */
     fun listUsers(
+        companyId: UUID? = null,
         first: Int? = null,
         max: Int? = null
     ): Array<User> {
-        return api.listUsers(first = first, max = max)
+        return api.listUsers(companyId = companyId, first = first, max = max)
     }
 
     /**

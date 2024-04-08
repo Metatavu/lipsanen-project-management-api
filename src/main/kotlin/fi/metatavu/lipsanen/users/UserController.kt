@@ -48,16 +48,40 @@ class UserController {
      * @param max max results
      * @return users
      */
-    suspend fun listUsers(first: Int?, max: Int?): Pair<Array<UserRepresentation>, Int> {
+    suspend fun listUsers(companyId: UUID?, first: Int?, max: Int?): Pair<Array<UserRepresentation>, Int> {
         val users = keycloakAdminClient.getUsersApi().realmUsersGet(
             realm = keycloakAdminClient.getRealm(),
             first = first,
-            max = max
+            max = max,
+            q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
         )
-        val usersCount = keycloakAdminClient.getUsersApi().realmUsersCountGet(
-            realm = keycloakAdminClient.getRealm()
-        )
+        val usersCount = if(companyId == null ) {
+            keycloakAdminClient.getUsersApi().realmUsersCountGet(
+                realm = keycloakAdminClient.getRealm()
+            )
+        } else {
+            keycloakAdminClient.getUsersApi().realmUsersGet(
+                realm = keycloakAdminClient.getRealm(),
+                q = "$COMPANY_PROP_NAME:$companyId"
+            ).size
+        }
+
         return users to usersCount
+    }
+
+    /**
+     * Lists users
+     *
+     * @param companyId company id
+     * @return array of users
+     */
+    suspend fun listUsers(companyId: UUID?): Array<UserRepresentation> {
+        val users = keycloakAdminClient.getUsersApi().realmUsersGet(
+            realm = keycloakAdminClient.getRealm(),
+            q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
+        )
+
+        return users
     }
 
     /**
@@ -77,7 +101,8 @@ class UserController {
                     lastName = user.lastName,
                     email = user.email,
                     username = user.email,
-                    enabled = true
+                    enabled = true,
+                    attributes = mapOf(COMPANY_PROP_NAME to arrayOf(user.companyId.toString()))
                 )
             )
 
@@ -142,6 +167,11 @@ class UserController {
         val updatedRepresentation = existingUser.copy(
             firstName = updateData.firstName,
             lastName = updateData.lastName,
+            attributes = if (updateData.companyId != null) {
+                mapOf(COMPANY_PROP_NAME to arrayOf(updateData.companyId.toString()))
+            } else {
+                emptyMap()
+            }
         )
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdPut(
@@ -246,5 +276,9 @@ class UserController {
                 )
             }
         }
+    }
+
+    companion object {
+        private const val COMPANY_PROP_NAME = "companyId"
     }
 }

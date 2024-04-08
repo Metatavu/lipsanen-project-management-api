@@ -41,6 +41,10 @@ class KeycloakResource : QuarkusTestResourceLifecycleManager {
         keycloak.stop()
     }
 
+    /*
+    Note: in this keycloak version main page shows Local access required error
+    but the page at http://localhost:{port}/admin/master/console/ works fine
+     */
     companion object {
         var keycloak: KeycloakContainer = KeycloakContainer()
             .withRealmImportFile("kc.json")

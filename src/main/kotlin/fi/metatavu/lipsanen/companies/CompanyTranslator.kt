@@ -1,27 +1,24 @@
-package fi.metatavu.lipsanen.projects
+package fi.metatavu.lipsanen.companies
 
-import fi.metatavu.lipsanen.api.model.Project
-import fi.metatavu.lipsanen.api.model.ProjectStatus
+import fi.metatavu.lipsanen.api.model.Company
 import fi.metatavu.lipsanen.rest.AbstractTranslator
 import fi.metatavu.lipsanen.rest.MetadataTranslator
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 
 /**
- * Translator for projects
+ * Translator for company
  */
 @ApplicationScoped
-class ProjectTranslator : AbstractTranslator<ProjectEntity, Project>() {
+class CompanyTranslator : AbstractTranslator<CompanyEntity, Company>() {
 
     @Inject
     lateinit var metadataTranslator: MetadataTranslator
 
-    override suspend fun translate(entity: ProjectEntity): Project {
-        return Project(
+    override suspend fun translate(entity: CompanyEntity): Company {
+        return Company(
             id = entity.id,
             name = entity.name,
-            tocomanId = entity.tocomanId,
-            status = ProjectStatus.PLANNING,
             metadata = metadataTranslator.translate(entity)
         )
     }

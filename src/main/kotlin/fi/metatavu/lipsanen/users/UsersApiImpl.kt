@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.users
 
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
+import fi.metatavu.lipsanen.companies.CompanyController
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -34,11 +35,14 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var projectController: ProjectController
 
     @Inject
+    lateinit var companyController: CompanyController
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    override fun listUsers(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val ( users, count ) = userController.listUsers(first, max)
+    override fun listUsers(companyId: UUID?, first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val ( users, count ) = userController.listUsers(companyId, first, max)
         createOk(users.map { userTranslator.translate(it) }, count.toLong())
     }.asUni()
 
@@ -51,6 +55,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         val keycloakGroupIds = user.projectIds?.map {
             projectController.findProject(it)?.keycloakGroupId ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
         }
+        user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
         val createdUser = userController.createUser(user, keycloakGroupIds) ?: return@async createInternalServerError("Failed to create user")
         createOk(userTranslator.translate(createdUser))
     }.asUni()
@@ -67,6 +72,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         val keycloakGroupIds = user.projectIds?.map {
             projectController.findProject(it)?.keycloakGroupId ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
         }
+        user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
         val updatedUser = userController.updateUser(
             userId = userId,
             existingUser = existingUser,
