@@ -53,12 +53,9 @@ class CompanyController {
     }
 
     /**
-     * Updates company
+     * Deletes company
      *
      * @param company company
-     * @param foundCompany found company
-     * @param userId user id
-     * @return updated company
      */
     suspend fun delete(foundCompany: CompanyEntity) {
         return companyRepository.deleteSuspending(foundCompany)
