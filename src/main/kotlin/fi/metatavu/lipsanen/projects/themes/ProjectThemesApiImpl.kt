@@ -40,7 +40,7 @@ class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun listProjectThemes(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val project = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
@@ -68,7 +68,7 @@ class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
             createOk(projectThemeTranslator.translate(created))
         }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun findProjectTheme(projectId: UUID, themeId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val (existingTheme, errorResponse) = findTheme(projectId, themeId)

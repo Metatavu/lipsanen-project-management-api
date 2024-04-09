@@ -46,9 +46,6 @@ class ProjectThemeTestIT : AbstractFunctionalTest() {
         val project2Themes = tb.admin.projectTheme.listProjectThemes(project2.id)
         assertNotNull(project2Themes)
         assertEquals(2, project2Themes.size)
-
-        //access rights
-        tb.user.projectTheme.assertListFail(403, project1.id)
     }
 
     @Test
