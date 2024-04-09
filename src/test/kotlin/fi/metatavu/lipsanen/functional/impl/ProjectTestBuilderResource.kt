@@ -37,6 +37,10 @@ class ProjectTestBuilderResource(
         return ProjectsApi(ApiTestSettings.apiBasePath)
     }
 
+    fun create(projectName: String): Project {
+        return create(Project(projectName, status = ProjectStatus.PLANNING))
+    }
+
     fun create(project: Project): Project {
         return addClosable(api.createProject(project))
     }

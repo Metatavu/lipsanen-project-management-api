@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects
 import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
 import fi.metatavu.lipsanen.api.model.Project
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
+import fi.metatavu.lipsanen.projects.themes.ProjectThemeController
 import fi.metatavu.lipsanen.users.UserController
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
@@ -24,6 +25,9 @@ class ProjectController {
 
     @Inject
     lateinit var keycloakAdminClient: KeycloakAdminClient
+
+    @Inject
+    lateinit var projectThemeController: ProjectThemeController
 
     @Inject
     lateinit var logger: Logger
@@ -193,6 +197,9 @@ class ProjectController {
         } catch (e: Exception) {
             logger.error("Failed to delete group ${projectEntity.keycloakGroupId}", e)
             return 1
+        }
+        projectThemeController.list(projectEntity).first.forEach {
+            projectThemeController.delete(it)
         }
         projectRepository.deleteSuspending(projectEntity)
         return null
