@@ -45,6 +45,8 @@ dependencies {
 
     implementation("org.jboss.logging:commons-logging-jboss-logging")
 
+    implementation("io.netty:netty-resolver-dns-native-macos")
+
     configurations.all {
         exclude(group = "commons-logging", module = "commons-logging")
         exclude(group = "org.keycloak", module = "keycloak-admin-client")
@@ -57,6 +59,7 @@ dependencies {
     testImplementation("org.testcontainers:mysql")
     testImplementation("com.github.dasniko:testcontainers-keycloak:$testContainersKeycloakVersion")
     testImplementation("fi.metatavu.jaxrs.testbuilder:jaxrs-functional-test-builder:$jaxrsFunctionalTestBuilderVersion")
+    testImplementation("io.netty:netty-resolver-dns-native-macos")
 
 }
 
