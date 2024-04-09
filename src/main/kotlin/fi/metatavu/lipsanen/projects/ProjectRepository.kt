@@ -1,5 +1,6 @@
 package fi.metatavu.lipsanen.projects
 
+import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -25,6 +26,7 @@ class ProjectRepository : AbstractRepository<ProjectEntity, UUID>() {
         val project = ProjectEntity()
         project.id = UUID.randomUUID()
         project.name = name
+        project.status = ProjectStatus.INITIATION
         project.keycloakGroupId = UUID.fromString(keycloakGroupId)
         project.tocomanId = tocomanId
         project.creatorId = creatorId

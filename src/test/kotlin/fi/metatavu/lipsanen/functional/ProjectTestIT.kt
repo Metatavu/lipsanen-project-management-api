@@ -72,6 +72,7 @@ class ProjectTestIT : AbstractFunctionalTest() {
         assertNotNull(updatedUser1)
         assertEquals(1, updatedUser1.projectIds!!.size)
         assertNotNull(tb.user.project.findProject(project.id))
+        assertEquals(project.status, ProjectStatus.INITIATION)
     }
 
     @Test
@@ -99,10 +100,11 @@ class ProjectTestIT : AbstractFunctionalTest() {
     @Test
     fun updateProject() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project", status = ProjectStatus.PLANNING))
+        val newProjectStatus = ProjectStatus.PLANNING
+        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project", status = newProjectStatus))
         assertNotNull(updatedProject)
         assertEquals("Updated project", updatedProject.name)
-
+        assertEquals(newProjectStatus, updatedProject.status)
         tb.user.project.assertUpdateFail(403, project.id, updatedProject)
     }
 

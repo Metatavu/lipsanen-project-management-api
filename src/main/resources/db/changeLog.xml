@@ -63,4 +63,14 @@
             <column name="modifiedat" type="datetime(6)"/>
         </createTable>
     </changeSet>
+
+    <changeSet id="project_status" author="daniil smirnov">
+        <addColumn tableName="project">
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <!-- Update project status to a default one if no status is present -->
+        <sql>UPDATE project SET status ='INITIATION'</sql>
+    </changeSet>
 </databaseChangeLog>

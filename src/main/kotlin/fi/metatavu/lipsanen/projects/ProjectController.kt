@@ -164,6 +164,7 @@ class ProjectController {
             }
         }
         existingProject.name = project.name
+        existingProject.status = project.status
         existingProject.tocomanId = project.tocomanId
         existingProject.lastModifierId = userId
         return projectRepository.persistSuspending(existingProject)

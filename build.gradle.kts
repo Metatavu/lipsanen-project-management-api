@@ -57,7 +57,6 @@ dependencies {
     testImplementation("org.testcontainers:mysql")
     testImplementation("com.github.dasniko:testcontainers-keycloak:$testContainersKeycloakVersion")
     testImplementation("fi.metatavu.jaxrs.testbuilder:jaxrs-functional-test-builder:$jaxrsFunctionalTestBuilderVersion")
-
 }
 
 group = "fi.metatavu.lipsanen"

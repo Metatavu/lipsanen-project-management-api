@@ -21,7 +21,7 @@ class ProjectTranslator : AbstractTranslator<ProjectEntity, Project>() {
             id = entity.id,
             name = entity.name,
             tocomanId = entity.tocomanId,
-            status = ProjectStatus.PLANNING,
+            status = entity.status,
             metadata = metadataTranslator.translate(entity)
         )
     }
