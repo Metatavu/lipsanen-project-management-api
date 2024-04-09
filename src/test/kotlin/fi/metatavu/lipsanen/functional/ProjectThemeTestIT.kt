@@ -166,7 +166,7 @@ class ProjectThemeTestIT : AbstractFunctionalTest() {
     }
 
     @Test
-    fun updateProject() = createTestBuilder().use { tb ->
+    fun updateProjectTheme() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val projectTheme = tb.admin.projectTheme.create(
             project.id!!,
@@ -188,7 +188,7 @@ class ProjectThemeTestIT : AbstractFunctionalTest() {
     }
 
     @Test
-    fun updateProjectFail() = createTestBuilder().use { tb ->
+    fun updateProjectThemeFail() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create("Project 1")
         val project2 = tb.admin.project.create("Project 2")
 
@@ -225,7 +225,7 @@ class ProjectThemeTestIT : AbstractFunctionalTest() {
     }
 
     @Test
-    fun deleteProject() = createTestBuilder().use { tb ->
+    fun deleteProjectTheme() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val project1Theme = tb.admin.projectTheme.create(
             project.id!!,
@@ -248,11 +248,14 @@ class ProjectThemeTestIT : AbstractFunctionalTest() {
         )
         tb.admin.project.deleteProject(project2.id)
         tb.admin.projectTheme.assertFindFail(404, project2.id, project1Theme2!!.id!!)
-
+        // Remove auto-removed theme from closables
+        tb.admin.projectTheme.removeCloseable {
+            return@removeCloseable it is ProjectTheme && it.id == project1Theme2.id
+        }
     }
 
     @Test
-    fun deleteProjectFail() = createTestBuilder().use { tb ->
+    fun deleteProjectThemeFail() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create("Project 1")
         val project2 = tb.admin.project.create("Project 2")
 
