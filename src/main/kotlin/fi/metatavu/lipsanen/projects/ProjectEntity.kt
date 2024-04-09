@@ -24,7 +24,7 @@ class ProjectEntity : Metadata() {
     lateinit var name: String
 
     @Column(nullable = false)
-    @NotEmpty
+    @Enumerated(EnumType.STRING)
     lateinit var status: ProjectStatus
 
     @Column
