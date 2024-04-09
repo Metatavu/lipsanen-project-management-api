@@ -1,5 +1,6 @@
 package fi.metatavu.lipsanen.projects
 
+import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.persistence.Metadata
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -21,6 +22,10 @@ class ProjectEntity : Metadata() {
     @Column(nullable = false, unique = true)
     @NotEmpty
     lateinit var name: String
+
+    @Column(nullable = false)
+    @NotEmpty
+    lateinit var status: ProjectStatus
 
     @Column
     var tocomanId: Int? = null
