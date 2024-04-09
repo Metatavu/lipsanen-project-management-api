@@ -70,5 +70,11 @@
                 <constraints nullable="false"/>
             </column>
         </addColumn>
+        <!-- Update project status to a default one if no status is present -->
+        <sql>
+            UPDATE project
+            SET status = 'INITIATION'
+            WHERE status IS NULL OR status = '';
+        </sql>
     </changeSet>
 </databaseChangeLog>
