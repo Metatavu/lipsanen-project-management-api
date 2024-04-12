@@ -70,15 +70,22 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     override fun updateUser(userId: UUID, user: User): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val existingUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
         val keycloakGroupIds = user.projectIds?.map {
-            projectController.findProject(it)?.keycloakGroupId ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
-        }
+            val project = projectController.findProject(it)
+            if (project == null) {
+                return@async createNotFound(createNotFoundMessage(PROJECT, it))
+            }
+            project.keycloakGroupId ?: return@async createInternalServerError("KeycloakGroupId is not initialized for project ${project.id}")
+        } ?: emptyList()
+
         user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
+
         val updatedUser = userController.updateUser(
-            userId = userId,
-            existingUser = existingUser,
-            updateData = user,
-            updateGroups = keycloakGroupIds
+                userId = userId,
+                existingUser = existingUser,
+                updateData = user,
+                updateGroups = keycloakGroupIds
         ) ?: return@async createInternalServerError("Failed to update user")
+
         createOk(userTranslator.translate(updatedUser))
     }.asUni()
 
