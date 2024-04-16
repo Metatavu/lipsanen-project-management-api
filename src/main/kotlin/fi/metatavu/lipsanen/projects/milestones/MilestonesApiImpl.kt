@@ -39,12 +39,16 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun listProjectMilestones(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+
         val project = projectController.findProject(projectId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                PROJECT,
-                projectId
-            )
+            createNotFoundMessage(PROJECT, projectId)
         )
+
+        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+            return@async createForbidden(NO_PROJECT_RIGHTS)
+        }
+
         val milestones = milestoneController.list(project)
         createOk(milestoneTranslator.translate(milestones))
     }.asUni()
@@ -55,12 +59,12 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    PROJECT,
-                    projectId
-                )
+                createNotFoundMessage(PROJECT, projectId)
             )
 
+            if (!projectController.hasAccessToProject(project, userId)) {
+                return@async createForbidden(NO_PROJECT_RIGHTS)
+            }
             if (!projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
@@ -80,17 +84,15 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun findProjectMilestone(projectId: UUID, milestoneId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
+            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    PROJECT,
-                    projectId
-                )
+                createNotFoundMessage(PROJECT, projectId)
             )
-            val milestone = milestoneController.find(milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    MILESTONE,
-                    milestoneId
-                )
+            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+                return@async createForbidden(NO_PROJECT_RIGHTS)
+            }
+            val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
+                createNotFoundMessage(MILESTONE, milestoneId)
             )
 
             if (!milestoneController.partOfSameProject(project, milestone)) {
@@ -106,22 +108,19 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    PROJECT,
-                    projectId
-                )
+                createNotFoundMessage(PROJECT, projectId)
             )
+            if (!projectController.hasAccessToProject(project, userId)) {
+                return@async createForbidden(NO_PROJECT_RIGHTS)
+            }
 
             if (!projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
 
 
-            val foundMilestone = milestoneController.find(milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    MILESTONE,
-                    milestoneId
-                )
+            val foundMilestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
+                createNotFoundMessage(MILESTONE, milestoneId)
             )
 
             if (!milestoneController.partOfSameProject(project, foundMilestone)) {
@@ -144,18 +143,16 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
     @WithTransaction
     override fun deleteProjectMilestone(projectId: UUID, milestoneId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
+            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    PROJECT,
-                    projectId
-                )
+                createNotFoundMessage(PROJECT, projectId)
             )
-            val milestone = milestoneController.find(milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(
-                    MILESTONE,
-                    milestoneId
-                )
+            val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
+                createNotFoundMessage(MILESTONE, milestoneId)
             )
+            if (!projectController.hasAccessToProject(project, userId)) {
+                return@async createForbidden(NO_PROJECT_RIGHTS)
+            }
 
             if (!projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)

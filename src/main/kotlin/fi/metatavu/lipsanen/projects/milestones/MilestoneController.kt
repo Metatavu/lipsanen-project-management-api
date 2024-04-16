@@ -59,6 +59,16 @@ class MilestoneController {
     }
 
     /**
+     * Finds a milestone
+     *
+     * @param milestoneId milestone id
+     * @return found milestone or null if not found
+     */
+    suspend fun find(project: ProjectEntity, milestoneId: UUID): MilestoneEntity? {
+        return milestoneRepository.find("project", project, "id", milestoneId).firstResult<MilestoneEntity?>().awaitSuspending()
+    }
+
+    /**
      * Updates a milestone
      *
      * @param existingMilestone existing milestone
