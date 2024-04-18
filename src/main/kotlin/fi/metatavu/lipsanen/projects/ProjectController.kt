@@ -2,7 +2,9 @@ package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
 import fi.metatavu.lipsanen.api.model.Project
+import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
+import fi.metatavu.lipsanen.projects.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.themes.ProjectThemeController
 import fi.metatavu.lipsanen.users.UserController
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -28,6 +30,9 @@ class ProjectController {
 
     @Inject
     lateinit var projectThemeController: ProjectThemeController
+
+    @Inject
+    lateinit var milestoneController: MilestoneController
 
     @Inject
     lateinit var logger: Logger
@@ -202,6 +207,9 @@ class ProjectController {
         projectThemeController.list(projectEntity).first.forEach {
             projectThemeController.delete(it)
         }
+        milestoneController.list(projectEntity).forEach {
+            milestoneController.delete(it)
+        }
         projectRepository.deleteSuspending(projectEntity)
         return null
     }
@@ -215,5 +223,15 @@ class ProjectController {
      */
     suspend fun hasAccessToProject(project: ProjectEntity, userId: UUID): Boolean {
         return userController.listUserGroups(userId).any { it.id == project.keycloakGroupId.toString() }
+    }
+
+    /**
+     * Checks if a project is in planning stage
+     *
+     * @param project project
+     * @return true if project is in planning stage; false otherwise
+     */
+    suspend fun isInPlanningStage(project: ProjectEntity): Boolean {
+        return project.status == ProjectStatus.PLANNING || project.status == ProjectStatus.INITIATION || project.status == ProjectStatus.DESIGN
     }
 }
