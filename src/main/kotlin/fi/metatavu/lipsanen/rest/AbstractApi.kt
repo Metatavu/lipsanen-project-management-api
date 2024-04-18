@@ -229,8 +229,10 @@ abstract class AbstractApi {
         const val USER = "User"
         const val COMPANY = "Company"
         const val PROJECT_THEME = "Project theme"
+        const val MILESTONE = "Milestone"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
+        const val WRONG_PROJECT_STAGE = "Project is not in planning stage"
     }
 
 }
