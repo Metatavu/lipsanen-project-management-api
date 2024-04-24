@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones
 
 import fi.metatavu.lipsanen.api.model.Milestone
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
@@ -65,7 +66,10 @@ class MilestoneController {
      * @return found milestone or null if not found
      */
     suspend fun find(project: ProjectEntity, milestoneId: UUID): MilestoneEntity? {
-        return milestoneRepository.find("project", project, "id", milestoneId).firstResult<MilestoneEntity?>().awaitSuspending()
+        return milestoneRepository.find(
+            "project = :project and id = :id",
+            Parameters.with("project", project).and("id", milestoneId)
+        ).firstResult<MilestoneEntity?>().awaitSuspending()
     }
 
     /**
