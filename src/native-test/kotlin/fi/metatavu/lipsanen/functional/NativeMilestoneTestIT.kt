@@ -14,4 +14,4 @@ import io.quarkus.test.junit.TestProfile
 @QuarkusTestResource.List(
     QuarkusTestResource(KeycloakResource::class),
 )
-class NativeMilestoneTestIT: ProjectTestIT()
+class NativeMilestoneTestIT: MilestoneTestIT()
