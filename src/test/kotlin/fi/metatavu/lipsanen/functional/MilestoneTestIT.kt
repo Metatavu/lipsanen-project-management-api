@@ -49,7 +49,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertNotNull(milestones)
         assertEquals(2, milestones.size)
         assertEquals(milestoneEarlier.id, milestones[0].id)
-        assertEquals(milestoneLater.id, milestones[1])
+        assertEquals(milestoneLater.id, milestones[1].id)
         val milestones2 = tb.admin.milestone.listProjectMilestones(project2.id)
         assertNotNull(milestones2)
         assertEquals(1, milestones2.size)
@@ -132,7 +132,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(project.id!!)
 
-        val foundMilestone = tb.user.milestone.findProjectMilestone(project.id, milestone.id!!)
+        val foundMilestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
         assertNotNull(foundMilestone)
         assertEquals(milestone.id, foundMilestone.id)
     }
