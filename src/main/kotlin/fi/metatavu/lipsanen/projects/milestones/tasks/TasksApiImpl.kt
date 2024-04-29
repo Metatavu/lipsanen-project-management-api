@@ -147,7 +147,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME)
     override fun deleteTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -191,7 +191,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 milestoneId
             )
         )
-        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+        if (!projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return milestone to project to null

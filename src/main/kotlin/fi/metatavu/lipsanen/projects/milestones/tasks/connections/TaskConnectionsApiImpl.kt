@@ -137,7 +137,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME)
     override fun deleteTaskConnection(
         projectId: UUID,
         connectionId: UUID
@@ -172,7 +172,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             )
         )
 
-        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+        if (!projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return project to null
