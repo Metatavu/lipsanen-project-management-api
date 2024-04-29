@@ -172,7 +172,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             )
         )
 
-        if (!projectController.hasAccessToProject(project, userId)) {
+        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return project to null

@@ -121,14 +121,17 @@ class TaskController {
         milestone: MilestoneEntity,
         userId: UUID
     ): TaskEntity {
+        /*
+        if the tasks extends beyond the milestone, the milestone is updated to fit that task
+         */
         if (newTask.startDate != existingTask.startDate || newTask.endDate != existingTask.endDate) {
-            if (newTask.startDate < milestone.startDate || newTask.endDate > milestone.endDate) {
-                if (newTask.startDate < milestone.startDate) {
-                    existingTask.startDate = milestone.startDate
-                }
-                if (newTask.endDate > milestone.endDate) {
-                    existingTask.endDate = milestone.endDate
-                }
+            if (newTask.startDate < milestone.startDate) {
+                milestone.startDate = newTask.startDate
+                existingTask.startDate = newTask.startDate
+            }
+            if (newTask.endDate > milestone.endDate) {
+                milestone.endDate = newTask.endDate
+                existingTask.endDate = newTask.endDate
             }
         }
 
