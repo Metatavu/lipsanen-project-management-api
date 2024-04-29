@@ -230,9 +230,13 @@ abstract class AbstractApi {
         const val COMPANY = "Company"
         const val PROJECT_THEME = "Project theme"
         const val MILESTONE = "Milestone"
+        const val TASK = "Task"
+        const val TASK_CONNECTION = "Task connection"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
         const val WRONG_PROJECT_STAGE = "Project is not in planning stage"
+        const val INVALID_TASK_DATES = "Task start date cannot be after end date"
+        const val INVALID_PROJECT_STATE = "Task updates are only allowed in project planning stage"
     }
 
 }

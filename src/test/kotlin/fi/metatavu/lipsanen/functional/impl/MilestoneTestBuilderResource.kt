@@ -115,11 +115,12 @@ class MilestoneTestBuilderResource(
     fun assertUpdateFail(
         expectedStatus: Int,
         projectId: UUID,
-        projectMilestoneId: UUID
+        projectMilestoneId: UUID,
+        milestone: Milestone? = null
     ) {
         try {
             api.updateProjectMilestone(
-                projectId, projectMilestoneId, Milestone(
+                projectId, projectMilestoneId, milestone ?: Milestone(
                     name = "Updated milestone",
                     startDate = "2022-02-01",
                     endDate = "2022-02-28"

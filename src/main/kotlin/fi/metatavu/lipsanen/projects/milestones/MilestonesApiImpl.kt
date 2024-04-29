@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones
 import fi.metatavu.lipsanen.api.model.Milestone
 import fi.metatavu.lipsanen.api.spec.ProjectMilestonesApi
 import fi.metatavu.lipsanen.projects.ProjectController
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -33,6 +34,9 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
 
     @Inject
     lateinit var projectController: ProjectController
+
+    @Inject
+    lateinit var taskController: TaskController
 
     @Inject
     lateinit var vertx: Vertx
@@ -88,7 +92,7 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
                 createNotFoundMessage(PROJECT, projectId)
             )
-            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) { //if it is just a user without access to project
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
             val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
@@ -131,8 +135,12 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 return@async createBadRequest("End date cannot be before start date")
             }
 
+            val milestoneTasks = taskController.list(foundMilestone)
+            milestoneController.checkForUpdateRestrictions(existingMilestone = foundMilestone, newMilestone = milestone, tasks = milestoneTasks)
+                ?.let { return@async createBadRequest(it)}
             val updatedMilestone = milestoneController.update(
                 existingMilestone = foundMilestone,
+                milestoneTasks = milestoneTasks,
                 updateData = milestone,
                 userId = userId
             )

@@ -97,4 +97,46 @@
             <column name="modifiedat" type="datetime(6)"/>
         </createTable>
     </changeSet>
+    
+    <changeSet id="tasks" author="katja danilova">
+        <createTable tableName="task">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="milestone_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_MILESTONE_ID" referencedColumnNames="id" referencedTableName="milestone"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startdate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enddate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+        
+        <createTable tableName="taskconnection">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="source_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASKCONNECTION_SOURCETASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="target_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASKCONNECTION_TARGETTASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="type" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>
