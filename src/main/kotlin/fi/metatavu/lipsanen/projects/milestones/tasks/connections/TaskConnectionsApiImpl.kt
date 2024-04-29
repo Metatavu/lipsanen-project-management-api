@@ -78,6 +78,9 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectOrError(projectId, userId)
         if (errorResponse != null) return@async errorResponse
+        if (!projectController.isInPlanningStage(project!!)) {
+            return@async createBadRequest(INVALID_PROJECT_STATE)
+        }
 
         val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
@@ -116,6 +119,9 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectOrError(projectId, userId)
         if (errorResponse != null) return@async errorResponse
+        if (!projectController.isInPlanningStage(project!!)) {
+            return@async createBadRequest(INVALID_PROJECT_STATE)
+        }
 
         val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
@@ -145,6 +151,9 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectOrError(projectId, userId)
         if (errorResponse != null) return@async errorResponse
+        if (!projectController.isInPlanningStage(project!!)) {
+            return@async createBadRequest(INVALID_PROJECT_STATE)
+        }
 
         val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)

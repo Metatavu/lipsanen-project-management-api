@@ -153,6 +153,9 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
+            if (!projectController.isInPlanningStage(projectMilestone!!.second)) {
+                return@async createBadRequest(INVALID_PROJECT_STATE)
+            }
 
             val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
                 createNotFoundMessage(TASK, taskId)
