@@ -12,6 +12,7 @@ import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Milestone
 import fi.metatavu.lipsanen.test.client.models.Project
 import fi.metatavu.lipsanen.test.client.models.ProjectStatus
+import fi.metatavu.lipsanen.test.client.models.Task
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -193,10 +194,42 @@ class MilestoneTestIT : AbstractFunctionalTest() {
     @Test
     fun updateMilestoneFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create(Project("Project 1", status = ProjectStatus.INITIATION))
-        val milestone = tb.admin.milestone.create(project.id!!)
+        val milestone = tb.admin.milestone.create(project.id!!,
+            Milestone(
+                name = "Milestone",
+                startDate = "2022-01-01",
+                endDate = "2022-01-31"
+            )
+        )
+
+        tb.admin.task.create(
+            project.id, milestone.id!!, Task(
+                name = "Task 1",
+                startDate = "2022-01-02",
+                endDate = "2022-01-10",
+                status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
+                milestoneId = milestone.id
+            )
+        )
+        tb.admin.task.create(
+            project.id, milestone.id!!, Task(
+                name = "Task 1",
+                startDate = "2022-01-05",
+                endDate = "2022-01-20",
+                status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
+                milestoneId = milestone.id
+            )
+        )
+
+        tb.admin.milestone.assertUpdateFail(400, project.id, milestone.id, milestone.copy(
+            startDate = "2022-01-11"    //this new start date is after the end date of the first task
+        ))
+        tb.admin.milestone.assertUpdateFail(400, project.id, milestone.id, milestone.copy(
+            endDate = "2022-01-04"      //this new end date is before the start date of the second task
+        ))
 
         // access rights
-        tb.user.milestone.assertUpdateFail(403, project.id, milestone.id!!)
+        tb.user.milestone.assertUpdateFail(403, project.id, milestone.id)
 
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}/milestones/{milestoneId}",
@@ -204,7 +237,6 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
             body = jacksonObjectMapper().writeValueAsString(milestone)
-
         )
             .path(
                 InvalidValueTestScenarioPath(
