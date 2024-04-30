@@ -147,7 +147,7 @@ class MilestoneController {
     }
 
     /**
-     * Deletes a milestone
+     * Deletes a milestone and dependent tasks
      *
      * @param milestone milestone
      */
