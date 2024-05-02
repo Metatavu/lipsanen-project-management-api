@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
 import java.util.*
 
@@ -15,6 +16,9 @@ import java.util.*
  */
 @ApplicationScoped
 class UserController {
+
+    @ConfigProperty(name = "lipsanen.keycloak.admin.user")
+    lateinit var keycloakAdminUser: String
 
     @Inject
     lateinit var keycloakAdminClient: KeycloakAdminClient
@@ -42,20 +46,21 @@ class UserController {
     }
 
     /**
-     * Lists users
+     * Lists users (except for admin user)
      *
      * @param first first result
      * @param max max results
      * @return users
      */
     suspend fun listUsers(companyId: UUID?, first: Int?, max: Int?): Pair<Array<UserRepresentation>, Int> {
-        val users = keycloakAdminClient.getUsersApi().realmUsersGet(
+        var users = keycloakAdminClient.getUsersApi().realmUsersGet(
             realm = keycloakAdminClient.getRealm(),
-            first = first,
-            max = max,
+            first = first ?: 0,
+            max = max?.plus(1)  ?: 10,  // +1 to account for possible admin user that has to be removed
             q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
         )
-        val usersCount = if(companyId == null ) {
+
+        var usersCount = if(companyId == null ) {
             keycloakAdminClient.getUsersApi().realmUsersCountGet(
                 realm = keycloakAdminClient.getRealm()
             )
@@ -64,6 +69,16 @@ class UserController {
                 realm = keycloakAdminClient.getRealm(),
                 q = "$COMPANY_PROP_NAME:$companyId"
             ).size
+        }
+
+        // Removing admin user from the list
+        if (users.find { it.username == keycloakAdminUser } != null) {
+            users = users.filter { it.username != keycloakAdminUser }.toTypedArray()
+            usersCount -= 1
+        } else {
+            if (max != null && users.size > max) {
+                users = users.slice(0 until if (max >= users.size) users.size-1 else max).toTypedArray()
+            }
         }
 
         return users to usersCount

@@ -72,13 +72,19 @@ class UserTestIT: AbstractFunctionalTest() {
     @Test
     fun testListUsers() = createTestBuilder().use {
         val users = it.admin.user.listUsers()
-        assertEquals(4, users.size)
+        assertEquals(3, users.size)
 
         val pagedUsers = it.admin.user.listUsers(first = 0, max = 2)
         assertEquals(2, pagedUsers.size)
 
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
         assertEquals(2, pagedUsers2.size)
+
+        val pagedUsers3 = it.admin.user.listUsers(first = 2, max = 3)
+        assertEquals(2, pagedUsers3.size)
+
+        val pagedUsers4 = it.admin.user.listUsers(first = 3, max = 2)
+        assertEquals(1, pagedUsers4.size)
 
         // Filter by company
         val company = it.admin.company.create()
