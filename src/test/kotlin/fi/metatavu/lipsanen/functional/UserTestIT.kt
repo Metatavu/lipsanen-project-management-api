@@ -48,7 +48,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertNull(createdUser.lastLoggedIn)
 
         val foundUser = it.admin.user.findUser(createdUser.id!!, true)
-        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.USER, foundUser.roles[0])
+        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.USER, foundUser.roles!![0])
 
         val smptTestPort = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-port", Int::class.java)
         val smtpTestHost = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-host", String::class.java)
@@ -78,7 +78,7 @@ class UserTestIT: AbstractFunctionalTest() {
         val users = it.admin.user.listUsers(null, null, null, true)
         assertEquals(3, users.size)
         users.forEach { user ->
-            assertTrue(fi.metatavu.lipsanen.test.client.models.UserRole.USER == user.roles[0] || fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN == user.roles[0])
+            assertTrue(fi.metatavu.lipsanen.test.client.models.UserRole.USER == user.roles!![0] || fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN == user.roles!![0])
         }
 
         val pagedUsers = it.admin.user.listUsers(first = 0, max = 2)
@@ -111,7 +111,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertNotNull(foundUser.lastLoggedIn)
 
         val foundUserWithRole = it.admin.user.findUser(adminId, true)
-        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN, foundUserWithRole.roles[0])
+        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN, foundUserWithRole.roles!![0])
     }
 
     @Test
