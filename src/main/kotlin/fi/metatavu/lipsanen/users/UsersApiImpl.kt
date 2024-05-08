@@ -32,9 +32,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var userTranslator: UserTranslator
 
     @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
     lateinit var companyController: CompanyController
 
     @Inject

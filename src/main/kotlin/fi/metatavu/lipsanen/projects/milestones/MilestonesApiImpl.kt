@@ -27,13 +27,7 @@ import java.util.*
 class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
 
     @Inject
-    lateinit var milestoneController: MilestoneController
-
-    @Inject
     lateinit var milestoneTranslator: MilestoneTranslator
-
-    @Inject
-    lateinit var projectController: ProjectController
 
     @Inject
     lateinit var taskController: TaskController
