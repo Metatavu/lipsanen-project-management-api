@@ -127,13 +127,13 @@ class TaskController {
         if (newTask.startDate != existingTask.startDate || newTask.endDate != existingTask.endDate) {
             if (newTask.startDate < milestone.startDate) {
                 milestone.startDate = newTask.startDate
-                existingTask.startDate = newTask.startDate
             }
             if (newTask.endDate > milestone.endDate) {
                 milestone.endDate = newTask.endDate
-                existingTask.endDate = newTask.endDate
             }
         }
+        existingTask.startDate = newTask.startDate
+        existingTask.endDate = newTask.endDate
 
         existingTask.status = newTask.status    // verification if updates are required is done in the api impl
         existingTask.name = newTask.name
