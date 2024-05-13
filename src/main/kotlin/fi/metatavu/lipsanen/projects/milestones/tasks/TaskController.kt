@@ -124,14 +124,13 @@ class TaskController {
         /*
         if the tasks extends beyond the milestone, the milestone is updated to fit that task
          */
-        if (newTask.startDate != existingTask.startDate || newTask.endDate != existingTask.endDate) {
-            if (newTask.startDate < milestone.startDate) {
-                milestone.startDate = newTask.startDate
-            }
-            if (newTask.endDate > milestone.endDate) {
-                milestone.endDate = newTask.endDate
-            }
+        if (newTask.startDate < milestone.startDate) {
+            milestone.startDate = newTask.startDate
         }
+        if (newTask.endDate > milestone.endDate) {
+            milestone.endDate = newTask.endDate
+        }
+
         existingTask.startDate = newTask.startDate
         existingTask.endDate = newTask.endDate
 
