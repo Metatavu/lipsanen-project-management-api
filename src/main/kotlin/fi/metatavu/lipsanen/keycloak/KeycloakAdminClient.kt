@@ -111,6 +111,34 @@ class KeycloakAdminClient : KeycloakClient() {
     }
 
     /**
+     * Gets role mapper api
+     *
+     * @return Api with valid access token
+     */
+    suspend fun getRoleMapperApi(): RoleMapperApi {
+        val baseUrl = getBaseUrl()
+        return RoleMapperApi(
+            basePath = "${baseUrl}/admin/realms",
+            accessToken = getAccessToken(),
+            vertx = vertxCore
+        )
+    }
+
+    /**
+     * Gets RoleContainerApi
+     *
+     * @return Api with valid access token
+     */
+    suspend fun getRoleContainerApi(): RoleContainerApi {
+        val baseUrl = getBaseUrl()
+        return RoleContainerApi(
+            basePath = "${baseUrl}/admin/realms",
+            accessToken = getAccessToken(),
+            vertx = vertxCore
+        )
+    }
+
+    /**
      * Gets users api with valid access token
      *
      * @return Api with valid access token
