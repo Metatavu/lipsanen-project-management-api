@@ -237,21 +237,23 @@ class TaskTestIT : AbstractFunctionalTest() {
             )
         )
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val updatedTask = tb.admin.task.update(
-            projectId = project.id, milestoneId = milestone.id!!, taskId = task.id!!,
-            task.copy(
-                name = "Task2",
-                startDate = "2022-01-03",
-                endDate = "2022-01-10"
-            )
+        val taskUpdateData = task.copy(
+            name = "Task2",
+            startDate = "2022-01-03",
+            endDate = "2022-02-01"
         )
+        val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)
 
         assertNotNull(updatedTask)
         assertEquals(task.id, updatedTask.id)
+        assertEquals("Task2", updatedTask.name)
+        assertEquals(taskUpdateData.startDate, updatedTask.startDate)
+        assertEquals(taskUpdateData.endDate, updatedTask.endDate)
 
-        val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id!!)
-        assertEquals(updatedTask.startDate, foundMilestone.startDate)
-        assertEquals(updatedTask.endDate, foundMilestone.endDate)
+        // verify that the end of the milestone extended to the new task length
+        val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
+        assertEquals(milestone.startDate, foundMilestone.startDate)
+        assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
     }
 
     @Test
