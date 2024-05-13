@@ -42,10 +42,11 @@ class UserTestBuilderResource (
      * Finds a user
      *
      * @param userId user id
+     * @param includeRoles
      * @return found user
      */
-    fun findUser(userId: UUID): User {
-        return api.findUser(userId)
+    fun findUser(userId: UUID, includeRoles: Boolean? = null): User {
+        return api.findUser(userId, includeRoles)
     }
 
     /**
@@ -53,14 +54,16 @@ class UserTestBuilderResource (
      *
      * @param first first
      * @param max max
+     * @param includeRoles
      * @return list of users
      */
     fun listUsers(
         companyId: UUID? = null,
         first: Int? = null,
-        max: Int? = null
+        max: Int? = null,
+        includeRoles: Boolean? = null
     ): Array<User> {
-        return api.listUsers(companyId = companyId, first = first, max = max)
+        return api.listUsers(companyId = companyId, first = first, max = max, includeRoles = includeRoles)
     }
 
     /**

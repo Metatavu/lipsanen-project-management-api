@@ -2,9 +2,11 @@ package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.EventRepresentation
 import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
+import fi.metatavu.keycloak.adminclient.models.RoleRepresentation
 import fi.metatavu.keycloak.adminclient.models.UserRepresentation
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
+import fi.metatavu.lipsanen.rest.UserRole
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -25,6 +27,19 @@ class UserController {
 
     @Inject
     lateinit var logger: Logger
+
+    /**
+     * Lists user roles
+     *
+     * @param userId user id
+     * @return user roles
+     */
+    suspend fun getUserRealmRoles(userId: UUID): Array<RoleRepresentation> {
+        return keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsGet(
+            id = userId.toString(),
+            realm = keycloakAdminClient.getRealm(),
+        ).realmMappings ?: emptyArray()
+    }
 
     /**
      * Lists user groups
@@ -127,6 +142,18 @@ class UserController {
             ).firstOrNull() ?: return null
 
             assignUserToGroups(foundUser, emptyArray(), groupIds)
+
+            // Assign user to USER role
+            val userRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
+                roleName = UserRole.USER.NAME,
+                realm = keycloakAdminClient.getRealm()
+            )
+            keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmPost(
+                id = foundUser.id.toString(),
+                realm = keycloakAdminClient.getRealm(),
+                roleRepresentation = arrayOf(userRole)
+            )
+
             foundUser
         } catch (e: Exception) {
             logger.error("Failed to create user:", e)

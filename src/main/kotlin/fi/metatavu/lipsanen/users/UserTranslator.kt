@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.UserRepresentation
 import fi.metatavu.lipsanen.api.model.User
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractTranslator
 import jakarta.enterprise.context.ApplicationScoped
@@ -35,7 +36,30 @@ class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
             lastName = entity.lastName ?: "",
             companyId = if (company != null && company != "null") UUID.fromString(company) else null,
             lastLoggedIn = if (lastEvent?.time == null) null else OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastEvent.time), ZoneOffset.UTC),
-            projectIds = projects.first.map { it.id }
+            projectIds = projects.first.map { it.id },
+            roles = emptyList()
         )
+    }
+
+    /**
+     * Translates UserRepresentation to User based on the includeRoles parameter
+     *
+     * @param entity UserRepresentation
+     * @param includeRoles include roles
+     * @return translated User
+     */
+    suspend fun translate(entity: UserRepresentation, includeRoles: Boolean?): User {
+        return if (includeRoles == true) {
+            val roles = userController.getUserRealmRoles(UUID.fromString(entity.id)).mapNotNull {
+                when (it.name) {
+                    "admin" -> UserRole.ADMIN
+                    "user" -> UserRole.USER
+                    else -> null
+                }
+            }
+            translate(entity).copy(roles = roles)
+        } else {
+            translate(entity)
+        }
     }
 }
