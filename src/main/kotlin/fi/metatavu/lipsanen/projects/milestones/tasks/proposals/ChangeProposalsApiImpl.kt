@@ -29,7 +29,7 @@ import java.util.*
 class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
     @Inject
-    lateinit var proposalController: ProposalController
+    lateinit var proposalController: ChangeProposalController
 
     @Inject
     lateinit var proposalTranslator: ProposalTranslator
@@ -48,17 +48,13 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         first: Int?,
         max: Int?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        println("listChangeProposals")
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
 
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                TASK,
-                taskId
-            )
+            createNotFoundMessage(TASK, taskId)
         )
 
         val (changeProposals, count) = proposalController.listChangeProposals(task, first, max)
@@ -77,18 +73,14 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         if (changeProposal.taskProposal.taskId != taskId) {
             return@async createBadRequest("Task id in task proposal does not match the task id in the path")
         }
-        
+
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                TASK,
-                taskId
-            )
+            createNotFoundMessage(TASK, taskId)
         )
         val createdProposal = proposalController.create(task, changeProposal, userId)
-        println("Created proposal: ${createdProposal.id}")
         createOk(proposalTranslator.translate(createdProposal))
     }.asUni()
 
@@ -105,16 +97,10 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         if (errorResponse != null) return@async errorResponse
 
         val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                TASK,
-                taskId
-            )
+            createNotFoundMessage(TASK, taskId)
         )
         val proposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                CHANGE_PROPOSAL,
-                changeProposalId
-            )
+            createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
 
         createOk(proposalTranslator.translate(proposal))
@@ -130,15 +116,15 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         changeProposal: ChangeProposal
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        if (changeProposal.taskProposal.taskId != taskId) {
+            return@async createBadRequest("Task id in task proposal does not match the task id in the path")
+        }
 
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                TASK,
-                taskId
-            )
+            createNotFoundMessage(TASK, taskId)
         )
         val foundProposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
             createNotFoundMessage(
@@ -167,16 +153,10 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         if (errorResponse != null) return@async errorResponse
 
         val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                TASK,
-                taskId
-            )
+            createNotFoundMessage(TASK, taskId)
         )
         val proposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                CHANGE_PROPOSAL,
-                changeProposalId
-            )
+            createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         hasProposalEditingRights(userId, proposal)?.let { return@async it }
 
@@ -185,9 +165,16 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         createNoContent()
     }.asUni()
 
+    /**
+     * Checks if the user has rights to edit the proposal (assuming user already has access to the project)
+     *
+     * @param userId user id
+     * @param proposal proposal
+     * @return response if the user does not have rights, null otherwise
+     */
     private fun hasProposalEditingRights(
         userId: UUID,
-        proposal: ProposalEntity
+        proposal: ChangeProposalEntity
     ): Response? {
         if (!isAdmin() && proposal.creatorId != userId) {
             return createForbidden(FORBIDDEN)

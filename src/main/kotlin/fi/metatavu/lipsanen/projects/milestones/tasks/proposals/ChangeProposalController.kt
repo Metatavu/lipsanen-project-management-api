@@ -9,17 +9,28 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
 
+/**
+ * Controller for proposals
+ */
 @ApplicationScoped
-class ProposalController {
+class ChangeProposalController {
 
     @Inject
-    lateinit var proposalRepository: ProposalRepository
+    lateinit var proposalRepository: ChangeProposalRepository
 
+    /**
+     * Creates a new proposal
+     *
+     * @param task task
+     * @param proposal proposal
+     * @param creatorId creator id
+     * @return created proposal
+     */
     suspend fun create(
         task: TaskEntity,
         proposal: ChangeProposal,
         creatorId: UUID
-    ): ProposalEntity {
+    ): ChangeProposalEntity {
         return proposalRepository.create(
             id = UUID.randomUUID(),
             task = task,
@@ -33,20 +44,23 @@ class ProposalController {
         )
     }
 
-    suspend fun isCreator(proposal: ProposalEntity, userId: UUID): Boolean {
-        return proposal.creatorId == userId
-    }
-
-    //todo sorting
-    // todo check if query makes sense
+    //todo verify ordering
+    /**
+     * Lists change proposals
+     *
+     * @param task task
+     * @param first first result
+     * @param max max results
+     * @return list of change proposals
+     */
     suspend fun listChangeProposals(
         task: TaskEntity,
         first: Int?,
         max: Int?
-    ): Pair<List<ProposalEntity>, Long> {
+    ): Pair<List<ChangeProposalEntity>, Long> {
         return proposalRepository.applyFirstMaxToQuery(
             query = proposalRepository.find(
-                "task=:task",
+                "task= :task",
                 Sort.ascending("createdAt"),
                 Parameters.with("task", task)
             ),
@@ -56,14 +70,29 @@ class ProposalController {
 
     }
 
-    suspend fun find(task: TaskEntity, changeProposalId: UUID): ProposalEntity? {
+    /**
+     * Finds a proposal for task
+     *
+     * @param task task
+     * @param changeProposalId change proposal id
+     * @return found proposal or null if not found
+     */
+    suspend fun find(task: TaskEntity, changeProposalId: UUID): ChangeProposalEntity? {
         return proposalRepository.find(
             "task=:task and id=:id",
             Parameters.with("task", task).and("id", changeProposalId)
-        ).firstResult<ProposalEntity>().awaitSuspending()
+        ).firstResult<ChangeProposalEntity>().awaitSuspending()
     }
 
-    suspend fun update(foundProposal: ProposalEntity, changeProposal: ChangeProposal, userId: UUID): ProposalEntity {
+    /**
+     * Updates a proposal
+     *
+     * @param foundProposal found proposal
+     * @param changeProposal change proposal
+     * @param userId user id
+     * @return updated proposal
+     */
+    suspend fun update(foundProposal: ChangeProposalEntity, changeProposal: ChangeProposal, userId: UUID): ChangeProposalEntity {
         foundProposal.reason = changeProposal.reason
         foundProposal.comment = changeProposal.comment
         foundProposal.startDate = changeProposal.taskProposal.startDate
@@ -72,7 +101,12 @@ class ProposalController {
         return proposalRepository.persistSuspending(foundProposal)
     }
 
-    suspend fun delete(proposal: ProposalEntity) {
+    /**
+     * Deletes a proposal
+     *
+     * @param proposal proposal
+     */
+    suspend fun delete(proposal: ChangeProposalEntity) {
         proposalRepository.deleteSuspending(proposal)
     }
 }

@@ -141,7 +141,7 @@
     </changeSet>
 
     <changeSet id="proposals" author="katja.danilova">
-        <createTable tableName="proposal">
+        <createTable tableName="changeproposal">
             <column name="id" type="binary(16)">
                 <constraints primaryKey="true" nullable="false"/>
             </column>

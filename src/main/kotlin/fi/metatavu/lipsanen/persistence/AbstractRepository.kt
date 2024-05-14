@@ -116,7 +116,6 @@ abstract class AbstractRepository<Entity, Id> : PanacheRepositoryBase<Entity, Id
         return if (firstIndex != null || maxResults != null) {
             val first = firstIndex ?: 0
             val max = maxResults ?: 10
-            println("range from index $first to ${max + first - 1}")
             Pair(query.range<Entity>(first,  max + first - 1).list<Entity>().awaitSuspending(), count)
         } else
             Pair(query.list<Entity>().awaitSuspending(), count)

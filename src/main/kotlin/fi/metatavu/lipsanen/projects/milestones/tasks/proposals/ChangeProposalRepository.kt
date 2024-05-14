@@ -7,8 +7,11 @@ import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
 import java.util.UUID
 
+/**
+ * Repository for proposals
+ */
 @ApplicationScoped
-class ProposalRepository: AbstractRepository<ProposalEntity, UUID>() {
+class ChangeProposalRepository: AbstractRepository<ChangeProposalEntity, UUID>() {
 
     suspend fun create(
         id: UUID,
@@ -20,8 +23,8 @@ class ProposalRepository: AbstractRepository<ProposalEntity, UUID>() {
         endDate: LocalDate?,
         creatorId: UUID,
         lastModifierId: UUID
-    ): ProposalEntity {
-        val proposal = ProposalEntity()
+    ): ChangeProposalEntity {
+        val proposal = ChangeProposalEntity()
         proposal.id = id
         proposal.task = task
         proposal.reason = reason

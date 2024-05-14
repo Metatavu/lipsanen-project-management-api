@@ -7,9 +7,12 @@ import jakarta.persistence.*
 import java.time.LocalDate
 import java.util.*
 
+/**
+ * Entity for change proposals
+ */
 @Entity
-@Table(name = "proposal")
-class ProposalEntity : Metadata() {
+@Table(name = "changeproposal")
+class ChangeProposalEntity : Metadata() {
 
     @Id
     lateinit var id: UUID

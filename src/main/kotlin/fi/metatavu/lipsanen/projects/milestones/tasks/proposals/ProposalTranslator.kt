@@ -11,12 +11,12 @@ import jakarta.inject.Inject
  * Translator for proposals
  */
 @ApplicationScoped
-class ProposalTranslator : AbstractTranslator<ProposalEntity, ChangeProposal>() {
+class ProposalTranslator : AbstractTranslator<ChangeProposalEntity, ChangeProposal>() {
 
     @Inject
     lateinit var metadataTranslator: MetadataTranslator
 
-    override suspend fun translate(entity: ProposalEntity): ChangeProposal {
+    override suspend fun translate(entity: ChangeProposalEntity): ChangeProposal {
         return ChangeProposal(
             id = entity.id,
             taskProposal = TaskProposal(
