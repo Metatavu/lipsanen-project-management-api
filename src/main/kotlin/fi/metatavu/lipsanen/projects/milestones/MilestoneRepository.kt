@@ -32,8 +32,8 @@ class MilestoneRepository : AbstractRepository<MilestoneEntity, UUID>() {
         name: String,
         startDate: LocalDate,
         endDate: LocalDate,
-        originalStartDate: LocalDate?,
-        originalEndDate: LocalDate?,
+        originalStartDate: LocalDate,
+        originalEndDate: LocalDate,
         creatorId: UUID,
         lastModifierId: UUID
     ): MilestoneEntity {
@@ -43,10 +43,8 @@ class MilestoneRepository : AbstractRepository<MilestoneEntity, UUID>() {
         milestone.name = name
         milestone.startDate = startDate
         milestone.endDate = endDate
-        // If originalStartDate is null, use startDate
-        milestone.originalStartDate = originalStartDate ?: startDate
-        // If originalEndDate is null, use endDate
-        milestone.originalEndDate = originalEndDate ?: endDate
+        milestone.originalStartDate = originalStartDate
+        milestone.originalEndDate = originalEndDate
         milestone.creatorId = creatorId
         milestone.lastModifierId = lastModifierId
         return persistSuspending(milestone)

@@ -51,8 +51,8 @@ class MilestoneController {
             name = milestone.name,
             startDate = milestone.startDate,
             endDate = milestone.endDate,
-            originalStartDate = milestone.originalStartDate,
-            originalEndDate = milestone.originalEndDate,
+            originalStartDate = milestone.startDate,
+            originalEndDate = milestone.endDate,
             creatorId = userId,
             lastModifierId = userId
         )
@@ -93,10 +93,11 @@ class MilestoneController {
         if (existingMilestone.startDate != updateData.startDate || existingMilestone.endDate != updateData.endDate) {
             updateTaskEstimations(existingMilestone, milestoneTasks, updateData.startDate, updateData.endDate, userId)
         }
+
         existingMilestone.startDate = updateData.startDate
         existingMilestone.endDate = updateData.endDate
-        existingMilestone.originalStartDate = updateData.originalStartDate ?: updateData.startDate
-        existingMilestone.originalEndDate = updateData.originalEndDate ?: updateData.endDate
+        existingMilestone.originalStartDate = updateData.startDate
+        existingMilestone.originalEndDate = updateData.endDate
         existingMilestone.name = updateData.name
         existingMilestone.lastModifierId = userId
         return milestoneRepository.persistSuspending(existingMilestone)
