@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
+import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -20,6 +21,12 @@ class TaskController {
 
     @Inject
     lateinit var taskEntityRepository: TaskEntityRepository
+
+    @Inject
+    lateinit var taskConnectionController: TaskConnectionController
+
+    @Inject
+    lateinit var proposalController: ChangeProposalController
 
     /**
      * Lists tasks
@@ -141,11 +148,17 @@ class TaskController {
     }
 
     /**
-     * Deletes a task
+     * Deletes a task and related entities
      *
      * @param foundTask task to delete
      */
     suspend fun delete(foundTask: TaskEntity) {
+        taskConnectionController.list(foundTask).forEach {
+            taskConnectionController.delete(it)
+        }
+        proposalController.list(foundTask).forEach {
+            proposalController.delete(it)
+        }
         taskEntityRepository.deleteSuspending(foundTask)
     }
 

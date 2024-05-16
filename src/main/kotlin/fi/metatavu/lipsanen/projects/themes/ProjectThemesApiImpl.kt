@@ -29,9 +29,6 @@ import java.util.*
 class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
 
     @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
     lateinit var projectThemeController: ProjectThemeController
 
     @Inject

@@ -32,9 +32,6 @@ import java.util.*
 class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
 
     @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
     lateinit var taskConnectionTranslator: TaskConnectionTranslator
 
     @Inject
@@ -53,7 +50,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         connectionRole: TaskConnectionRole?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, userId)//todo move this
         if (errorResponse != null) return@async errorResponse
 
         val task = if (taskId != null) {

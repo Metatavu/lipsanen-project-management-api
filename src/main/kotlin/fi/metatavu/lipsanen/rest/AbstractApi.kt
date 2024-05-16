@@ -1,6 +1,10 @@
 package fi.metatavu.lipsanen.rest
 
 import fi.metatavu.lipsanen.api.model.Error
+import fi.metatavu.lipsanen.projects.ProjectController
+import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.projects.milestones.MilestoneController
+import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import io.quarkus.security.identity.SecurityIdentity
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
@@ -217,6 +221,42 @@ abstract class AbstractApi {
         return "$entity with id $id not found"
     }
 
+    @Inject
+    lateinit var projectController: ProjectController
+
+    @Inject
+    lateinit var milestoneController: MilestoneController
+
+    /**
+     * Helper method for getting project or milestone or an error response
+     *
+     * @param projectId project id
+     * @param milestoneId milestone id
+     * @param userId user id
+     * @return either data or response with error
+     */
+    open suspend fun getProjectMilestoneAccessRights(
+        projectId: UUID,
+        milestoneId: UUID,
+        userId: UUID
+    ): Pair<Pair<MilestoneEntity, ProjectEntity>?, Response?> {
+        val project = projectController.findProject(projectId) ?: return null to createNotFound(
+            createNotFoundMessage(
+                PROJECT,
+                projectId
+            )
+        )
+        val milestone = milestoneController.find(project, milestoneId) ?: return null to createNotFound(
+            createNotFoundMessage(
+                MILESTONE,
+                milestoneId
+            )
+        )
+        if (!projectController.hasAccessToProject(project, userId)) {
+            return null to createForbidden(NO_PROJECT_RIGHTS)
+        }
+        return milestone to project to null
+    }
 
     companion object {
         const val NOT_FOUND_MESSAGE = "Not found"
@@ -232,6 +272,7 @@ abstract class AbstractApi {
         const val MILESTONE = "Milestone"
         const val TASK = "Task"
         const val TASK_CONNECTION = "Task connection"
+        const val CHANGE_PROPOSAL = "Change proposal"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
         const val WRONG_PROJECT_STAGE = "Project is not in planning stage"

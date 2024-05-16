@@ -38,12 +38,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     lateinit var taskTranslator: TaskTranslator
 
     @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
-    lateinit var milestoneController: MilestoneController
-
-    @Inject
     lateinit var taskConnectionRepository: TaskConnectionRepository
 
 
@@ -55,7 +49,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
 
-            val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
+            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
 
             val (tasks, count) = taskController.list(milestone = projectMilestone!!.first, first = first, max = max)
@@ -67,7 +61,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     override fun createTask(projectId: UUID, milestoneId: UUID, task: Task): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
+            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
             if (task.milestoneId != milestoneId) {
                 return@async createBadRequest("Milestone id in task does not match the milestone id in the path")
@@ -94,7 +88,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     override fun findTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
+            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
 
             val task = taskController.find(
@@ -110,7 +104,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     override fun updateTask(projectId: UUID, milestoneId: UUID, taskId: UUID, task: Task): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
+            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
             if (task.milestoneId != milestoneId) {
                 return@async createBadRequest("Milestone id in task does not match the milestone id in the path")
@@ -151,13 +145,13 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     override fun deleteTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val (projectMilestone, errorResponse) = getProjectMilestone(projectId, milestoneId, userId)
+            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
             if (!projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
+            val foundTask = taskController.find(projectMilestone.first, taskId) ?: return@async createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 
@@ -169,36 +163,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             createNoContent()
         }.asUni()
 
-    /**
-     * Helper method for getting project or milestone or an error response
-     *
-     * @param projectId project id
-     * @param milestoneId milestone id
-     * @param userId user id
-     * @return either data or response with error
-     */
-    suspend fun getProjectMilestone(
-        projectId: UUID,
-        milestoneId: UUID,
-        userId: UUID
-    ): Pair<Pair<MilestoneEntity, ProjectEntity>?, Response?> {
-        val project = projectController.findProject(projectId) ?: return null to createNotFound(
-            createNotFoundMessage(
-                PROJECT,
-                projectId
-            )
-        )
-        val milestone = milestoneController.find(project, milestoneId) ?: return null to createNotFound(
-            createNotFoundMessage(
-                MILESTONE,
-                milestoneId
-            )
-        )
-        if (!projectController.hasAccessToProject(project, userId)) {
-            return null to createForbidden(NO_PROJECT_RIGHTS)
-        }
-        return milestone to project to null
-    }
+
 
     /**
      * Helper method for checking if task can be updated

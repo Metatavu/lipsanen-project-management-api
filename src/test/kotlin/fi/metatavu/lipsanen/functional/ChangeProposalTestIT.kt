@@ -1,0 +1,460 @@
+package fi.metatavu.lipsanen.functional
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import fi.metatavu.invalid.InvalidValueTestScenarioBody
+import fi.metatavu.invalid.InvalidValueTestScenarioBuilder
+import fi.metatavu.invalid.InvalidValueTestScenarioPath
+import fi.metatavu.invalid.InvalidValues
+import fi.metatavu.invalid.providers.SimpleInvalidValueProvider
+import fi.metatavu.lipsanen.functional.resources.KeycloakResource
+import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
+import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
+import fi.metatavu.lipsanen.test.client.models.ChangeProposal
+import fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus
+import io.quarkus.test.common.QuarkusTestResource
+import io.quarkus.test.junit.QuarkusTest
+import io.quarkus.test.junit.TestProfile
+import io.restassured.http.Method
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Test
+import java.time.LocalDate
+import java.util.*
+
+/**
+ * Native tests for ChangeProposals API
+ */
+@QuarkusTest
+@TestProfile(DefaultTestProfile::class)
+@QuarkusTestResource.List(
+    QuarkusTestResource(KeycloakResource::class),
+)
+class ChangeProposalTestIT : AbstractFunctionalTest() {
+
+    @Test
+    fun testListChangeProposals() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone1 = tb.admin.milestone.create(projectId = project.id!!)
+        val milestone2 = tb.admin.milestone.create(projectId = project.id)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone1.id!!)
+        val task2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone2.id!!)
+        val task3 = tb.admin.task.create(projectId = project.id, milestoneId = milestone2.id!!)
+
+        val proposal1 =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone1.id!!, taskId = task1.id!!)
+        val proposal2 =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone2.id, taskId = task2.id!!)
+        val proposal3 =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone2.id, taskId = task3.id!!)
+
+        val proposals = tb.admin.changeProposal.listChangeProposals(
+            projectId = project.id,
+            milestoneId = milestone1.id,
+            taskId = task1.id
+        )
+        assertEquals(1, proposals.size)
+
+        val proposals2 = tb.admin.changeProposal.listChangeProposals(
+            projectId = project.id,
+            milestoneId = milestone2.id,
+        )
+        assertEquals(2, proposals2.size)
+        assertEquals(proposal2!!.id, proposals2[0].id)
+        assertEquals(proposal3!!.id, proposals2[1].id)
+
+        val paging0 = tb.admin.changeProposal.listChangeProposals(
+            projectId = project.id,
+            milestoneId = milestone2.id,
+            first = 0
+        )
+        assertEquals(2, paging0.size)
+        val paging1 = tb.admin.changeProposal.listChangeProposals(
+            projectId = project.id,
+            milestoneId = milestone2.id,
+            first = 1
+        )
+        assertEquals(1, paging1.size)
+
+        val paging2 = tb.admin.changeProposal.listChangeProposals(
+            projectId = project.id,
+            milestoneId = milestone2.id,
+            first = 2
+        )
+        assertEquals(0, paging2.size)
+
+        tb.user.changeProposal.assertListFail(
+            403,
+            projectId = project.id,
+            milestoneId = milestone2.id,
+            taskId = task1.id
+        )
+
+        // join the project
+        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
+        assertNotNull(
+            tb.admin.changeProposal.listChangeProposals(
+                projectId = project.id,
+                milestoneId = milestone1.id,
+                taskId = task1.id
+            )
+        )
+    }
+
+    @Test
+    fun testListChangeProposalsFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val milestone2 = tb.admin.milestone.create(projectId = project.id)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val task2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone2.id!!)
+
+        tb.admin.changeProposal.assertListFail(
+            404,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            taskId = task2.id!!
+        )
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals",
+            method = Method.GET,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = project.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "milestoneId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = milestone.id.toString()
+                )
+            )
+            .build()
+            .test()
+    }
+
+    @Test
+    fun testCreateChangeProposal() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val proposalData = ChangeProposal(
+            reason = "reason",
+            comment = "comment",
+            status = ChangeProposalStatus.PENDING,
+            taskId = task1.id!!, startDate = null, endDate = LocalDate.now().toString()
+        )
+        val changeProposal = tb.admin.changeProposal.create(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            taskId = task1.id,
+            changeProposal = proposalData
+        )!!
+
+        assertEquals(proposalData.reason, changeProposal.reason)
+        assertEquals(proposalData.comment, changeProposal.comment)
+        assertEquals(proposalData.status, changeProposal.status)
+        assertEquals(proposalData.startDate, changeProposal.startDate)
+        assertEquals(proposalData.endDate, changeProposal.endDate)
+    }
+
+    @Test
+    fun testCreateChangeProposalFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val changeProposal = ChangeProposal(
+            reason = "reason",
+            comment = "comment",
+            status = ChangeProposalStatus.PENDING,
+            taskId = task1.id!!, startDate = null, endDate = LocalDate.now().toString()
+        )
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals",
+            method = Method.POST,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+            body = jacksonObjectMapper().writeValueAsString(changeProposal),
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = project.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "milestoneId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = milestone.id.toString()
+                )
+            )
+            .body(
+                InvalidValueTestScenarioBody(
+                    expectedStatus = 400,
+                    values = listOf(
+                        changeProposal.copy(taskId = UUID.randomUUID())
+                    )
+                        .map { jacksonObjectMapper().writeValueAsString(it) }
+                        .map { SimpleInvalidValueProvider(it) }
+                )
+            )
+            .build()
+            .test()
+    }
+
+    @Test
+    fun testFindChangeProposal() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val changeProposal =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)!!
+        val foundChangeProposal = tb.admin.changeProposal.findChangeProposal(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = changeProposal.id!!
+        )
+
+        assertEquals(changeProposal.id, foundChangeProposal.id)
+
+        // join the project
+        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
+        assertNotNull(
+            tb.user.changeProposal.findChangeProposal(
+                projectId = project.id,
+                milestoneId = milestone.id,
+                changeProposalId = changeProposal.id
+            )
+        )
+    }
+
+    @Test
+    fun testFindChangeProposalFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val proposal =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals/{changeProposalId}",
+            method = Method.GET,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = project.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "milestoneId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = milestone.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "changeProposalId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = proposal!!.id.toString()
+                )
+            )
+            .build()
+            .test()
+    }
+
+    @Test
+    fun testUpdateChangeProposal() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val proposal =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)!!
+        val updateData = proposal.copy(
+            reason = "new reason",
+            comment = "new comment",
+
+            taskId = task.id,
+            startDate = LocalDate.now().toString(),
+            endDate = LocalDate.now().toString()
+
+        )
+        val updatedProposal = tb.admin.changeProposal.updateChangeProposal(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal.id!!,
+            changeProposal = updateData
+        )
+
+        assertEquals(updateData.reason, updatedProposal.reason)
+        assertEquals(updateData.comment, updatedProposal.comment)
+        assertEquals(updateData.startDate, updatedProposal.startDate)
+        assertEquals(updateData.endDate, updatedProposal.endDate)
+    }
+
+    @Test
+    fun testUpdateChangeProposalFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val proposal =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)!!
+
+        //access rights
+        tb.user2.changeProposal.assertUpdateFail(
+            403,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal.id!!,
+            proposal
+        )
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals/{changeProposalId}",
+            method = Method.PUT,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+            body = jacksonObjectMapper().writeValueAsString(proposal),
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = project.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "milestoneId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = milestone.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "changeProposalId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = proposal.id.toString()
+                )
+            )
+            .body(
+                InvalidValueTestScenarioBody(
+                    expectedStatus = 400,
+                    values = listOf(
+                        proposal.copy(taskId = UUID.randomUUID())
+                    )
+                        .map { jacksonObjectMapper().writeValueAsString(it) }
+                        .map { SimpleInvalidValueProvider(it) }
+                )
+            )
+            .build()
+            .test()
+    }
+
+
+    @Test
+    fun testDeleteChangeProposal() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        // access rights
+        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
+        val proposal =
+            tb.user.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)!!
+        tb.user.changeProposal.deleteProposal(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal.id!!
+        )
+
+        tb.admin.changeProposal.assertFindFail(
+            404,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal.id
+        )
+    }
+
+    @Test
+    fun testDeleteChangeProposalFail() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!)
+        val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+
+        val proposal =
+            tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)!!
+
+        // access rights
+        tb.user2.changeProposal.assertDeleteFail(
+            403,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal.id!!
+        )
+
+        InvalidValueTestScenarioBuilder(
+            path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals/{changeProposalId}",
+            method = Method.DELETE,
+            token = tb.admin.accessTokenProvider.accessToken,
+            basePath = ApiTestSettings.apiBasePath,
+        )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "projectId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = project.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "milestoneId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = milestone.id.toString()
+                )
+            )
+            .path(
+                InvalidValueTestScenarioPath(
+                    name = "changeProposalId",
+                    values = InvalidValues.STRING_NOT_NULL,
+                    expectedStatus = 404,
+                    default = proposal.id.toString()
+                )
+            )
+            .build()
+            .test()
+    }
+}
