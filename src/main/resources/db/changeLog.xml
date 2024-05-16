@@ -139,4 +139,11 @@
             </column>
         </createTable>
     </changeSet>
+
+    <changeSet id="milestone_original_dates" author="daniil smirnov">
+        <addColumn tableName="milestone">
+            <column name="originalstartdate" type="date"/>
+            <column name="originalenddate" type="date"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
