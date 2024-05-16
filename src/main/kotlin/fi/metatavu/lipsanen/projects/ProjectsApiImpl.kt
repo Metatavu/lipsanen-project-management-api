@@ -28,9 +28,6 @@ import java.util.*
 class ProjectsApiImpl : ProjectsApi, AbstractApi() {
 
     @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
     lateinit var projectTranslator: ProjectTranslator
 
     @Inject

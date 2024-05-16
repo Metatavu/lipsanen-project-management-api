@@ -51,6 +51,16 @@ class TaskConnectionController {
         }
     }
 
+    suspend fun list(
+        task: TaskEntity,
+    ): List<TaskConnectionEntity> {
+
+
+        return        taskConnectionRepository.listByTasks(arrayListOf(task))
+
+    }
+
+
     /**
      * Creates a new task connection
      *
