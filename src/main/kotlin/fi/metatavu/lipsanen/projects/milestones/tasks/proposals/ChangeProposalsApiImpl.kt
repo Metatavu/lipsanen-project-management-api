@@ -32,7 +32,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     lateinit var proposalController: ChangeProposalController
 
     @Inject
-    lateinit var proposalTranslator: ProposalTranslator
+    lateinit var changeProposalTrnaslator: ChangeProposalTrnaslator
 
     @Inject
     lateinit var taskController: TaskController
@@ -65,7 +65,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             first = first,
             max = max
         )
-        createOk(proposalTranslator.translate(changeProposals), count)
+        createOk(changeProposalTrnaslator.translate(changeProposals), count)
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
@@ -84,7 +84,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             createNotFoundMessage(TASK, changeProposal.taskId)
         )
         val createdProposal = proposalController.create(task, changeProposal, userId)
-        createOk(proposalTranslator.translate(createdProposal))
+        createOk(changeProposalTrnaslator.translate(createdProposal))
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
@@ -105,7 +105,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
 
-        createOk(proposalTranslator.translate(proposal))
+        createOk(changeProposalTrnaslator.translate(proposal))
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
@@ -134,7 +134,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
         val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
 
-        createOk(proposalTranslator.translate(updatedProposal))
+        createOk(changeProposalTrnaslator.translate(updatedProposal))
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
