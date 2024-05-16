@@ -51,6 +51,8 @@ class MilestoneController {
             name = milestone.name,
             startDate = milestone.startDate,
             endDate = milestone.endDate,
+            originalStartDate = milestone.originalStartDate,
+            originalEndDate = milestone.originalEndDate,
             creatorId = userId,
             lastModifierId = userId
         )
@@ -93,6 +95,8 @@ class MilestoneController {
         }
         existingMilestone.startDate = updateData.startDate
         existingMilestone.endDate = updateData.endDate
+        existingMilestone.originalStartDate = updateData.originalStartDate ?: updateData.startDate
+        existingMilestone.originalEndDate = updateData.originalEndDate ?: updateData.endDate
         existingMilestone.name = updateData.name
         existingMilestone.lastModifierId = userId
         return milestoneRepository.persistSuspending(existingMilestone)

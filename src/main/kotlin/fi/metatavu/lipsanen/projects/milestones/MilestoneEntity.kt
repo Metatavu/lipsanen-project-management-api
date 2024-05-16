@@ -30,6 +30,10 @@ class MilestoneEntity : Metadata() {
     @Column(nullable = false)
     lateinit var endDate: LocalDate
 
+    var originalStartDate: LocalDate? = null
+
+    var originalEndDate: LocalDate? = null
+
     override lateinit var creatorId: UUID
 
     override lateinit var lastModifierId: UUID
