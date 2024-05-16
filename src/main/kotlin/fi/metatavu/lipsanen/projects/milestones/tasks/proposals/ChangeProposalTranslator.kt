@@ -10,7 +10,7 @@ import jakarta.inject.Inject
  * Translator for proposals
  */
 @ApplicationScoped
-class ChangeProposalTrnaslator : AbstractTranslator<ChangeProposalEntity, ChangeProposal>() {
+class ChangeProposalTranslator : AbstractTranslator<ChangeProposalEntity, ChangeProposal>() {
 
     @Inject
     lateinit var metadataTranslator: MetadataTranslator
