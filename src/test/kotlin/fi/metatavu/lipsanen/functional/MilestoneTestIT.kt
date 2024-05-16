@@ -38,11 +38,11 @@ class MilestoneTestIT : AbstractFunctionalTest() {
 
         val milestoneLater = tb.admin.milestone.create(
             project1.id!!,
-            Milestone(name = "Milestone 1", startDate = "2023-01-01", endDate = "2023-01-31")
+            Milestone(name = "Milestone 1", startDate = "2023-01-01", endDate = "2023-01-31", originalStartDate = "2023-01-02", originalEndDate = "2023-01-30")
         )
         val milestoneEarlier = tb.admin.milestone.create(
             project1.id,
-            Milestone(name = "Milestone 2", startDate = "2022-02-01", endDate = "2022-02-28")
+            Milestone(name = "Milestone 2", startDate = "2022-02-01", endDate = "2022-02-28", originalStartDate = "2022-02-02", originalEndDate = "2022-02-27")
         )
         tb.admin.milestone.create(project2.id!!)
 
@@ -62,7 +62,9 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         val milestoneData = Milestone(
             name = "Milestone",
             startDate = "2022-01-01",
-            endDate = "2022-01-31"
+            endDate = "2022-01-31",
+            originalStartDate = "2022-01-02",
+            originalEndDate = "2022-01-30"
         )
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!,
@@ -73,8 +75,8 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(milestoneData.name, milestone.name)
         assertEquals(milestoneData.startDate, milestone.startDate)
         assertEquals(milestoneData.endDate, milestone.endDate)
-        assertEquals(milestoneData.startDate, milestone.originalStartDate)
-        assertEquals(milestoneData.endDate, milestone.originalEndDate)
+        assertEquals(milestoneData.originalStartDate, milestone.originalStartDate)
+        assertEquals(milestoneData.originalEndDate, milestone.originalEndDate)
         assertNotNull(milestone.id)
         assertNotNull(milestone.metadata)
     }
@@ -86,7 +88,9 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         val milestoneData = Milestone(
             name = "Milestone",
             startDate = "2022-01-01",
-            endDate = "2022-01-31"
+            endDate = "2022-01-31",
+            originalStartDate = "2022-01-02",
+            originalEndDate = "2022-01-30"
         )
         // access rights
         tb.user.milestone.assertCreateFail(403, project.id, milestoneData)
@@ -117,7 +121,9 @@ class MilestoneTestIT : AbstractFunctionalTest() {
                                 Milestone(
                                     name = "Milestone",
                                     startDate = "2023-01-01",
-                                    endDate = "2022-01-31"
+                                    endDate = "2022-01-31",
+                                    originalStartDate = "2022-01-02",
+                                    originalEndDate = "2022-01-30"
                                 )
                             )
                         )
@@ -179,7 +185,9 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         val updateData = Milestone(
             name = "Updated milestone",
             startDate = "2022-02-01",
-            endDate = "2022-02-28"
+            endDate = "2022-02-28",
+            originalStartDate = "2022-01-01",
+            originalEndDate = "2022-01-28"
         )
         val updatedMilestone = tb.admin.milestone.updateProjectMilestone(
             projectId = project.id,
@@ -191,8 +199,8 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(updateData.name, updatedMilestone.name)
         assertEquals(updateData.startDate, updatedMilestone.startDate)
         assertEquals(updateData.endDate, updatedMilestone.endDate)
-        assertEquals(updateData.startDate, updatedMilestone.originalStartDate)
-        assertEquals(updateData.endDate, updatedMilestone.originalEndDate)
+        assertEquals(updateData.originalStartDate, updatedMilestone.originalStartDate)
+        assertEquals(updateData.originalEndDate, updatedMilestone.originalEndDate)
     }
 
     @Test
@@ -202,7 +210,9 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             Milestone(
                 name = "Milestone",
                 startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
             )
         )
 
