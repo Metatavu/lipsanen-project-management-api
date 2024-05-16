@@ -149,7 +149,9 @@
                 <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSAL_TASK_ID" referencedColumnNames="id"
                              referencedTableName="task"/>
             </column>
-            <column name="reason" type="varchar(255)" />
+            <column name="reason" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
             <column name="comment" type="text" />
             <column name="status" type="varchar(255)">
                 <constraints nullable="false"/>

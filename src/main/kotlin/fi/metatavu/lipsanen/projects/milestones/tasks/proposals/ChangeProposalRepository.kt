@@ -13,10 +13,24 @@ import java.util.UUID
 @ApplicationScoped
 class ChangeProposalRepository: AbstractRepository<ChangeProposalEntity, UUID>() {
 
+    /**
+     * Creates a new proposal
+     *
+     * @param id id
+     * @param task task
+     * @param reason reason
+     * @param comment comment
+     * @param status status
+     * @param startDate start date
+     * @param endDate end date
+     * @param creatorId creator id
+     * @param lastModifierId last modifier id
+     * @return created proposal
+     */
     suspend fun create(
         id: UUID,
         task: TaskEntity,
-        reason: String?,
+        reason: String,
         comment: String?,
         status: ChangeProposalStatus,
         startDate: LocalDate?,

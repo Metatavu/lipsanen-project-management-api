@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
+import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import io.quarkus.panache.common.Parameters
@@ -37,7 +38,7 @@ class ChangeProposalController {
             task = task,
             reason = proposal.reason,
             comment = proposal.comment,
-            status = proposal.status,
+            status = ChangeProposalStatus.PENDING,
             startDate = proposal.startDate,
             endDate = proposal.endDate,
             creatorId = creatorId,

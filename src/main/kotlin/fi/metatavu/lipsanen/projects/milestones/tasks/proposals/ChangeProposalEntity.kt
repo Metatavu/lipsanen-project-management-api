@@ -20,8 +20,8 @@ class ChangeProposalEntity : Metadata() {
     @ManyToOne
     lateinit var task: TaskEntity
 
-    @Column
-    var reason: String? = null
+    @Column(nullable = false)
+    lateinit var reason: String
 
     @Column
     var comment: String? = null
