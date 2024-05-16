@@ -73,6 +73,8 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(milestoneData.name, milestone.name)
         assertEquals(milestoneData.startDate, milestone.startDate)
         assertEquals(milestoneData.endDate, milestone.endDate)
+        assertEquals(milestoneData.startDate, milestone.originalStartDate)
+        assertEquals(milestoneData.endDate, milestone.originalEndDate)
         assertNotNull(milestone.id)
         assertNotNull(milestone.metadata)
     }
@@ -189,6 +191,25 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(updateData.name, updatedMilestone.name)
         assertEquals(updateData.startDate, updatedMilestone.startDate)
         assertEquals(updateData.endDate, updatedMilestone.endDate)
+        assertEquals(updateData.startDate, updatedMilestone.originalStartDate)
+        assertEquals(updateData.endDate, updatedMilestone.originalEndDate)
+
+        val extraUpdateData = Milestone(
+            name = "Updated milestone",
+            startDate = "2022-03-01",
+            endDate = "2022-03-28",
+            originalStartDate = "2022-02-03",
+            originalEndDate = "2022-02-27"
+        )
+        val extraUpdatedMilestone = tb.admin.milestone.updateProjectMilestone(
+            projectId = project.id,
+            projectMilestoneId = milestone.id,
+            milestone = extraUpdateData
+        )
+
+        assertNotNull(extraUpdatedMilestone)
+        assertEquals(extraUpdateData.originalStartDate, extraUpdatedMilestone.originalStartDate)
+        assertEquals(extraUpdateData.originalEndDate, extraUpdatedMilestone.originalEndDate)
     }
 
     @Test
