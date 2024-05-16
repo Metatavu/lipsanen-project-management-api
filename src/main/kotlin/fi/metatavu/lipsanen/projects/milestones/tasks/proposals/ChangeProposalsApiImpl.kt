@@ -44,7 +44,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     override fun listChangeProposals(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
+        taskId: UUID?,
         first: Int?,
         max: Int?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
@@ -53,11 +53,18 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(TASK, taskId)
-        )
+        val taskFilter = if (taskId != null) {
+            taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
+                createNotFoundMessage(TASK, taskId)
+            )
+        } else null
 
-        val (changeProposals, count) = proposalController.listChangeProposals(task, first, max)
+        val (changeProposals, count) = proposalController.listChangeProposals(
+            milestone = projectMilestone!!.first,
+            taskFilter = taskFilter,
+            first = first,
+            max = max
+        )
         createOk(proposalTranslator.translate(changeProposals), count)
     }.asUni()
 
@@ -66,19 +73,15 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     override fun createChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposal: ChangeProposal
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        if (changeProposal.taskProposal.taskId != taskId) {
-            return@async createBadRequest("Task id in task proposal does not match the task id in the path")
-        }
 
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(TASK, taskId)
+        val task = taskController.find(projectMilestone!!.first, changeProposal.taskId) ?: return@async createBadRequest(
+            createNotFoundMessage(TASK, changeProposal.taskId)
         )
         val createdProposal = proposalController.create(task, changeProposal, userId)
         createOk(proposalTranslator.translate(createdProposal))
@@ -88,20 +91,19 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     override fun findChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(TASK, taskId)
-        )
-        val proposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
+        val proposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
+        if (proposal.task.milestone.id != milestoneId) {
+            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+        }
 
         createOk(proposalTranslator.translate(proposal))
     }.asUni()
@@ -111,27 +113,23 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     override fun updateChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        if (changeProposal.taskProposal.taskId != taskId) {
-            return@async createBadRequest("Task id in task proposal does not match the task id in the path")
-        }
-
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(TASK, taskId)
+        val foundProposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
+            createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
-        val foundProposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
-            createNotFoundMessage(
-                CHANGE_PROPOSAL,
-                changeProposalId
-            )
-        )
+        if (changeProposal.taskId != foundProposal.task.id) {
+            return@async createBadRequest("Proposal cannot be reassigned to other task")
+        }
+
+        if (foundProposal.task.milestone.id != milestoneId) {
+            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+        }
         hasProposalEditingRights(userId, foundProposal)?.let { return@async it }
 
         val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
@@ -144,20 +142,20 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     override fun deleteChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
         if (errorResponse != null) return@async errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
-            createNotFoundMessage(TASK, taskId)
-        )
-        val proposal = proposalController.find(task, changeProposalId) ?: return@async createNotFound(
+        val proposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
+        if (proposal.task.milestone.id != milestoneId) {
+            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+        }
+
         hasProposalEditingRights(userId, proposal)?.let { return@async it }
 
         proposalController.delete(proposal)

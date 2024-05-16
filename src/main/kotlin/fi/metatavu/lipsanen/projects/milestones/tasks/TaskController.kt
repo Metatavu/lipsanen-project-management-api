@@ -156,7 +156,7 @@ class TaskController {
         taskConnectionController.list(foundTask).forEach {
             taskConnectionController.delete(it)
         }
-        proposalController.listChangeProposals(foundTask, null, null).first.forEach {
+        proposalController.list(foundTask).forEach {
             proposalController.delete(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)

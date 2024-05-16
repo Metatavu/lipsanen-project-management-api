@@ -19,11 +19,9 @@ class ProposalTranslator : AbstractTranslator<ChangeProposalEntity, ChangePropos
     override suspend fun translate(entity: ChangeProposalEntity): ChangeProposal {
         return ChangeProposal(
             id = entity.id,
-            taskProposal = TaskProposal(
-                taskId = entity.task.id,
-                startDate = entity.startDate,
-                endDate = entity.endDate,
-            ),
+            taskId = entity.task.id,
+            startDate = entity.startDate,
+            endDate = entity.endDate,
             reason = entity.reason,
             comment = entity.comment,
             status = entity.status,

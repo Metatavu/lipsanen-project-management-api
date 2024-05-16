@@ -8,7 +8,6 @@ import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.ChangeProposal
 import fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus
-import fi.metatavu.lipsanen.test.client.models.TaskProposal
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.fail
 import java.util.*
@@ -31,7 +30,6 @@ class ChangeProposalTestBuilderResource(
             api.deleteChangeProposal(
                 projectId = proposalToProjectId[it.id!!]!!,
                 milestoneId = proposalToMilestoneId[it.id]!!,
-                taskId = proposalToTaskId[it.id]!!,
                 changeProposalId = it.id
             )
         }
@@ -45,12 +43,14 @@ class ChangeProposalTestBuilderResource(
     fun create(projectId: UUID, milestoneId: UUID, taskId: UUID): ChangeProposal? {
         val created = addClosable(
             api.createChangeProposal(
-                projectId, milestoneId, taskId,
+                projectId, milestoneId,
                 ChangeProposal(
                     reason = "reason",
                     comment = "comment",
                     status = ChangeProposalStatus.PENDING,
-                    taskProposal = TaskProposal(taskId = taskId, startDate = null, endDate = null)
+                    taskId = taskId,
+                    startDate = null,
+                    endDate = null
                 )
             )
         )
@@ -61,7 +61,7 @@ class ChangeProposalTestBuilderResource(
     }
 
     fun create(projectId: UUID, milestoneId: UUID, taskId: UUID, changeProposal: ChangeProposal): ChangeProposal? {
-        val created = addClosable(api.createChangeProposal(projectId, milestoneId, taskId, changeProposal))
+        val created = addClosable(api.createChangeProposal(projectId, milestoneId, changeProposal))
         proposalToTaskId[created.id!!] = taskId
         proposalToMilestoneId[created.id!!] = milestoneId
         proposalToProjectId[created.id!!] = projectId
@@ -71,20 +71,19 @@ class ChangeProposalTestBuilderResource(
     fun findChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID, changeProposalId: UUID
+        changeProposalId: UUID
     ): ChangeProposal {
-        return api.findChangeProposal(projectId, milestoneId, taskId, changeProposalId)
+        return api.findChangeProposal(projectId, milestoneId, changeProposalId)
     }
 
     fun assertFindFail(
         expectedStatus: Int,
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID
     ) {
         try {
-            api.findChangeProposal(projectId, milestoneId, taskId, changeProposalId)
+            api.findChangeProposal(projectId, milestoneId, changeProposalId)
             fail(String.format("Expected find to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -94,7 +93,7 @@ class ChangeProposalTestBuilderResource(
     fun listChangeProposals(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
+        taskId: UUID? = null,
         first: Int? = null,
         max: Int? = null
     ): Array<ChangeProposal> {
@@ -118,23 +117,21 @@ class ChangeProposalTestBuilderResource(
     fun updateChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ): ChangeProposal {
-        return api.updateChangeProposal(projectId, milestoneId, taskId, changeProposalId, changeProposal)
+        return api.updateChangeProposal(projectId, milestoneId, changeProposalId, changeProposal)
     }
 
     fun assertUpdateFail(
         expectedStatus: Int,
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ) {
         try {
-            api.updateChangeProposal(projectId, milestoneId, taskId, changeProposalId, changeProposal)
+            api.updateChangeProposal(projectId, milestoneId, changeProposalId, changeProposal)
             fail(String.format("Expected update to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -145,22 +142,20 @@ class ChangeProposalTestBuilderResource(
         expectedStatus: Int,
         projectId: UUID,
         milestoneId: UUID,
-        taskId: UUID,
         changeProposalId: UUID
     ) {
         try {
-            api.deleteChangeProposal(projectId, milestoneId, taskId, changeProposalId)
+            api.deleteChangeProposal(projectId, milestoneId, changeProposalId)
             fail(String.format("Expected delete to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
         }
     }
 
-    fun deleteProposal(projectId: UUID, milestoneId: UUID, taskId: UUID, changeProposalId: UUID) {
+    fun deleteProposal(projectId: UUID, milestoneId: UUID, changeProposalId: UUID) {
         api.deleteChangeProposal(
             projectId = projectId,
             milestoneId = milestoneId,
-            taskId = taskId,
             changeProposalId = changeProposalId
         )
         removeCloseable { closable: Any ->
@@ -172,9 +167,9 @@ class ChangeProposalTestBuilderResource(
         }
     }
 
-    fun assertCreateFail(i: Int, projectId: UUID, milestoneId: UUID, taskId: UUID, proposalData: ChangeProposal) {
+    fun assertCreateFail(i: Int, projectId: UUID, milestoneId: UUID, proposalData: ChangeProposal) {
         try {
-            api.createChangeProposal(projectId, milestoneId, taskId, proposalData)
+            api.createChangeProposal(projectId, milestoneId, proposalData)
             fail(String.format("Expected create to fail with status %d", i))
         } catch (e: ClientException) {
             Assertions.assertEquals(i.toLong(), e.statusCode.toLong())
