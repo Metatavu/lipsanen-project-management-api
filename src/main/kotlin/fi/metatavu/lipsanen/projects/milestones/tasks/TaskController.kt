@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
@@ -80,8 +81,13 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
+            assigneeIds = task.assigneeIds ?: emptyList(),
+            userRole = task.userRole ?: UserRole.USER,
+            estimatedDuration = task.estimatedDuration ?: "",
+            estimatedReadiness = task.estimatedReadiness ?: "",
+            attachmentUrls = task.attachmentUrls ?: emptyList(),
             creatorId = userId,
-            lastModifierId = userId
+            lastModifierId = userId,
         )
     }
 
@@ -138,12 +144,18 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        existingTask.startDate = newTask.startDate
-        existingTask.endDate = newTask.endDate
-
-        existingTask.status = newTask.status    // verification if updates are required is done in the api impl
-        existingTask.name = newTask.name
-        existingTask.lastModifierId = userId
+        with(existingTask) {
+            startDate = newTask.startDate
+            endDate = newTask.endDate
+            status = newTask.status
+            name = newTask.name
+            lastModifierId = userId
+            assigneeIds = newTask.assigneeIds ?: emptyList()
+            userRole = newTask.userRole ?: UserRole.USER
+            estimatedDuration = newTask.estimatedDuration ?: ""
+            estimatedReadiness = newTask.estimatedReadiness ?: ""
+            attachmentUrls = newTask.attachmentUrls ?: emptyList()
+        }
         return taskEntityRepository.persistSuspending(existingTask)
     }
 

@@ -165,4 +165,14 @@
             <column name="modifiedat" type="datetime(6)"/>
         </createTable>
     </changeSet>
+
+    <changeSet id="taskparams" author="daniil smirnov">
+        <addColumn tableName="task">
+            <column name="assigneeids" type="JSON"/>
+            <column name="userrole" type="varchar(255)"/>
+            <column name="estimatedduration" type="varchar(255)"/>
+            <column name="estimatedreadiness" type="varchar(255)"/>
+            <column name="attachmenturls" type="JSON"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

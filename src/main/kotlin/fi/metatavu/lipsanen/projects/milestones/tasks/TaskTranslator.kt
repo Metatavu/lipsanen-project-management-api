@@ -23,6 +23,11 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             endDate = entity.endDate,
             milestoneId = entity.milestone.id,
             status = entity.status,
+            assigneeIds = entity.assigneeIds,
+            userRole = entity.userRole,
+            estimatedDuration = entity.estimatedDuration,
+            estimatedReadiness = entity.estimatedReadiness,
+            attachmentUrls = entity.attachmentUrls,
             metadata = metadataTranslator.translate(entity)
         )
     }
