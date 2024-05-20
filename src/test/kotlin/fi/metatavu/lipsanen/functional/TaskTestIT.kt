@@ -281,7 +281,9 @@ class TaskTestIT : AbstractFunctionalTest() {
             projectId = project.id!!, Milestone(
                 name = "Milestone",
                 startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
             )
         )
 
@@ -354,7 +356,9 @@ class TaskTestIT : AbstractFunctionalTest() {
             projectId = project.id!!, Milestone(
                 name = "Milestone",
                 startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
             )
         )
 

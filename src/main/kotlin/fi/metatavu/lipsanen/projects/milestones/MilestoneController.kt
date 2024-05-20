@@ -90,19 +90,29 @@ class MilestoneController {
      *
      * @param existingMilestone existing milestone
      * @param updateData update data
+     * @param milestoneTasks milestone tasks
+     * @param isProjectPlanningStage is project in planning stage (affects original dates)
      * @param userId user id
      * @return updated milestone
      */
-    suspend fun update(existingMilestone: MilestoneEntity, updateData: Milestone, milestoneTasks: List<TaskEntity>, userId: UUID): MilestoneEntity {
+    suspend fun update(
+        existingMilestone: MilestoneEntity,
+        updateData: Milestone,
+        milestoneTasks: List<TaskEntity>,
+        userId: UUID,
+        isProjectPlanningStage: Boolean = false
+    ): MilestoneEntity {
         if (existingMilestone.startDate != updateData.startDate || existingMilestone.endDate != updateData.endDate) {
-            updateTaskEstimations(existingMilestone, milestoneTasks, updateData.startDate, updateData.endDate, userId)
+            updateTasksLengthWithinMilestone(existingMilestone, milestoneTasks, updateData.startDate, updateData.endDate, userId)
+        }
+
+        if (isProjectPlanningStage) {
+            existingMilestone.originalStartDate = updateData.originalStartDate
+            existingMilestone.originalEndDate = updateData.originalEndDate
         }
 
         existingMilestone.startDate = updateData.startDate
         existingMilestone.endDate = updateData.endDate
-        // NOTE: original start and end dates should not be updated once project is out of planning stage
-        existingMilestone.originalStartDate = updateData.originalStartDate
-        existingMilestone.originalEndDate = updateData.originalEndDate
         existingMilestone.name = updateData.name
         existingMilestone.lastModifierId = userId
         return milestoneRepository.persistSuspending(existingMilestone)
@@ -117,7 +127,7 @@ class MilestoneController {
      * @param endDate new end date
      * @param userId user id
      */
-    private suspend fun updateTaskEstimations(
+    private suspend fun updateTasksLengthWithinMilestone(
         existingMilestone: MilestoneEntity,
         milestoneTasks: List<TaskEntity>,
         startDate: LocalDate,
@@ -166,17 +176,6 @@ class MilestoneController {
             taskController.delete(it)
         }
         milestoneRepository.deleteSuspending(milestone)
-    }
-
-    /**
-     * Checks if milestone is part of the same project
-     *
-     * @param project project
-     * @param milestone milestone
-     * @return true if milestone is part of the same project
-     */
-    fun partOfSameProject(project: ProjectEntity, milestone: MilestoneEntity): Boolean {
-        return project == milestone.project
     }
 
     /**

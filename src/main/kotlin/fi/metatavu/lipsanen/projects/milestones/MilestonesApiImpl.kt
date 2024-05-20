@@ -2,7 +2,6 @@ package fi.metatavu.lipsanen.projects.milestones
 
 import fi.metatavu.lipsanen.api.model.Milestone
 import fi.metatavu.lipsanen.api.spec.ProjectMilestonesApi
-import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -93,10 +92,6 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 createNotFoundMessage(MILESTONE, milestoneId)
             )
 
-            if (!milestoneController.partOfSameProject(project, milestone)) {
-                return@async createNotFound(createNotFoundMessage(MILESTONE, milestoneId))
-            }
-
             createOk(milestoneTranslator.translate(milestone))
         }.asUni()
 
@@ -112,17 +107,14 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
 
-            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
+            val isProjectPlanningStage = projectController.isInPlanningStage(project)
+            if (!isAdmin() && !isProjectPlanningStage) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
 
             val foundMilestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
                 createNotFoundMessage(MILESTONE, milestoneId)
             )
-
-            if (!milestoneController.partOfSameProject(project, foundMilestone)) {
-                return@async createNotFound(createNotFoundMessage(MILESTONE, milestoneId))
-            }
 
             if (milestone.endDate.isBefore(milestone.startDate)) {
                 return@async createBadRequest("End date cannot be before start date")
@@ -135,6 +127,7 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 existingMilestone = foundMilestone,
                 milestoneTasks = milestoneTasks,
                 updateData = milestone,
+                isProjectPlanningStage = isProjectPlanningStage,
                 userId = userId
             )
             createOk(milestoneTranslator.translate(updatedMilestone))
