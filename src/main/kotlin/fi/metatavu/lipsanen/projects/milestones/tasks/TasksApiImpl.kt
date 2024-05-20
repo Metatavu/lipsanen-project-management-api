@@ -117,7 +117,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 createNotFoundMessage(TASK, taskId)
             )
 
-            if (!projectController.isInPlanningStage(projectMilestone.second)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
