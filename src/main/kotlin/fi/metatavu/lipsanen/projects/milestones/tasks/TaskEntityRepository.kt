@@ -34,11 +34,11 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         endDate: LocalDate,
         milestone: MilestoneEntity,
         status: TaskStatus,
-        assigneeIds: List<String>?,
+        assignees: List<TaskAssigneeEntity>,
         userRole: UserRole?,
         estimatedDuration: String?,
         estimatedReadiness: String?,
-        attachmentUrls: List<String>?,
+        attachments: List<TaskAttachmentEntity>,
         creatorId: UUID,
         lastModifierId: UUID
     ): TaskEntity {
@@ -49,11 +49,11 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         taskEntity.endDate = endDate
         taskEntity.milestone = milestone
         taskEntity.status = status
-        taskEntity.assigneeIds = assigneeIds
+        taskEntity.assignees = assignees
         taskEntity.userRole = userRole
         taskEntity.estimatedDuration = estimatedDuration
         taskEntity.estimatedReadiness = estimatedReadiness
-        taskEntity.attachmentUrls = attachmentUrls
+        taskEntity.attachments = attachments
         taskEntity.creatorId = creatorId
         taskEntity.lastModifierId = lastModifierId
         return persistSuspending(taskEntity)

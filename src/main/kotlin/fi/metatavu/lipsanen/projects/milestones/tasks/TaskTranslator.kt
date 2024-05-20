@@ -1,6 +1,8 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.Task
+import fi.metatavu.lipsanen.api.model.TaskAssignee
+import fi.metatavu.lipsanen.api.model.TaskAttachment
 import fi.metatavu.lipsanen.rest.AbstractTranslator
 import fi.metatavu.lipsanen.rest.MetadataTranslator
 import jakarta.enterprise.context.ApplicationScoped
@@ -23,11 +25,23 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             endDate = entity.endDate,
             milestoneId = entity.milestone.id,
             status = entity.status,
-            assigneeIds = entity.assigneeIds,
+            assignees = entity.assignees.map { assignee ->
+                TaskAssignee(
+                    id = assignee.id,
+                    taskId = assignee.taskId,
+                    assigneeId = assignee.assigneeId
+                )
+            },
             userRole = entity.userRole,
             estimatedDuration = entity.estimatedDuration,
             estimatedReadiness = entity.estimatedReadiness,
-            attachmentUrls = entity.attachmentUrls,
+            attachments = entity.attachments.map { attachment ->
+                TaskAttachment(
+                    id = attachment.id,
+                    taskId = attachment.taskId,
+                    attachmentUrl = attachment.attachmentUrl
+                )
+            },
             metadata = metadataTranslator.translate(entity)
         )
     }

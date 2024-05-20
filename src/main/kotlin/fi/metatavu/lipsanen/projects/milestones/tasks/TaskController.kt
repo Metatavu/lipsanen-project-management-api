@@ -81,11 +81,13 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
-            assigneeIds = task.assigneeIds ?: emptyList(),
+                // Todo: match types below
+            assignees = emptyList(),
             userRole = task.userRole ?: UserRole.USER,
             estimatedDuration = task.estimatedDuration ?: "",
             estimatedReadiness = task.estimatedReadiness ?: "",
-            attachmentUrls = task.attachmentUrls ?: emptyList(),
+                // Todo: match types below
+            attachments = emptyList(),
             creatorId = userId,
             lastModifierId = userId
         )
@@ -150,11 +152,13 @@ class TaskController {
             status = newTask.status
             name = newTask.name
             lastModifierId = userId
-            assigneeIds = newTask.assigneeIds ?: emptyList()
+            // Todo: match types below
+            assignees = emptyList()
             userRole = newTask.userRole ?: UserRole.USER
             estimatedDuration = newTask.estimatedDuration ?: ""
             estimatedReadiness = newTask.estimatedReadiness ?: ""
-            attachmentUrls = newTask.attachmentUrls ?: emptyList()
+            // Todo: match types below
+            attachments = emptyList()
         }
         return taskEntityRepository.persistSuspending(existingTask)
     }

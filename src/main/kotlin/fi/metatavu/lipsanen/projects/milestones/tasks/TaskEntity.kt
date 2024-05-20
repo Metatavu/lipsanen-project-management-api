@@ -33,8 +33,8 @@ class TaskEntity : Metadata() {
     @Enumerated(EnumType.STRING)
     lateinit var status: TaskStatus
 
-    @Column(columnDefinition = "json")
-    lateinit var assigneeIds: List<String>
+    @OneToMany(mappedBy = "task", cascade = [CascadeType.ALL], orphanRemoval = true)
+    lateinit var assignees: List<TaskAssigneeEntity>
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = true)
@@ -46,8 +46,8 @@ class TaskEntity : Metadata() {
     @Column(nullable = true)
     var estimatedReadiness: String? = null
 
-    @Column(columnDefinition = "json")
-    lateinit var attachmentUrls: List<String>
+    @OneToMany(mappedBy = "task", cascade = [CascadeType.ALL], orphanRemoval = true)
+    lateinit var attachments: List<TaskAttachmentEntity>
 
     override lateinit var creatorId: UUID
 
