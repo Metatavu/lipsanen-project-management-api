@@ -123,7 +123,7 @@ class TaskController {
      * @param milestone milestone
      * @param userId user id
      * @return updated task
-     * @throws IllegalArgumentException
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -156,7 +156,7 @@ class TaskController {
      * @param userId user id
      * @param proposalMode if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
      * @return updated task
-     * @throws IllegalArgumentException if the cascade update goes out of the milestone boundaries
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -180,6 +180,31 @@ class TaskController {
     }
 
     /**
+     * Deletes a task and related entities
+     *
+     * @param foundTask task to delete
+     */
+    suspend fun delete(foundTask: TaskEntity) {
+        taskConnectionController.list(foundTask).forEach {
+            taskConnectionController.delete(it)
+        }
+        proposalController.list(foundTask).forEach {
+            proposalController.delete(it)
+        }
+        taskEntityRepository.deleteSuspending(foundTask)
+    }
+
+    /**
+     * Persists a task
+     *
+     * @param startsFirst task to persist
+     * @return persisted task
+     */
+    suspend fun persist(startsFirst: TaskEntity): TaskEntity {
+        return taskEntityRepository.persistSuspending(startsFirst)
+    }
+
+    /**
      * Updates task dates
      *
      * @param movableTask task to update
@@ -188,6 +213,7 @@ class TaskController {
      * @param milestone milestone
      * @param proposalMode if the task update happens in proposal mode - if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
      * @return updated task
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
     private suspend fun updateTaskDates(
         movableTask: TaskEntity,
@@ -219,10 +245,7 @@ class TaskController {
         // Check if the dependent tasks are still within the milestone
         updatableTasks.forEach {
             if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
-                throw IllegalArgumentException(
-                    "Tasks affected by the update go out of the milestone boundaries," +
-                        " update rejected, see task ${it.id} with new dates ${it.startDate} - ${it.endDate}"
-                )
+                throw TaskOutsideMilestoneException(it.id, it.startDate, it.endDate)
             }
         }
         updatableTasks.forEach { taskEntityRepository.persistSuspending(it) }
@@ -244,7 +267,7 @@ class TaskController {
      * @param movedTask task to update
      * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
      */
-    suspend fun updateTaskConnectionsBackward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+    private suspend fun updateTaskConnectionsBackward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
         val tasks = ArrayDeque<TaskEntity>()
         tasks.add(movedTask)
         while (tasks.isNotEmpty()) {
@@ -296,7 +319,7 @@ class TaskController {
      * @param movedTask task to update
      * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
      */
-    suspend fun updateTaskConnectionsForward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+    private suspend fun updateTaskConnectionsForward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
         val tasks = ArrayDeque<TaskEntity>()
         tasks.add(movedTask)
 
@@ -344,28 +367,12 @@ class TaskController {
     }
 
     /**
-     * Deletes a task and related entities
+     * Exception for task outside milestone boundaries
      *
-     * @param foundTask task to delete
+     * @param taskId task id
+     * @param startDate new start date
+     * @param endDate new end date
      */
-    suspend fun delete(foundTask: TaskEntity) {
-        taskConnectionController.list(foundTask).forEach {
-            taskConnectionController.delete(it)
-        }
-        proposalController.list(foundTask).forEach {
-            proposalController.delete(it)
-        }
-        taskEntityRepository.deleteSuspending(foundTask)
-    }
-
-    /**
-     * Persists a task
-     *
-     * @param startsFirst task to persist
-     * @return persisted task
-     */
-    suspend fun persist(startsFirst: TaskEntity): TaskEntity {
-        return taskEntityRepository.persistSuspending(startsFirst)
-    }
-
+    class TaskOutsideMilestoneException(taskId: UUID, startDate: LocalDate, endDate: LocalDate) :
+        Exception("Task $taskId with new dates $startDate - $endDate goes out of the milestone boundaries")
 }

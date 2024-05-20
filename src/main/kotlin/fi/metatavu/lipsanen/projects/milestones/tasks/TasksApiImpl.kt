@@ -4,10 +4,7 @@ import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.spec.TasksApi
-import fi.metatavu.lipsanen.projects.ProjectController
-import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
-import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -138,7 +135,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                     userId = userId
                 )
                 return@async createOk(taskTranslator.translate(updatedTask))
-            } catch (e: IllegalArgumentException) {
+            } catch (e: TaskOutsideMilestoneException) {
                 return@async createBadRequest(e.message!!)
             }
 

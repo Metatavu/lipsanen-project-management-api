@@ -5,13 +5,13 @@ import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
-import java.util.UUID
+import java.util.*
 
 /**
  * Repository for proposals
  */
 @ApplicationScoped
-class ChangeProposalRepository: AbstractRepository<ChangeProposalEntity, UUID>() {
+class ChangeProposalRepository : AbstractRepository<ChangeProposalEntity, UUID>() {
 
     /**
      * Creates a new proposal

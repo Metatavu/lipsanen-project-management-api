@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones
 
 import fi.metatavu.lipsanen.api.model.Milestone
+import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
@@ -17,6 +18,9 @@ import java.util.*
  */
 @ApplicationScoped
 class MilestoneController {
+
+    @Inject
+    lateinit var projectController: ProjectController
 
     @Inject
     lateinit var milestoneRepository: MilestoneRepository
@@ -191,9 +195,7 @@ class MilestoneController {
                 return "Milestone cannot be shortened to earlier than task ${it.name} start date"
             }
         }
-
         return null
     }
-
 
 }

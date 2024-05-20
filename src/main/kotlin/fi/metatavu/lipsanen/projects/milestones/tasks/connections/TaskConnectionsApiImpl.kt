@@ -52,7 +52,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         connectionRole: TaskConnectionRole?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)//todo move this
+        val (project, errorResponse) = getProjectOrError(projectId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = if (taskId != null) {
@@ -81,7 +81,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             return@async createBadRequest(INVALID_PROJECT_STATE)
         }
 
-        val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val sourceTask = taskController.find(project, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
         val targetTask = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
@@ -95,8 +95,6 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         val createdTaskConnection = taskConnectionController.create(sourceTask, targetTask, taskConnection, userId)
         createOk(taskConnectionTranslator.translate(createdTaskConnection))
     }.asUni()
-
-
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun findTaskConnection(

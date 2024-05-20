@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.spec.ChangeProposalsApi
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -32,7 +33,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     lateinit var proposalController: ChangeProposalController
 
     @Inject
-    lateinit var changeProposalTrnaslator: ChangeProposalTrnaslator
+    lateinit var changeProposalTrnaslator: ChangeProposalTranslator
 
     @Inject
     lateinit var taskController: TaskController
@@ -124,7 +125,6 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         if (changeProposal.taskId != foundProposal.task.id) {
-            println("Proposal cannot be reassigned to other task")
             return@async createBadRequest("Proposal cannot be reassigned to other task")
         }
 
@@ -140,8 +140,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
             createOk(changeProposalTrnaslator.translate(updatedProposal))
 
-        } catch (e: IllegalArgumentException) {
-            println("Invalid proposal? ${e.message}")
+        } catch (e: TaskOutsideMilestoneException) {
             return@async createBadRequest(e.message!!)
         }
 
