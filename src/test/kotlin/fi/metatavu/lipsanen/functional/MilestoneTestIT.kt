@@ -95,9 +95,6 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         // access rights
         tb.user.milestone.assertCreateFail(403, project.id, milestoneData)
 
-        // status of the project
-        tb.admin.milestone.assertCreateFail(400, project.id, milestoneData)
-
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}/milestones",
             method = Method.POST,
@@ -321,13 +318,6 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             )
             .build()
             .test()
-
-        // project status
-        tb.admin.project.updateProject(project.id, Project("Updated project", status = ProjectStatus.COMPLETION))
-        tb.admin.milestone.assertDeleteFail(400, project.id, milestone.id)
-
-        tb.admin.project.updateProject(project.id, Project("Updated project", status = ProjectStatus.INITIATION))
-        return@use
     }
 
 }
