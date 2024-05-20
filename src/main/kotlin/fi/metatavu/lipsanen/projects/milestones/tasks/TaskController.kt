@@ -206,6 +206,41 @@ class TaskController {
     }
 
     /**
+     * Helper method for checking if task can be updated (used by api)
+     *
+     * @param existingTask existing task
+     * @param newStatus new status
+     * @return error message or null if no errors
+     */
+    suspend fun isNotUpdatable(existingTask: TaskEntity, newStatus: TaskStatus): String? {
+        if (existingTask.status != newStatus) {
+            val parentTasks = taskConnectionController.list(existingTask, TaskConnectionRole.TARGET)
+            for (parentTaskConnection in parentTasks) {
+                val source = parentTaskConnection.source
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_START) {
+                    if (source.status != TaskStatus.DONE) {
+                        return "Task ${source.name} must be finished before task ${existingTask.name} can be started"
+                    }
+                }
+
+                if (parentTaskConnection.type == TaskConnectionType.START_TO_START) {
+                    if (source.status == TaskStatus.NOT_STARTED) {
+                        return "Task ${source.name} must be started before task ${existingTask.name} can be started"
+                    }
+                }
+
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_FINISH) {
+                    if (source.status != TaskStatus.DONE) {
+                        return "Task ${source.name} must be finished before task ${existingTask.name} can be finished"
+                    }
+                }
+            }
+
+        }
+        return null
+    }
+
+    /**
      * Updates task dates
      *
      * @param movableTask task to update
@@ -366,4 +401,5 @@ class TaskController {
             }
         }
     }
+
 }

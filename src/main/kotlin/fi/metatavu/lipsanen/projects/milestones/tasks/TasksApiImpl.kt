@@ -1,10 +1,8 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.Task
-import fi.metatavu.lipsanen.api.model.TaskConnectionType
-import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.spec.TasksApi
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController.TaskOutsideMilestoneException
+import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -68,12 +66,12 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_TASK_DATES)
             }
 
-            if (!projectController.isInPlanningStage(projectMilestone!!.second)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
             val createdTask = taskController.create(
-                milestone = projectMilestone.first,
+                milestone = projectMilestone!!.first,
                 task = task,
                 userId = userId
             )
@@ -119,7 +117,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             }
 
             // Verify that nothing blocks it from updating
-            val updateError = isNotUpdatable(
+            val updateError = taskController.isNotUpdatable(
                 existingTask = foundTask,
                 newStatus = task.status
             )
@@ -148,11 +146,11 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
-            if (!projectController.isInPlanningStage(projectMilestone!!.second)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            val foundTask = taskController.find(projectMilestone.first, taskId) ?: return@async createNotFound(
+            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 
@@ -164,40 +162,4 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             createNoContent()
         }.asUni()
 
-
-
-    /**
-     * Helper method for checking if task can be updated
-     *
-     * @param existingTask existing task
-     * @param newStatus new status
-     * @return error message or null if no errors
-     */
-    suspend fun isNotUpdatable(existingTask: TaskEntity, newStatus: TaskStatus): String? {
-        if (existingTask.status != newStatus) {
-            val parentTasks = taskConnectionRepository.listByTargetTask(existingTask)
-            for (parentTaskConnection in parentTasks) {
-                val source = parentTaskConnection.source
-                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_START) {
-                    if (source.status != TaskStatus.DONE) {
-                        return "Task ${source.name} must be finished before task ${existingTask.name} can be started"
-                    }
-                }
-
-                if (parentTaskConnection.type == TaskConnectionType.START_TO_START) {
-                    if (source.status == TaskStatus.NOT_STARTED) {
-                        return "Task ${source.name} must be started before task ${existingTask.name} can be started"
-                    }
-                }
-
-                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_FINISH) {
-                    if (source.status != TaskStatus.DONE) {
-                        return "Task ${source.name} must be finished before task ${existingTask.name} can be finished"
-                    }
-                }
-            }
-
-        }
-        return null
-    }
 }

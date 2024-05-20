@@ -63,7 +63,7 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             if (!projectController.hasAccessToProject(project, userId)) {
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
-            if (!projectController.isInPlanningStage(project)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
 
@@ -112,10 +112,9 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
 
-            if (!projectController.isInPlanningStage(project)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
-
 
             val foundMilestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
                 createNotFoundMessage(MILESTONE, milestoneId)
@@ -156,7 +155,7 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
 
-            if (!projectController.isInPlanningStage(project)) {
+            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
 
