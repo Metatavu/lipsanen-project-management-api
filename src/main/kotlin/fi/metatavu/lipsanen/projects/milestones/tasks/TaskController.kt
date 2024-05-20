@@ -87,7 +87,7 @@ class TaskController {
             estimatedReadiness = task.estimatedReadiness ?: "",
             attachmentUrls = task.attachmentUrls ?: emptyList(),
             creatorId = userId,
-            lastModifierId = userId,
+            lastModifierId = userId
         )
     }
 
