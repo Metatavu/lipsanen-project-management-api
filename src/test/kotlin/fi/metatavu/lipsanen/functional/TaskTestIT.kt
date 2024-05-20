@@ -233,7 +233,9 @@ class TaskTestIT : AbstractFunctionalTest() {
             projectId = project.id!!, Milestone(
                 name = "Milestone",
                 startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
             )
         )
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
@@ -267,7 +269,9 @@ class TaskTestIT : AbstractFunctionalTest() {
             projectId = project.id!!, Milestone(
                 name = "Milestone",
                 startDate = milestoneStart.toString(),
-                endDate = milestoneEnd.toString()
+                endDate = milestoneEnd.toString(),
+                originalStartDate = milestoneStart.toString(),
+                originalEndDate = milestoneEnd.toString()
             )
         )
 
