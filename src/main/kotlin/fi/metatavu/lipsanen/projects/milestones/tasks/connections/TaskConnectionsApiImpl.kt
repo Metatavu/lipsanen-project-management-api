@@ -2,11 +2,13 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.connections
 
 import fi.metatavu.lipsanen.api.model.TaskConnection
 import fi.metatavu.lipsanen.api.model.TaskConnectionRole
+import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.api.spec.TaskConnectionsApi
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -86,9 +88,15 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             createNotFoundMessage(TASK, taskConnection.targetTaskId)
         )
 
+        taskConnectionController.verifyTaskConnection(sourceTask, targetTask, taskConnection.type)?.let {
+            return@async createBadRequest(it)
+        }
+
         val createdTaskConnection = taskConnectionController.create(sourceTask, targetTask, taskConnection, userId)
         createOk(taskConnectionTranslator.translate(createdTaskConnection))
     }.asUni()
+
+
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun findTaskConnection(
@@ -120,14 +128,18 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             return@async createBadRequest(INVALID_PROJECT_STATE)
         }
 
-        val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val connectionFrom = taskController.find(project, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
         val connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.targetTaskId)
         )
 
-        val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
+        taskConnectionController.verifyTaskConnection(connectionFrom, connectionTo, taskConnection.type)?.let {
+            return@async createBadRequest(it)
+        }
+
+        val foundConnection = taskConnectionController.findById(connectionId, project) ?: return@async createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)
         )
         val updatedConnection = taskConnectionController.update(

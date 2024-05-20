@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.connections
 
 import fi.metatavu.lipsanen.api.model.TaskConnection
 import fi.metatavu.lipsanen.api.model.TaskConnectionRole
+import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
@@ -141,6 +142,35 @@ class TaskConnectionController {
     suspend fun delete(foundConnection: TaskConnectionEntity) {
         taskConnectionRepository.deleteSuspending(foundConnection)
     }
+
+
+    /**
+     * Verifies task connection logic
+     *
+     * @param sourceTask source task
+     * @param targetTask target task
+     * @param type connection type
+     * @return error message if connection is invalid, null otherwise
+     */
+    fun verifyTaskConnection(sourceTask: TaskEntity, targetTask: TaskEntity, type: TaskConnectionType): String? {
+        if (sourceTask == targetTask)
+            return ("Source and target tasks cannot be the same")
+
+        return when (type) {
+            TaskConnectionType.START_TO_START -> if (sourceTask.startDate > targetTask.startDate) {
+                "Source task start date cannot be after target task start date"
+            } else null
+
+            TaskConnectionType.FINISH_TO_FINISH -> if (sourceTask.endDate > targetTask.endDate) {
+                "Source task end date cannot be after target task end date"
+            } else null
+
+            TaskConnectionType.FINISH_TO_START -> if (sourceTask.endDate > targetTask.startDate) {
+                "Source task end date cannot be after target task start date"
+            } else null
+        }
+    }
+
 
     /**
      * Gets the task filter based on project of provided task
