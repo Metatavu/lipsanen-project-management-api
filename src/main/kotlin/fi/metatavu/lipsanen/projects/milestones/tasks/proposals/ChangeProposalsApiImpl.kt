@@ -124,6 +124,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         if (changeProposal.taskId != foundProposal.task.id) {
+            println("Proposal cannot be reassigned to other task")
             return@async createBadRequest("Proposal cannot be reassigned to other task")
         }
 
@@ -132,9 +133,18 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         }
         hasProposalEditingRights(userId, foundProposal)?.let { return@async it }
 
-        val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
+        if (changeProposal.status != foundProposal.status && !isAdmin()) {
+            return@async createForbidden("Status can be changed only by admin")
+        }
+        try {
+            val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
+            createOk(changeProposalTrnaslator.translate(updatedProposal))
 
-        createOk(changeProposalTrnaslator.translate(updatedProposal))
+        } catch (e: IllegalArgumentException) {
+            println("Invalid proposal? ${e.message}")
+            return@async createBadRequest(e.message!!)
+        }
+
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)

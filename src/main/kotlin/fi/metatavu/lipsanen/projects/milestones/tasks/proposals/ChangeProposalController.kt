@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -19,6 +20,9 @@ class ChangeProposalController {
 
     @Inject
     lateinit var proposalRepository: ChangeProposalRepository
+
+    @Inject
+    lateinit var taskController: TaskController
 
     /**
      * Creates a new proposal
@@ -94,6 +98,11 @@ class ChangeProposalController {
             .awaitSuspending()
     }
 
+    suspend fun list(tasks: List<TaskEntity>): List<ChangeProposalEntity> {
+        return proposalRepository.find("task in :tasks", Parameters.with("tasks", tasks)).list<ChangeProposalEntity>()
+            .awaitSuspending()
+    }
+
     /**
      * Finds a proposal for task
      *
@@ -125,6 +134,7 @@ class ChangeProposalController {
      * @param changeProposal change proposal
      * @param userId user id
      * @return updated proposal
+     * @throws IllegalArgumentException
      */
     suspend fun update(
         foundProposal: ChangeProposalEntity,
@@ -136,7 +146,47 @@ class ChangeProposalController {
         foundProposal.startDate = changeProposal.startDate
         foundProposal.endDate = changeProposal.endDate
         foundProposal.lastModifierId = userId
+
+        if (foundProposal.status != changeProposal.status) {
+            if (changeProposal.status == ChangeProposalStatus.APPROVED) {
+                foundProposal.status = changeProposal.status
+                approveChangeProposal(foundProposal, userId)
+            } else if (changeProposal.status == ChangeProposalStatus.REJECTED) {
+                foundProposal.status = changeProposal.status
+            } else {
+                // cannot change status to pending
+            }
+        }
         return proposalRepository.persistSuspending(foundProposal)
+    }
+
+    /**
+     * Apply change proposal to the task:
+     *  - change the task dates
+     *  - change the milestone dates if needed
+     *  - find other proposals that affect the given task and reject them if it is approved todo how we define it
+     *  @throws IllegalArgumentException if the proposal is not approved
+     */
+    private suspend fun approveChangeProposal(foundProposal: ChangeProposalEntity, userId: UUID) {
+        // Update the task which will in turn affect the milestone if needed
+        taskController.update(
+            existingTask = foundProposal.task,
+            newStartDate = foundProposal.startDate ?: foundProposal.task.startDate,
+            newEndDate = foundProposal.endDate ?: foundProposal.task.endDate,
+            milestone = foundProposal.task.milestone,
+            proposalModel = true,
+            userId = userId
+        )
+
+        // reject all other proposals that affect the task
+        list(foundProposal.task).forEach {
+            if (it.id != foundProposal.id) {
+                it.status = ChangeProposalStatus.REJECTED
+                proposalRepository.persistSuspending(it)
+            }
+
+        }
+
     }
 
     /**
@@ -146,5 +196,9 @@ class ChangeProposalController {
      */
     suspend fun delete(proposal: ChangeProposalEntity) {
         proposalRepository.deleteSuspending(proposal)
+    }
+
+    suspend fun persist(changeProposal: ChangeProposalEntity) {
+        proposalRepository.persistSuspending(changeProposal)
     }
 }

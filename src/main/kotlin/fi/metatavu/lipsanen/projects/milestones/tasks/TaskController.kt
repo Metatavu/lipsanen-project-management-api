@@ -1,9 +1,6 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
-import fi.metatavu.lipsanen.api.model.Task
-import fi.metatavu.lipsanen.api.model.TaskConnectionRole
-import fi.metatavu.lipsanen.api.model.TaskConnectionType
-import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
@@ -14,6 +11,7 @@ import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -141,9 +139,30 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        val updatedTask = updateTaskDates(existingTask, newTask, milestone)
+        val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
         updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
         updatedTask.name = newTask.name
+        updatedTask.lastModifierId = userId
+        return taskEntityRepository.persistSuspending(updatedTask)
+    }
+
+    suspend fun update(
+        existingTask: TaskEntity,
+        newStartDate: LocalDate,
+        newEndDate: LocalDate,
+        milestone: MilestoneEntity,
+        userId: UUID,
+        proposalModel: Boolean
+    ): TaskEntity {
+        //if the task extends beyond the milestone, the milestone is updated to fit that task
+        if (newStartDate < milestone.startDate) {
+            milestone.startDate = newStartDate
+        }
+        if (newEndDate > milestone.endDate) {
+            milestone.endDate = newEndDate
+        }
+
+        val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalModel)
         updatedTask.lastModifierId = userId
         return taskEntityRepository.persistSuspending(updatedTask)
     }
@@ -158,16 +177,18 @@ class TaskController {
      */
     private suspend fun updateTaskDates(
         movableTask: TaskEntity,
-        newTask: Task,
-        milestone: MilestoneEntity
+        newStartDate: LocalDate,
+        newEndDate: LocalDate,
+        milestone: MilestoneEntity,
+        proposalMode: Boolean = false
     ): TaskEntity {
-        if (movableTask.startDate == newTask.startDate && movableTask.endDate == newTask.endDate) {
+        if (movableTask.startDate == newStartDate && movableTask.endDate == newEndDate) {
             return movableTask
         }
-        val moveForward = movableTask.endDate < newTask.endDate
-        val moveBackward = movableTask.startDate > newTask.startDate
-        movableTask.startDate = newTask.startDate
-        movableTask.endDate = newTask.endDate
+        val moveForward = movableTask.endDate < newEndDate
+        val moveBackward = movableTask.startDate > newStartDate
+        movableTask.startDate = newStartDate
+        movableTask.endDate = newEndDate
 
         taskEntityRepository.persistSuspending(movableTask) //Save the task at this point so that when listing connections it is up to date
         Panache.flush()
@@ -183,10 +204,19 @@ class TaskController {
         // Check if the dependent tasks are still within the milestone and save them
         updatableTasks.forEach {
             if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
+                println("Tasks moved backward are out of milestone, task start date ${it.startDate}, milestone start date ${milestone.startDate}, task end date ${it.endDate}, milestone end date ${milestone.endDate}")
                 throw IllegalArgumentException("Tasks moved backward are out of milestone")
             }
         }
         updatableTasks.forEach { taskEntityRepository.persistSuspending(it) }
+
+        //in proposal model cancel all the proposals that affect the moved tasks
+        if (proposalMode) {
+            proposalController.list(updatableTasks).forEach {
+                it.status = ChangeProposalStatus.REJECTED
+                proposalController.persist(it)
+            }
+        }
 
         return movableTask
     }

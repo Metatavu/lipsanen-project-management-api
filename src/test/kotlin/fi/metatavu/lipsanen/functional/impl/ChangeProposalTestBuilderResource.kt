@@ -60,9 +60,9 @@ class ChangeProposalTestBuilderResource(
         return created
     }
 
-    fun create(projectId: UUID, milestoneId: UUID, taskId: UUID, changeProposal: ChangeProposal): ChangeProposal? {
+    fun create(projectId: UUID, milestoneId: UUID, changeProposal: ChangeProposal): ChangeProposal? {
         val created = addClosable(api.createChangeProposal(projectId, milestoneId, changeProposal))
-        proposalToTaskId[created.id!!] = taskId
+        proposalToTaskId[created.id!!] = changeProposal.taskId
         proposalToMilestoneId[created.id!!] = milestoneId
         proposalToProjectId[created.id!!] = projectId
         return created

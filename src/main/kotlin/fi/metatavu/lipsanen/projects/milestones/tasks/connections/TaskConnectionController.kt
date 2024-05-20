@@ -51,13 +51,24 @@ class TaskConnectionController {
         }
     }
 
+    /**
+     * Lists task connections
+     *
+     * @param task task
+     * @return list of task connections
+     */
     suspend fun list(
         task: TaskEntity,
+        connectionRole: TaskConnectionRole? = null
     ): List<TaskConnectionEntity> {
-
-
-        return        taskConnectionRepository.listByTasks(arrayListOf(task))
-
+        return if (connectionRole == null) {
+            taskConnectionRepository.listByTasks(arrayListOf(task))
+        } else {
+            when (connectionRole) {
+                TaskConnectionRole.SOURCE -> taskConnectionRepository.listBySourceTask(task)
+                TaskConnectionRole.TARGET -> taskConnectionRepository.listByTargetTask(task)
+            }
+        }
     }
 
 

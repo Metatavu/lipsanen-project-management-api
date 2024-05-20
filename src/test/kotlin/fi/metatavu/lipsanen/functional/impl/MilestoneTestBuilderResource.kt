@@ -41,12 +41,14 @@ class MilestoneTestBuilderResource(
         return created
     }
 
-    fun create(projectId: UUID): Milestone {
+    fun create(projectId: UUID,
+               startDate: String? = null,
+               endDate: String? = null): Milestone {
         return create(
             projectId, Milestone(
                 name = "Milestone",
-                startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                startDate = startDate ?: "2022-01-01",
+                endDate = endDate ?: "2022-01-31"
             )
         )
     }
