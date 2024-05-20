@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.spec.ChangeProposalsApi
+import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole

@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.*
+import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
@@ -365,14 +366,4 @@ class TaskController {
             }
         }
     }
-
-    /**
-     * Exception for task outside milestone boundaries
-     *
-     * @param taskId task id
-     * @param startDate new start date
-     * @param endDate new end date
-     */
-    class TaskOutsideMilestoneException(taskId: UUID, startDate: LocalDate, endDate: LocalDate) :
-        Exception("Task $taskId with new dates $startDate - $endDate goes out of the milestone boundaries")
 }
