@@ -34,11 +34,11 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         endDate: LocalDate,
         milestone: MilestoneEntity,
         status: TaskStatus,
-        assigneeIds: List<String>,
-        userRole: UserRole,
-        estimatedDuration: String,
-        estimatedReadiness: String,
-        attachmentUrls: List<String>,
+        assigneeIds: List<String>?,
+        userRole: UserRole?,
+        estimatedDuration: String?,
+        estimatedReadiness: String?,
+        attachmentUrls: List<String>?,
         creatorId: UUID,
         lastModifierId: UUID
     ): TaskEntity {
