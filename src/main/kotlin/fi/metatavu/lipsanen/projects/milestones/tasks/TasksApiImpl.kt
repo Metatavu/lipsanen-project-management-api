@@ -130,14 +130,18 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createConflict(updateError)
             }
 
-            val updatedTask = taskController.update(
-                existingTask = foundTask,
-                newTask = task,
-                milestone = projectMilestone.first,
-                userId = userId
-            )
+            try {
+                val updatedTask = taskController.update(
+                    existingTask = foundTask,
+                    newTask = task,
+                    milestone = projectMilestone.first,
+                    userId = userId
+                )
+                return@async createOk(taskTranslator.translate(updatedTask))
+            } catch (e: IllegalArgumentException) {
+                return@async createBadRequest(e.message!!)
+            }
 
-            return@async createOk(taskTranslator.translate(updatedTask))
         }.asUni()
 
     @WithTransaction

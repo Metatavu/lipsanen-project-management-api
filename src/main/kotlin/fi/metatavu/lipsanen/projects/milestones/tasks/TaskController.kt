@@ -1,11 +1,14 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.Task
+import fi.metatavu.lipsanen.api.model.TaskConnectionRole
+import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
+import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -61,7 +64,8 @@ class TaskController {
      * @return list of tasks
      */
     suspend fun list(milestones: List<MilestoneEntity>): List<TaskEntity> {
-        return taskEntityRepository.find("milestone in :milestones", Parameters().and("milestones", milestones)).list<TaskEntity>().awaitSuspending()
+        return taskEntityRepository.find("milestone in :milestones", Parameters().and("milestones", milestones))
+            .list<TaskEntity>().awaitSuspending()
     }
 
     /**
@@ -121,6 +125,7 @@ class TaskController {
      * @param milestone milestone
      * @param userId user id
      * @return updated task
+     * @throws IllegalArgumentException
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -128,9 +133,7 @@ class TaskController {
         milestone: MilestoneEntity,
         userId: UUID
     ): TaskEntity {
-        /*
-        if the tasks extends beyond the milestone, the milestone is updated to fit that task
-         */
+        //if the task extends beyond the milestone, the milestone is updated to fit that task
         if (newTask.startDate < milestone.startDate) {
             milestone.startDate = newTask.startDate
         }
@@ -138,13 +141,159 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        existingTask.startDate = newTask.startDate
-        existingTask.endDate = newTask.endDate
+        val updatedTask = updateTaskDates(existingTask, newTask, milestone)
+        updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
+        updatedTask.name = newTask.name
+        updatedTask.lastModifierId = userId
+        return taskEntityRepository.persistSuspending(updatedTask)
+    }
 
-        existingTask.status = newTask.status    // verification if updates are required is done in the api impl
-        existingTask.name = newTask.name
-        existingTask.lastModifierId = userId
-        return taskEntityRepository.persistSuspending(existingTask)
+    /**
+     * Updates task dates
+     *
+     * @param movableTask task to update
+     * @param newTask new task
+     * @param milestone milestone
+     * @return updated task
+     */
+    private suspend fun updateTaskDates(
+        movableTask: TaskEntity,
+        newTask: Task,
+        milestone: MilestoneEntity
+    ): TaskEntity {
+        if (movableTask.startDate == newTask.startDate && movableTask.endDate == newTask.endDate) {
+            return movableTask
+        }
+        val moveForward = movableTask.endDate < newTask.endDate
+        val moveBackward = movableTask.startDate > newTask.startDate
+        movableTask.startDate = newTask.startDate
+        movableTask.endDate = newTask.endDate
+
+        taskEntityRepository.persistSuspending(movableTask) //Save the task at this point so that when listing connections it is up to date
+        Panache.flush()
+
+        val updatableTasks = mutableListOf<TaskEntity>()
+        if (moveForward) {
+            updateTaskConnectionsForward(movableTask, updatableTasks)
+        }
+        if (moveBackward) {
+            updateTaskConnectionsBackward(movableTask, updatableTasks)
+        }
+
+        // Check if the dependent tasks are still within the milestone and save them
+        updatableTasks.forEach {
+            if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
+                throw IllegalArgumentException("Tasks moved backward are out of milestone")
+            }
+        }
+        updatableTasks.forEach { taskEntityRepository.persistSuspending(it) }
+
+        return movableTask
+    }
+
+    /**
+     * Cascade update task connections backward (all parents of movabletask recursively)
+     *
+     * @param movableTask task to update
+     * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
+     */
+    suspend fun updateTaskConnectionsBackward(movableTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+        val tasks = ArrayDeque<TaskEntity>()
+        tasks.add(movableTask)
+        while (tasks.isNotEmpty()) {
+            val currentTask = tasks.removeFirst()
+            val connections = taskConnectionController.list(currentTask, TaskConnectionRole.TARGET)
+            for (connection in connections) {
+                var updated = 0
+                val sourceTask = connection.source
+                val targetTask = connection.target
+                val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
+                when (connection.type) {
+                    TaskConnectionType.FINISH_TO_START -> {
+                        if (sourceTask.endDate > targetTask.startDate) {
+                            updated = 1
+                            sourceTask.endDate = targetTask.startDate
+                            sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.START_TO_START -> {
+                        if (sourceTask.startDate > targetTask.startDate) {
+                            updated = 1
+                            sourceTask.startDate = targetTask.startDate
+                            sourceTask.endDate = sourceTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.FINISH_TO_FINISH -> {
+                        if (sourceTask.endDate > targetTask.endDate) {
+                            updated = 1
+                            sourceTask.endDate = targetTask.endDate
+                            sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
+                        }
+                    }
+                }
+
+                if (updated == 1) {
+                    updatableTasks.add(sourceTask)
+                }
+                tasks.add(sourceTask)
+            }
+
+        }
+    }
+
+    /**
+     * Cascade update task connections forward (all children of movable task recursively)
+     *
+     * @param movableTask task to update
+     * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
+     */
+    suspend fun updateTaskConnectionsForward(movableTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+        val tasks = ArrayDeque<TaskEntity>()
+        tasks.add(movableTask)
+
+        while (tasks.isNotEmpty()) {
+            val currentTask = tasks.removeFirst()
+            val connections = taskConnectionController.list(currentTask, TaskConnectionRole.SOURCE)
+            for (connection in connections) {
+                var updated = 0
+                val sourceTask = connection.source
+                val targetTask = connection.target
+                val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
+                when (connection.type) {
+                    TaskConnectionType.FINISH_TO_START -> {
+                        if (sourceTask.endDate > targetTask.startDate) {
+                            updated = 1
+                            targetTask.startDate = sourceTask.endDate
+                            targetTask.endDate = targetTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.START_TO_START -> {
+                        if (targetTask.startDate < sourceTask.startDate) {
+                            updated = 1
+                            targetTask.startDate = sourceTask.startDate
+                            targetTask.endDate = targetTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.FINISH_TO_FINISH -> {
+                        if (targetTask.endDate < sourceTask.endDate) {
+                            updated = 1
+                            targetTask.endDate = sourceTask.endDate
+                            targetTask.startDate = targetTask.endDate.minusDays(taskLength)
+                        }
+                    }
+                }
+
+
+                if (updated == 1) {
+                    updatableTasks.add(targetTask)
+                }
+                tasks.add(targetTask)
+            }
+        }
     }
 
     /**

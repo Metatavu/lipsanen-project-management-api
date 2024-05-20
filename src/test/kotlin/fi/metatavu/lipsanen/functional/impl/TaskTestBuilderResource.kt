@@ -61,6 +61,26 @@ class TaskTestBuilderResource(
 
     fun create(
         projectId: UUID,
+        milestoneId: UUID,
+        startDate: String,
+        endDate: String,
+        name: String? = null
+    ): Task {
+        return create(
+            projectId = projectId,
+            milestoneId = milestoneId,
+            task = Task(
+                name = name ?: "Task",
+                startDate = startDate,
+                status = TaskStatus.NOT_STARTED,
+                milestoneId = milestoneId,
+                endDate = endDate
+            )
+        )
+    }
+
+    fun create(
+        projectId: UUID,
         milestoneId: UUID
     ): Task {
         return create(

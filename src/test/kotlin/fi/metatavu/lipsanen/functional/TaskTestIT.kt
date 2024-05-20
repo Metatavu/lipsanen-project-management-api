@@ -256,6 +256,156 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
     }
 
+    /*
+    Test case for cascade updating the tasks forward:
+    Source:
+    Day:    1   2   3   4   5   6
+    Task:  *t1***
+                *t2**
+                    *t3******
+                        *t4**
+
+    With expected outcome after moving t1 to 3-4
+    Day:    1   2   3   4   5   6
+    Task:           **t1*
+                        **t2*
+                        *t3******
+                        *t4******
+     */
+    @Test
+    fun tsetUpdateTaskConnectionsForward() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(
+            projectId = project.id!!, Milestone(
+                name = "Milestone",
+                startDate = "2022-01-01",
+                endDate = "2022-01-31"
+            )
+        )
+
+        val task = tb.admin.task.create(name = "task1", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-01", endDate = "2022-01-02")
+        val task2 = tb.admin.task.create(name = "task2", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-02", endDate = "2022-01-03")
+        val task3 = tb.admin.task.create(name = "task3", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-03", endDate = "2022-01-05")
+        val task4 = tb.admin.task.create(name = "task4", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-04", endDate = "2022-01-06")
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task.id!!,
+                targetTaskId = task2.id!!,
+                type = TaskConnectionType.FINISH_TO_START
+            )
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task2.id,
+                targetTaskId = task3.id!!,
+                type = TaskConnectionType.START_TO_START
+            )
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task3.id,
+                targetTaskId = task4.id!!,
+                type = TaskConnectionType.FINISH_TO_FINISH
+            )
+        )
+
+        tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id, task.copy(startDate = "2022-01-03", endDate = "2022-01-04"))
+
+        val foundTask1 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
+        val foundTask2 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task2.id)
+        val foundTask3 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)
+        val foundTask4 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task4.id)
+
+
+        assertEquals("2022-01-03", foundTask1.startDate)
+        assertEquals("2022-01-04", foundTask1.endDate)
+
+        assertEquals("2022-01-04", foundTask2.startDate)
+        assertEquals("2022-01-05", foundTask2.endDate)
+
+        assertEquals("2022-01-04", foundTask3.startDate)
+        assertEquals("2022-01-06", foundTask3.endDate)
+
+        assertEquals("2022-01-04", foundTask4.startDate)
+        assertEquals("2022-01-06", foundTask4.endDate)
+
+        // test moving to invalid dates (cascade affects the milestone)
+        tb.admin.task.assertUpdateFail(
+            expectedStatus = 400,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            taskId = task.id,
+            task = task.copy(startDate = "2022-01-30", endDate = "2022-01-31")
+        )
+    }
+
+    /**
+     * Same setup as in tsetUpdateTaskConnectionsForward but the task4 is updated backwards
+     */
+    @Test
+    fun testUpdateTaskConnectionsBackwards() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(
+            projectId = project.id!!, Milestone(
+                name = "Milestone",
+                startDate = "2022-01-01",
+                endDate = "2022-01-31"
+            )
+        )
+
+        val task = tb.admin.task.create(name = "task1", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-01", endDate = "2022-01-02")
+        val task2 = tb.admin.task.create(name = "task2", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-02", endDate = "2022-01-03")
+        val task3 = tb.admin.task.create(name = "task3", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-03", endDate = "2022-01-05")
+        val task4 = tb.admin.task.create(name = "task4", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-04", endDate = "2022-01-06")
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task.id!!,
+                targetTaskId = task2.id!!,
+                type = TaskConnectionType.FINISH_TO_START
+            )
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task2.id,
+                targetTaskId = task3.id!!,
+                type = TaskConnectionType.START_TO_START
+            )
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(
+                sourceTaskId = task3.id,
+                targetTaskId = task4.id!!,
+                type = TaskConnectionType.FINISH_TO_FINISH
+            )
+        )
+
+        tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task4.id, task4.copy(startDate = "2022-01-02", endDate = "2022-01-04"))
+
+        val foundTask1 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
+        val foundTask2 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task2.id)
+        val foundTask3 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)
+        val foundTask4 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task4.id)
+
+
+        assertEquals("2022-01-01", foundTask1.startDate)
+        assertEquals("2022-01-02", foundTask1.endDate)
+
+        assertEquals("2022-01-02", foundTask2.startDate)
+        assertEquals("2022-01-03", foundTask2.endDate)
+
+        assertEquals("2022-01-02", foundTask3.startDate)
+        assertEquals("2022-01-04", foundTask3.endDate)
+
+        assertEquals("2022-01-02", foundTask4.startDate)
+        assertEquals("2022-01-04", foundTask4.endDate)
+    }
+
     @Test
     fun testTaskUpdateFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
