@@ -193,7 +193,7 @@
             <column name="task_id" type="binary(16)">
                 <constraints nullable="false" foreignKeyName="FK_TASK_ASSIGNEE_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
             </column>
-            <column name="assigneeid" type="varchar(255)">
+            <column name="assigneeid" type="binary(16)">
                 <constraints nullable="false"/>
             </column>
         </createTable>

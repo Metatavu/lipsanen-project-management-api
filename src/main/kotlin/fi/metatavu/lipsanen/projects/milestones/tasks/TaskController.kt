@@ -81,13 +81,21 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
-                // Todo: match types below
-            assignees = emptyList(),
+            assignees = task.assigneeIds?.map {
+                val assigneeEntity = TaskAssigneeEntity()
+                assigneeEntity.id = UUID.randomUUID()
+                assigneeEntity.assigneeId = it
+                assigneeEntity
+            } ?: emptyList(),
             userRole = task.userRole ?: UserRole.USER,
             estimatedDuration = task.estimatedDuration ?: "",
             estimatedReadiness = task.estimatedReadiness ?: "",
-                // Todo: match types below
-            attachments = emptyList(),
+            attachments = task.attachmentUrls?.map {
+                val attachmentEntity = TaskAttachmentEntity()
+                attachmentEntity.id = UUID.randomUUID()
+                attachmentEntity.attachmentUrl = it
+                attachmentEntity
+            } ?: emptyList(),
             creatorId = userId,
             lastModifierId = userId
         )
@@ -146,19 +154,33 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
+        //TODO: verify that it works
+        val updatedAssignees = newTask.assigneeIds?.map { newAssigneeId ->
+            existingTask.assignees.find { it.assigneeId == newAssigneeId } ?: TaskAssigneeEntity().apply {
+                id = UUID.randomUUID()
+                assigneeId = newAssigneeId
+            }
+        } ?: emptyList()
+
+        //TODO: verify that it works
+        val updatedAttachments = newTask.attachmentUrls?.map { newAttachmentUrl ->
+            existingTask.attachments.find { it.attachmentUrl == newAttachmentUrl } ?: TaskAttachmentEntity().apply {
+                id = UUID.randomUUID()
+                attachmentUrl = newAttachmentUrl
+            }
+        } ?: emptyList()
+
         with(existingTask) {
             startDate = newTask.startDate
             endDate = newTask.endDate
             status = newTask.status
             name = newTask.name
             lastModifierId = userId
-            // Todo: match types below
-            assignees = emptyList()
+            assignees = updatedAssignees
             userRole = newTask.userRole ?: UserRole.USER
             estimatedDuration = newTask.estimatedDuration ?: ""
             estimatedReadiness = newTask.estimatedReadiness ?: ""
-            // Todo: match types below
-            attachments = emptyList()
+            attachments = updatedAttachments
         }
         return taskEntityRepository.persistSuspending(existingTask)
     }

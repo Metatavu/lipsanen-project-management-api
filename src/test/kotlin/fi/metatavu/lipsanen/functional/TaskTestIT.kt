@@ -40,7 +40,13 @@ class TaskTestIT : AbstractFunctionalTest() {
             status = TaskStatus.NOT_STARTED,    //always created as not started
             startDate = "2022-01-01",
             endDate = "2022-01-31",
-            milestoneId = milestone.id!!
+            milestoneId = milestone.id!!,
+            assigneeIds = arrayOf(UUID.randomUUID(), UUID.randomUUID()),
+            userRole = UserRole.USER,
+            estimatedDuration = "1d",
+            estimatedReadiness = "10%",
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
+
         )
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
 
@@ -51,6 +57,11 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.startDate, task.startDate)
         assertEquals(taskData.endDate, task.endDate)
         assertEquals(taskData.milestoneId, task.milestoneId)
+        assertEquals(taskData.assigneeIds!!.toList(), task.assigneeIds!!.toList())
+        assertEquals(taskData.userRole, task.userRole)
+        assertEquals(taskData.estimatedDuration, task.estimatedDuration)
+        assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
+        assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
     }
 
     @Test
@@ -242,7 +253,12 @@ class TaskTestIT : AbstractFunctionalTest() {
         val taskUpdateData = task.copy(
             name = "Task2",
             startDate = "2022-01-03",
-            endDate = "2022-02-01"
+            endDate = "2022-02-01",
+            assigneeIds = arrayOf(UUID.randomUUID()),
+            userRole = UserRole.ADMIN,
+            estimatedDuration = "2d",
+            estimatedReadiness = "20%",
+            attachmentUrls = arrayOf("https://example.com/attachment1, https://example.com/attachment3")
         )
         val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)
 
@@ -251,6 +267,13 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals("Task2", updatedTask.name)
         assertEquals(taskUpdateData.startDate, updatedTask.startDate)
         assertEquals(taskUpdateData.endDate, updatedTask.endDate)
+        assertEquals(updatedTask.assigneeIds?.size, 1)
+        assertEquals(updatedTask.assigneeIds?.get(0), taskUpdateData.assigneeIds?.get(0))
+        assertEquals(updatedTask.userRole, taskUpdateData.userRole)
+        assertEquals(updatedTask.estimatedDuration, taskUpdateData.estimatedDuration)
+        assertEquals(updatedTask.estimatedReadiness, taskUpdateData.estimatedReadiness)
+        assertEquals(updatedTask.attachmentUrls?.size, 2)
+        assertEquals(updatedTask.attachmentUrls, taskUpdateData.attachmentUrls)
 
         // verify that the end of the milestone extended to the new task length
         val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
