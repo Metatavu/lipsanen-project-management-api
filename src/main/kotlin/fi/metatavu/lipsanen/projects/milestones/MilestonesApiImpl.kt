@@ -113,9 +113,9 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             }
 
             if (!projectController.isInPlanningStage(project)) {
+                // Milestone original start and end dates are not updated in this case as well
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
-
 
             val foundMilestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
                 createNotFoundMessage(MILESTONE, milestoneId)

@@ -166,6 +166,19 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="milestone_original_dates" author="daniil smirnov">
+        <addColumn tableName="milestone">
+            <column name="originalstartdate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="originalenddate" type="date">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <!-- Update milestone original dates to a default value -->
+        <sql>UPDATE milestone SET originalstartdate = startdate, originalenddate = enddate</sql>
+    </changeSet>
+
     <changeSet id="taskparams" author="daniil smirnov">
         <addColumn tableName="task">
             <column name="userrole" type="varchar(255)"/>

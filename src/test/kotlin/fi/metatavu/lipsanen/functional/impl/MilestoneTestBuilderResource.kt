@@ -46,7 +46,9 @@ class MilestoneTestBuilderResource(
             projectId, Milestone(
                 name = "Milestone",
                 startDate = "2022-01-01",
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-02",
+                originalEndDate = "2022-01-30"
             )
         )
     }
@@ -123,7 +125,9 @@ class MilestoneTestBuilderResource(
                 projectId, projectMilestoneId, milestone ?: Milestone(
                     name = "Updated milestone",
                     startDate = "2022-02-01",
-                    endDate = "2022-02-28"
+                    endDate = "2022-02-28",
+                    originalStartDate = "2022-02-02",
+                    originalEndDate = "2022-02-27"
                 )
             )
             fail(String.format("Expected update to fail with status %d", expectedStatus))
