@@ -29,6 +29,12 @@ class TaskController {
     @Inject
     lateinit var proposalController: ChangeProposalController
 
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var taskAttachmentRepository: TaskAttachmentRepository
+
     /**
      * Lists tasks
      *
@@ -74,6 +80,22 @@ class TaskController {
      * @return created task
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
+        task.assigneeIds?.forEach { assigneeId ->
+            taskAssigneeRepository.create(
+                    id = UUID.randomUUID(),
+                    taskId = UUID.randomUUID(),
+                    assigneeId = assigneeId
+            )
+        }
+
+        task.attachmentUrls?.forEach { attachmentUrl ->
+            taskAttachmentRepository.create(
+                    id = UUID.randomUUID(),
+                    taskId = UUID.randomUUID(),
+                    attachmentUrl = attachmentUrl
+            )
+        }
+
         return taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
@@ -154,21 +176,33 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        //TODO: verify that it works
-        val updatedAssignees = newTask.assigneeIds?.map { newAssigneeId ->
-            existingTask.assignees.find { it.assigneeId == newAssigneeId } ?: TaskAssigneeEntity().apply {
-                id = UUID.randomUUID()
-                assigneeId = newAssigneeId
+        // Handle updating task assignees
+        val existingAssignees = taskAssigneeRepository.listByTaskId(existingTask.id).first
+        val newAssignees = newTask.assigneeIds ?: emptyList()
+        existingAssignees.forEach { existingAssignee ->
+            if (existingAssignee.assigneeId !in newAssignees) {
+                taskAssigneeRepository.deleteSuspending(existingAssignee)
             }
-        } ?: emptyList()
+        }
+        newAssignees.forEach { newAssigneeId ->
+            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask.id, newAssigneeId)
+            }
+        }
 
-        //TODO: verify that it works
-        val updatedAttachments = newTask.attachmentUrls?.map { newAttachmentUrl ->
-            existingTask.attachments.find { it.attachmentUrl == newAttachmentUrl } ?: TaskAttachmentEntity().apply {
-                id = UUID.randomUUID()
-                attachmentUrl = newAttachmentUrl
+        // Handle updating task attachments
+        val existingAttachments = taskAttachmentRepository.listByTaskId(existingTask.id).first
+        val newAttachments = newTask.attachmentUrls ?: emptyList()
+        existingAttachments.forEach { existingAttachment ->
+            if (existingAttachment.attachmentUrl !in newAttachments) {
+                taskAttachmentRepository.deleteSuspending(existingAttachment)
             }
-        } ?: emptyList()
+        }
+        newAttachments.forEach { newAttachmentUrl ->
+            if (existingAttachments.none { it.attachmentUrl == newAttachmentUrl }) {
+                taskAttachmentRepository.create(UUID.randomUUID(), existingTask.id, newAttachmentUrl)
+            }
+        }
 
         with(existingTask) {
             startDate = newTask.startDate
@@ -176,11 +210,9 @@ class TaskController {
             status = newTask.status
             name = newTask.name
             lastModifierId = userId
-            assignees = updatedAssignees
             userRole = newTask.userRole ?: UserRole.USER
             estimatedDuration = newTask.estimatedDuration ?: ""
             estimatedReadiness = newTask.estimatedReadiness ?: ""
-            attachments = updatedAttachments
         }
         return taskEntityRepository.persistSuspending(existingTask)
     }

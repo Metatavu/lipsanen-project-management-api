@@ -49,11 +49,9 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         taskEntity.endDate = endDate
         taskEntity.milestone = milestone
         taskEntity.status = status
-        taskEntity.assignees = assignees
         taskEntity.userRole = userRole
         taskEntity.estimatedDuration = estimatedDuration
         taskEntity.estimatedReadiness = estimatedReadiness
-        taskEntity.attachments = attachments
         taskEntity.creatorId = creatorId
         taskEntity.lastModifierId = lastModifierId
         return persistSuspending(taskEntity)
