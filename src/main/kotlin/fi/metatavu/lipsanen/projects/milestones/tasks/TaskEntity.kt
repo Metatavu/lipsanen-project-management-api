@@ -33,7 +33,7 @@ class TaskEntity : Metadata() {
     @Enumerated(EnumType.STRING)
     lateinit var status: TaskStatus
 
-    @OneToMany(mappedBy = "task", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "id", cascade = [CascadeType.ALL], orphanRemoval = true, targetEntity = TaskAssigneeEntity::class)
     lateinit var assignees: List<TaskAssigneeEntity>
 
     @Enumerated(EnumType.STRING)
@@ -46,7 +46,7 @@ class TaskEntity : Metadata() {
     @Column(nullable = true)
     var estimatedReadiness: String? = null
 
-    @OneToMany(mappedBy = "task", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToMany(mappedBy = "id", cascade = [CascadeType.ALL], orphanRemoval = true, targetEntity = TaskAttachmentEntity::class)
     lateinit var attachments: List<TaskAttachmentEntity>
 
     override lateinit var creatorId: UUID
