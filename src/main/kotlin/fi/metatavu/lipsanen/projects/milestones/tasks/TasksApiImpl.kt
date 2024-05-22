@@ -40,7 +40,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     @Inject
     lateinit var taskConnectionRepository: TaskConnectionRepository
 
-
     @Inject
     lateinit var vertx: Vertx
 

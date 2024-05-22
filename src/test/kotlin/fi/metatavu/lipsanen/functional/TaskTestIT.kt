@@ -14,7 +14,6 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.http.Method
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -48,7 +47,10 @@ class TaskTestIT : AbstractFunctionalTest() {
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
 
         )
+        println("TaskData: $taskData")
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
+
+        println("Task: $task")
 
         assertNotNull(task)
         assertNotNull(task.id)

@@ -15,18 +15,18 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
      * Creates a new task assignee entity
      *
      * @param id id
-     * @param taskId task id
+     * @param task task
      * @param assigneeId assignee id
      * @return created task assignee
      */
     suspend fun create(
         id: UUID,
-        taskId: UUID,
+        task: TaskEntity,
         assigneeId: UUID
     ): TaskAssigneeEntity {
         val taskAssigneeEntity = TaskAssigneeEntity()
         taskAssigneeEntity.id = id
-        taskAssigneeEntity.taskId = taskId
+        taskAssigneeEntity.task = task
         taskAssigneeEntity.assigneeId = assigneeId
         return persistSuspending(taskAssigneeEntity)
     }
@@ -41,7 +41,7 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
-        queryBuilder.append("taskId = :taskId")
+        queryBuilder.append("task.id = :taskId")
         params.and("taskId", taskId)
 
         return applyFirstMaxToQuery(

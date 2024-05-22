@@ -80,47 +80,37 @@ class TaskController {
      * @return created task
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
-        task.assigneeIds?.forEach { assigneeId ->
-            taskAssigneeRepository.create(
-                    id = UUID.randomUUID(),
-                    taskId = UUID.randomUUID(),
-                    assigneeId = assigneeId
-            )
-        }
-
-        task.attachmentUrls?.forEach { attachmentUrl ->
-            taskAttachmentRepository.create(
-                    id = UUID.randomUUID(),
-                    taskId = UUID.randomUUID(),
-                    attachmentUrl = attachmentUrl
-            )
-        }
-
-        return taskEntityRepository.create(
+        val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
             startDate = task.startDate,
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
-            assignees = task.assigneeIds?.map {
-                val assigneeEntity = TaskAssigneeEntity()
-                assigneeEntity.id = UUID.randomUUID()
-                assigneeEntity.assigneeId = it
-                assigneeEntity
-            } ?: emptyList(),
             userRole = task.userRole ?: UserRole.USER,
             estimatedDuration = task.estimatedDuration ?: "",
             estimatedReadiness = task.estimatedReadiness ?: "",
-            attachments = task.attachmentUrls?.map {
-                val attachmentEntity = TaskAttachmentEntity()
-                attachmentEntity.id = UUID.randomUUID()
-                attachmentEntity.attachmentUrl = it
-                attachmentEntity
-            } ?: emptyList(),
             creatorId = userId,
             lastModifierId = userId
         )
+
+        task.assigneeIds?.forEach { assigneeId ->
+            taskAssigneeRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                assigneeId = assigneeId
+            )
+        }
+
+        task.attachmentUrls?.forEach { attachmentUrl ->
+            taskAttachmentRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                attachmentUrl = attachmentUrl
+            )
+        }
+
+        return taskEntity
     }
 
     /**
@@ -186,7 +176,7 @@ class TaskController {
         }
         newAssignees.forEach { newAssigneeId ->
             if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
-                taskAssigneeRepository.create(UUID.randomUUID(), existingTask.id, newAssigneeId)
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
             }
         }
 
@@ -200,7 +190,7 @@ class TaskController {
         }
         newAttachments.forEach { newAttachmentUrl ->
             if (existingAttachments.none { it.attachmentUrl == newAttachmentUrl }) {
-                taskAttachmentRepository.create(UUID.randomUUID(), existingTask.id, newAttachmentUrl)
+                taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
             }
         }
 
@@ -228,6 +218,12 @@ class TaskController {
         }
         proposalController.list(foundTask).forEach {
             proposalController.delete(it)
+        }
+        taskAssigneeRepository.listByTaskId(foundTask.id).first.forEach {
+            taskAssigneeRepository.deleteSuspending(it)
+        }
+        taskAttachmentRepository.listByTaskId(foundTask.id).first.forEach {
+            taskAttachmentRepository.deleteSuspending(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
     }

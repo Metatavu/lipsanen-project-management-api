@@ -11,8 +11,7 @@ class TaskAttachmentEntity {
     lateinit var id: UUID
 
     @ManyToOne
-    @JoinColumn(name = "task_id", nullable = false)
-    lateinit var taskId: UUID
+    lateinit var task: TaskEntity
 
     @Column(nullable = false)
     lateinit var attachmentUrl: String

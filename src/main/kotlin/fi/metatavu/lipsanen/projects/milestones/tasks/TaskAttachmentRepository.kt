@@ -15,16 +15,18 @@ class TaskAttachmentRepository : AbstractRepository<TaskAttachmentEntity, UUID>(
      * Creates a new task attachment
      *
      * @param id id
-     * @param taskId task id
+     * @param task task
      * @param attachmentUrl attachment url
      * @return created task attachment
      */
     suspend fun create(
-        id: UUID,taskId: UUID,attachmentUrl: String
+        id: UUID,
+        task: TaskEntity,
+        attachmentUrl: String
     ): TaskAttachmentEntity {
         val taskAttachment = TaskAttachmentEntity()
         taskAttachment.id = id
-        taskAttachment.taskId = taskId
+        taskAttachment.task = task
         taskAttachment.attachmentUrl = attachmentUrl
         return taskAttachment
     }
@@ -39,7 +41,7 @@ class TaskAttachmentRepository : AbstractRepository<TaskAttachmentEntity, UUID>(
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
-        queryBuilder.append("taskId = :taskId")
+        queryBuilder.append("task.id = :taskId")
         params.and("taskId", taskId)
 
         return applyFirstMaxToQuery(
