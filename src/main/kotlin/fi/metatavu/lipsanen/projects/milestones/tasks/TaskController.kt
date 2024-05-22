@@ -167,7 +167,7 @@ class TaskController {
         }
 
         // Handle updating task assignees
-        val existingAssignees = taskAssigneeRepository.listByTaskId(existingTask.id).first
+        val existingAssignees = taskAssigneeRepository.listByTask(existingTask).first
         val newAssignees = newTask.assigneeIds ?: emptyList()
         existingAssignees.forEach { existingAssignee ->
             if (existingAssignee.assigneeId !in newAssignees) {
@@ -181,7 +181,7 @@ class TaskController {
         }
 
         // Handle updating task attachments
-        val existingAttachments = taskAttachmentRepository.listByTaskId(existingTask.id).first
+        val existingAttachments = taskAttachmentRepository.listByTask(existingTask).first
         val newAttachments = newTask.attachmentUrls ?: emptyList()
         existingAttachments.forEach { existingAttachment ->
             if (existingAttachment.attachmentUrl !in newAttachments) {
@@ -219,10 +219,10 @@ class TaskController {
         proposalController.list(foundTask).forEach {
             proposalController.delete(it)
         }
-        taskAssigneeRepository.listByTaskId(foundTask.id).first.forEach {
+        taskAssigneeRepository.listByTask(foundTask).first.forEach {
             taskAssigneeRepository.deleteSuspending(it)
         }
-        taskAttachmentRepository.listByTaskId(foundTask.id).first.forEach {
+        taskAttachmentRepository.listByTask(foundTask).first.forEach {
             taskAttachmentRepository.deleteSuspending(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)

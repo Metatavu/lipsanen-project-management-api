@@ -32,17 +32,17 @@ class TaskAttachmentRepository : AbstractRepository<TaskAttachmentEntity, UUID>(
     }
 
     /**
-     * Lists task attachments by task id
+     * Lists task attachments by task
      *
-     * @param taskId task id
+     * @param task task
      * @return list of task attachments
      */
-    suspend fun listByTaskId(taskId: UUID): Pair<List<TaskAttachmentEntity>, Long> {
+    suspend fun listByTask(task: TaskEntity): Pair<List<TaskAttachmentEntity>, Long> {
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
-        queryBuilder.append("task.id = :taskId")
-        params.and("taskId", taskId)
+        queryBuilder.append("task = :task")
+        params.and("task", task)
 
         return applyFirstMaxToQuery(
             query = find(queryBuilder.toString(), Sort.descending("id"), params),

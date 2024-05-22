@@ -32,17 +32,17 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
     }
 
     /**
-     * Lists task assignees by task id
+     * Lists task assignees by task
      *
-     * @param taskId task id
+     * @param task task
      * @return list of task assignees
      */
-    suspend fun listByTaskId(taskId: UUID): Pair<List<TaskAssigneeEntity>, Long> {
+    suspend fun listByTask(task: TaskEntity): Pair<List<TaskAssigneeEntity>, Long> {
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
-        queryBuilder.append("task.id = :taskId")
-        params.and("taskId", taskId)
+        queryBuilder.append("task = :task")
+        params.and("task", task)
 
         return applyFirstMaxToQuery(
             query = find(queryBuilder.toString(), Sort.descending("id"), params),
