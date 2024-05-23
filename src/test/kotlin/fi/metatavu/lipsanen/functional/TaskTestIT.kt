@@ -111,16 +111,22 @@ class TaskTestIT : AbstractFunctionalTest() {
                             startDate = "2022-01-01",
                             endDate = "2022-01-31",
                             milestoneId = UUID.randomUUID(),
-                            status = TaskStatus.NOT_STARTED
+                            status = TaskStatus.NOT_STARTED,
                         ),
-                        task.copy(assigneeIds = arrayOf(UUID.randomUUID())), //assignee not found
+                        Task(       //wrong assignee id
+                            name = "Milestone",
+                            startDate = "2022-01-01",
+                            endDate = "2022-01-31",
+                            milestoneId = milestone.id,
+                            status = TaskStatus.NOT_STARTED,
+                            assigneeIds = arrayOf(UUID.randomUUID())
+                        ),
                     ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
                 )
             )
             .build()
             .test()
-
     }
 
     @Test
@@ -375,7 +381,7 @@ class TaskTestIT : AbstractFunctionalTest() {
                             assigneeIds = arrayOf(UUID.randomUUID())
                         )
                     ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
-                    expectedStatus = 400
+                    expectedStatus = 404
                 )
             )
             .build()

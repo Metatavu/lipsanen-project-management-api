@@ -75,7 +75,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
             task.assigneeIds?.forEach { assigneeId ->
                 if (userController.findUser(assigneeId) == null) {
-                    return@async createNotFound("Assignee with id $assigneeId not found")
+                    return@async createBadRequest("Assignee with id $assigneeId not found")
                 }
             }
 
