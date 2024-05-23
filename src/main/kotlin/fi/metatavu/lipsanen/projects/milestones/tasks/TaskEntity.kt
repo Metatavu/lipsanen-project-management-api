@@ -34,7 +34,6 @@ class TaskEntity : Metadata() {
     lateinit var status: TaskStatus
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
     var userRole: UserRole? = null
 
     @Column(nullable = true)

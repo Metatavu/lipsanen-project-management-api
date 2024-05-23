@@ -181,9 +181,9 @@
 
     <changeSet id="taskparams" author="daniil smirnov">
         <addColumn tableName="task">
-            <column name="userrole" type="varchar(255)"/>
-            <column name="estimatedduration" type="varchar(255)"/>
-            <column name="estimatedreadiness" type="varchar(255)"/>
+            <column name="userrole" type="varchar(191)"/>
+            <column name="estimatedduration" type="varchar(191)"/>
+            <column name="estimatedreadiness" type="varchar(191)"/>
         </addColumn>
 
         <createTable tableName="task_assignee">

@@ -88,8 +88,8 @@ class TaskController {
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
             userRole = task.userRole ?: UserRole.USER,
-            estimatedDuration = task.estimatedDuration ?: "",
-            estimatedReadiness = task.estimatedReadiness ?: "",
+            estimatedDuration = task.estimatedDuration,
+            estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
             lastModifierId = userId
         )
