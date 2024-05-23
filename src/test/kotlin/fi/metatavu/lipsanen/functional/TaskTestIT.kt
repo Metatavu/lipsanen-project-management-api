@@ -14,8 +14,7 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.http.Method
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.util.*
@@ -30,6 +29,10 @@ import java.util.*
 )
 class TaskTestIT : AbstractFunctionalTest() {
 
+    val userId1 = UUID.fromString("f4c1e6a1-705a-471a-825d-1982b5112ebd")
+    val userId2 = UUID.fromString("ef89e98e-6aa3-4511-9b80-ff98bd87fe36")
+    val userId3 = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
+
     @Test
     fun testTaskCreate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
@@ -40,7 +43,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             milestoneId = milestone.id!!,
-            assigneeIds = arrayOf(UUID.randomUUID(), UUID.randomUUID()),
+            assigneeIds = arrayOf(userId2, userId1),    //todo let's use valid user ids here since there's verification on the task creation
             userRole = UserRole.USER,
             estimatedDuration = "1d",
             estimatedReadiness = "10%",
@@ -111,7 +114,8 @@ class TaskTestIT : AbstractFunctionalTest() {
                             endDate = "2022-01-31",
                             milestoneId = UUID.randomUUID(),
                             status = TaskStatus.NOT_STARTED
-                        )
+                        ),
+                        task.copy(assigneeIds = arrayOf(UUID.randomUUID())), //assignee not found
                     ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
                 )
@@ -251,12 +255,24 @@ class TaskTestIT : AbstractFunctionalTest() {
                 originalEndDate = "2022-01-31"
             )
         )
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, Task(
+            name = "Task",
+            startDate = "2022-01-01",
+            endDate = "2022-01-31",
+            status = TaskStatus.NOT_STARTED,
+            assigneeIds = arrayOf(userId1, userId2),
+            userRole = UserRole.USER,
+            estimatedDuration = "1d",
+            estimatedReadiness = "10%",
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
+            milestoneId = milestone.id
+        ))
         val taskUpdateData = task.copy(
             name = "Task2",
             startDate = "2022-01-03",
             endDate = "2022-02-01",
-            assigneeIds = arrayOf(UUID.randomUUID()),
+            status = TaskStatus.IN_PROGRESS,
+            assigneeIds = arrayOf(userId3, userId2),
             userRole = UserRole.ADMIN,
             estimatedDuration = "2d",
             estimatedReadiness = "20%",
@@ -269,8 +285,9 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals("Task2", updatedTask.name)
         assertEquals(taskUpdateData.startDate, updatedTask.startDate)
         assertEquals(taskUpdateData.endDate, updatedTask.endDate)
+
+        // todo replace spots of actual and expected, expected is the correst responce, actual is "updated task" values
         assertEquals(updatedTask.assigneeIds?.size, 1)
-        assertEquals(updatedTask.assigneeIds?.get(0), taskUpdateData.assigneeIds?.get(0))
         assertEquals(updatedTask.userRole, taskUpdateData.userRole)
         assertEquals(updatedTask.estimatedDuration, taskUpdateData.estimatedDuration)
         assertEquals(updatedTask.estimatedReadiness, taskUpdateData.estimatedReadiness)
@@ -281,6 +298,10 @@ class TaskTestIT : AbstractFunctionalTest() {
         val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
         assertEquals(milestone.startDate, foundMilestone.startDate)
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
+
+        // Verify that the user cannot be removed
+        tb.admin.user.assertDeleteFailStatus(409, userId2)
+        tb.admin.user.assertDeleteFailStatus(409, userId3)
     }
 
     @Test
@@ -348,6 +369,7 @@ class TaskTestIT : AbstractFunctionalTest() {
                         ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
                 )
+                //todo add tests with updating with invalid user ids
             )
             .build()
             .test()

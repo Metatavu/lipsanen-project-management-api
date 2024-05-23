@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
 
@@ -11,6 +12,7 @@ import java.util.*
  */
 @ApplicationScoped
 class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
+
     /**
      * Creates a new task assignee entity
      *
@@ -37,17 +39,29 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
      * @param task task
      * @return list of task assignees
      */
-    suspend fun listByTask(task: TaskEntity): Pair<List<TaskAssigneeEntity>, Long> {
+    suspend fun listByTask(task: TaskEntity): List<TaskAssigneeEntity> {
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
         queryBuilder.append("task = :task")
         params.and("task", task)
+        // todo it was unnecessary to do the counting here since it is used for paging, these entities do not need paging since they are not requested separetely in the ui, same as task attachments
+        return find(queryBuilder.toString(), Sort.ascending("assigneeId"), params).list<TaskAssigneeEntity>().awaitSuspending()
+    }
 
-        return applyFirstMaxToQuery(
-            query = find(queryBuilder.toString(), Sort.descending("id"), params),
-            firstIndex = null,
-            maxResults = null
-        )
+    /**
+     * Lists task assignees by assignee
+     *
+     * @param assigneeId assignee id
+     * @return list of task assignees
+     */
+    suspend fun listByAssignee(assigneeId: UUID): List<TaskAssigneeEntity> {
+        val queryBuilder = StringBuilder()
+        val params = Parameters()
+
+        queryBuilder.append("assigneeId = :assigneeId")
+        params.and("assigneeId", assigneeId)
+
+        return find(queryBuilder.toString(), params).list<TaskAssigneeEntity>().awaitSuspending()
     }
 }

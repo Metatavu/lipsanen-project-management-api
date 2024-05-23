@@ -167,7 +167,7 @@ class TaskController {
         }
 
         // Handle updating task assignees
-        val existingAssignees = taskAssigneeRepository.listByTask(existingTask).first
+        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
         val newAssignees = newTask.assigneeIds ?: emptyList()
         existingAssignees.forEach { existingAssignee ->
             if (existingAssignee.assigneeId !in newAssignees) {
@@ -181,7 +181,7 @@ class TaskController {
         }
 
         // Handle updating task attachments
-        val existingAttachments = taskAttachmentRepository.listByTask(existingTask).first
+        val existingAttachments = taskAttachmentRepository.listByTask(existingTask)
         val newAttachments = newTask.attachmentUrls ?: emptyList()
         existingAttachments.forEach { existingAttachment ->
             if (existingAttachment.attachmentUrl !in newAttachments) {
@@ -201,9 +201,10 @@ class TaskController {
             name = newTask.name
             lastModifierId = userId
             userRole = newTask.userRole ?: UserRole.USER
-            estimatedDuration = newTask.estimatedDuration ?: ""
-            estimatedReadiness = newTask.estimatedReadiness ?: ""
+            estimatedDuration = newTask.estimatedDuration   //todo no need for empty strings, nulls are ok
+            estimatedReadiness = newTask.estimatedReadiness
         }
+
         return taskEntityRepository.persistSuspending(existingTask)
     }
 
@@ -219,10 +220,10 @@ class TaskController {
         proposalController.list(foundTask).forEach {
             proposalController.delete(it)
         }
-        taskAssigneeRepository.listByTask(foundTask).first.forEach {
+        taskAssigneeRepository.listByTask(foundTask).forEach {
             taskAssigneeRepository.deleteSuspending(it)
         }
-        taskAttachmentRepository.listByTask(foundTask).first.forEach {
+        taskAttachmentRepository.listByTask(foundTask).forEach {
             taskAttachmentRepository.deleteSuspending(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)

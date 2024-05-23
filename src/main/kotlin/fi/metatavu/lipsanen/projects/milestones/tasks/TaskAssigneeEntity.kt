@@ -3,6 +3,9 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import jakarta.persistence.*
 import java.util.*
 
+/**
+ * Entity for task assignees
+ */
 @Entity
 @Table(name = "task_assignee")
 class TaskAssigneeEntity {

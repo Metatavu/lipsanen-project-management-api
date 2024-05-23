@@ -4,13 +4,10 @@ import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.spec.TasksApi
-import fi.metatavu.lipsanen.projects.ProjectController
-import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
-import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -41,6 +38,12 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     lateinit var taskConnectionRepository: TaskConnectionRepository
 
     @Inject
+    lateinit var userController: UserController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
@@ -68,6 +71,13 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
             if (task.startDate.isAfter(task.endDate)) {
                 return@async createBadRequest(INVALID_TASK_DATES)
+            }
+
+            //todo verify that assignees are valid
+            task.assigneeIds?.forEach { assigneeId ->
+                if (userController.findUser(assigneeId) == null) {
+                    return@async createBadRequest("Assignee with id $assigneeId not found")
+                }
             }
 
             if (!projectController.isInPlanningStage(projectMilestone!!.second)) {
@@ -118,6 +128,18 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
             if (!projectController.isInPlanningStage(projectMilestone.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
+            }
+
+            //todo verify that assignees are valid
+            if (task.assigneeIds != null) {
+                val existingAssignees = taskAssigneeRepository.listByTask(foundTask)
+                if (existingAssignees.size != task.assigneeIds.size || !existingAssignees.map { it.assigneeId }.containsAll(task.assigneeIds)) {
+                    task.assigneeIds.forEach { assigneeId ->
+                        if (userController.findUser(assigneeId) == null) {
+                            return@async createBadRequest("Assignee with id $assigneeId not found")
+                        }
+                    }
+                }
             }
 
             // Verify that nothing blocks it from updating
