@@ -86,7 +86,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
     override fun deleteUser(userId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
-        //todo not allowed to delete users which have been assigned to active tasks
         val assignedToTasks = taskAssigneeRepository.listByAssignee(userId).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
         if (assignedToTasks.isNotEmpty()) {
             return@async createConflict("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")

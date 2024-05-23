@@ -201,7 +201,7 @@ class TaskController {
             name = newTask.name
             lastModifierId = userId
             userRole = newTask.userRole ?: UserRole.USER
-            estimatedDuration = newTask.estimatedDuration   //todo no need for empty strings, nulls are ok
+            estimatedDuration = newTask.estimatedDuration
             estimatedReadiness = newTask.estimatedReadiness
         }
 

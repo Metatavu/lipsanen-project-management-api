@@ -73,7 +73,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_TASK_DATES)
             }
 
-            //todo verify that assignees are valid
             task.assigneeIds?.forEach { assigneeId ->
                 if (userController.findUser(assigneeId) == null) {
                     return@async createBadRequest("Assignee with id $assigneeId not found")
@@ -130,7 +129,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            //todo verify that assignees are valid
             if (task.assigneeIds != null) {
                 val existingAssignees = taskAssigneeRepository.listByTask(foundTask)
                 if (existingAssignees.size != task.assigneeIds.size || !existingAssignees.map { it.assigneeId }.containsAll(task.assigneeIds)) {

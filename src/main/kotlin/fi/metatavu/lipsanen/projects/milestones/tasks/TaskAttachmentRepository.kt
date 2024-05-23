@@ -30,7 +30,7 @@ class TaskAttachmentRepository : AbstractRepository<TaskAttachmentEntity, UUID>(
         taskAttachment.id = id
         taskAttachment.task = task
         taskAttachment.attachmentUrl = attachmentUrl
-        return persistSuspending(taskAttachment)    //todo forgot saving here
+        return persistSuspending(taskAttachment)
     }
 
     /**

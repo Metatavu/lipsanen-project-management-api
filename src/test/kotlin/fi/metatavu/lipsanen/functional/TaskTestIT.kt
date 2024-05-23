@@ -43,17 +43,15 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             milestoneId = milestone.id!!,
-            assigneeIds = arrayOf(userId2, userId1),    //todo let's use valid user ids here since there's verification on the task creation
+            assigneeIds = arrayOf(userId2, userId1),
             userRole = UserRole.USER,
             estimatedDuration = "1d",
             estimatedReadiness = "10%",
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
 
         )
-        println("TaskData: $taskData")
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
 
-        println("Task: $task")
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
 
         assertNotNull(task)
         assertNotNull(task.id)
@@ -276,7 +274,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             userRole = UserRole.ADMIN,
             estimatedDuration = "2d",
             estimatedReadiness = "20%",
-            attachmentUrls = arrayOf("https://example.com/attachment1, https://example.com/attachment3")
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
         )
         val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)
 
@@ -286,13 +284,13 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.startDate, updatedTask.startDate)
         assertEquals(taskUpdateData.endDate, updatedTask.endDate)
 
-        // todo replace spots of actual and expected, expected is the correst responce, actual is "updated task" values
-        assertEquals(updatedTask.assigneeIds?.size, 1)
-        assertEquals(updatedTask.userRole, taskUpdateData.userRole)
-        assertEquals(updatedTask.estimatedDuration, taskUpdateData.estimatedDuration)
-        assertEquals(updatedTask.estimatedReadiness, taskUpdateData.estimatedReadiness)
-        assertEquals(updatedTask.attachmentUrls?.size, 2)
-        assertEquals(updatedTask.attachmentUrls, taskUpdateData.attachmentUrls)
+        assertEquals(2, updatedTask.assigneeIds?.size)
+        assertEquals(taskUpdateData.assigneeIds!!.toList(), updatedTask.assigneeIds!!.toList())
+        assertEquals(taskUpdateData.userRole, updatedTask.userRole)
+        assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
+        assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
+        assertEquals(2, updatedTask.attachmentUrls?.size)
+        assertEquals(taskUpdateData.attachmentUrls!!.toList(), updatedTask.attachmentUrls!!.toList())
 
         // verify that the end of the milestone extended to the new task length
         val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
@@ -369,7 +367,16 @@ class TaskTestIT : AbstractFunctionalTest() {
                         ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
                 )
-                //todo add tests with updating with invalid user ids
+            )
+            .body(
+                InvalidValueTestScenarioBody(
+                    values = listOf(
+                        task.copy(
+                            assigneeIds = arrayOf(UUID.randomUUID())
+                        )
+                    ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
+                    expectedStatus = 400
+                )
             )
             .build()
             .test()

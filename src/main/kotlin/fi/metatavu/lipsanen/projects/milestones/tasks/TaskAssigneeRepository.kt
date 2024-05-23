@@ -45,7 +45,7 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
 
         queryBuilder.append("task = :task")
         params.and("task", task)
-        // todo it was unnecessary to do the counting here since it is used for paging, these entities do not need paging since they are not requested separetely in the ui, same as task attachments
+
         return find(queryBuilder.toString(), Sort.ascending("assigneeId"), params).list<TaskAssigneeEntity>().awaitSuspending()
     }
 
