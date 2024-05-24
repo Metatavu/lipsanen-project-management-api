@@ -106,7 +106,9 @@ class ChangeProposalController {
      * @return proposals for tasks
      */
     suspend fun list(tasks: List<TaskEntity>): List<ChangeProposalEntity> {
-        return proposalRepository.find("task in :tasks", Parameters.with("tasks", tasks)).list<ChangeProposalEntity>()
+        return proposalRepository
+            .find("task in :tasks", Parameters.with("tasks", tasks))
+            .list<ChangeProposalEntity>()
             .awaitSuspending()
     }
 
