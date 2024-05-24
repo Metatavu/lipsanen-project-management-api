@@ -262,17 +262,17 @@ class TaskTestIT : AbstractFunctionalTest() {
     Test case for cascade updating the tasks forward:
     Source:
     Day:    1   2   3   4   5   6
-    Task:  *t1***
-                *t2**
-                    *t3******
-                        *t4**
+    Task:   |t1-|
+                |t2-|
+                    |t3-----|
+                        |t4-|
 
     With expected outcome after moving t1 to 3-4
     Day:    1   2   3   4   5   6
-    Task:           **t1*
-                        **t2*
-                        *t3******
-                        *t4******
+    Task:           |t1-|
+                        |t2-|
+                        |t3-----|
+                        |t4-----|
      */
     @Test
     fun tsetUpdateTaskConnectionsForward() = createTestBuilder().use { tb ->
