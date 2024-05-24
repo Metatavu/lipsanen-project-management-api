@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
@@ -27,6 +28,12 @@ class TaskController {
 
     @Inject
     lateinit var proposalController: ChangeProposalController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var taskAttachmentRepository: TaskAttachmentRepository
 
     /**
      * Lists tasks
@@ -73,16 +80,37 @@ class TaskController {
      * @return created task
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
-        return taskEntityRepository.create(
+        val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
             startDate = task.startDate,
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
+            userRole = task.userRole ?: UserRole.USER,
+            estimatedDuration = task.estimatedDuration,
+            estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
             lastModifierId = userId
         )
+
+        task.assigneeIds?.forEach { assigneeId ->
+            taskAssigneeRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                assigneeId = assigneeId
+            )
+        }
+
+        task.attachmentUrls?.forEach { attachmentUrl ->
+            taskAttachmentRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                attachmentUrl = attachmentUrl
+            )
+        }
+
+        return taskEntity
     }
 
     /**
@@ -138,12 +166,45 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        existingTask.startDate = newTask.startDate
-        existingTask.endDate = newTask.endDate
+        // Handle updating task assignees
+        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
+        val newAssignees = newTask.assigneeIds ?: emptyList()
+        existingAssignees.forEach { existingAssignee ->
+            if (existingAssignee.assigneeId !in newAssignees) {
+                taskAssigneeRepository.deleteSuspending(existingAssignee)
+            }
+        }
+        newAssignees.forEach { newAssigneeId ->
+            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
+            }
+        }
 
-        existingTask.status = newTask.status    // verification if updates are required is done in the api impl
-        existingTask.name = newTask.name
-        existingTask.lastModifierId = userId
+        // Handle updating task attachments
+        val existingAttachments = taskAttachmentRepository.listByTask(existingTask)
+        val newAttachments = newTask.attachmentUrls ?: emptyList()
+        existingAttachments.forEach { existingAttachment ->
+            if (existingAttachment.attachmentUrl !in newAttachments) {
+                taskAttachmentRepository.deleteSuspending(existingAttachment)
+            }
+        }
+        newAttachments.forEach { newAttachmentUrl ->
+            if (existingAttachments.none { it.attachmentUrl == newAttachmentUrl }) {
+                taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
+            }
+        }
+
+        with(existingTask) {
+            startDate = newTask.startDate
+            endDate = newTask.endDate
+            status = newTask.status
+            name = newTask.name
+            lastModifierId = userId
+            userRole = newTask.userRole ?: UserRole.USER
+            estimatedDuration = newTask.estimatedDuration
+            estimatedReadiness = newTask.estimatedReadiness
+        }
+
         return taskEntityRepository.persistSuspending(existingTask)
     }
 
@@ -158,6 +219,12 @@ class TaskController {
         }
         proposalController.list(foundTask).forEach {
             proposalController.delete(it)
+        }
+        taskAssigneeRepository.listByTask(foundTask).forEach {
+            taskAssigneeRepository.deleteSuspending(it)
+        }
+        taskAttachmentRepository.listByTask(foundTask).forEach {
+            taskAttachmentRepository.deleteSuspending(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
     }
