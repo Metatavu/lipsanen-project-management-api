@@ -217,22 +217,19 @@ class TaskController {
             val parentTasks = taskConnectionController.list(existingTask, TaskConnectionRole.TARGET)
             for (parentTaskConnection in parentTasks) {
                 val source = parentTaskConnection.source
-                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_START) {
-                    if (source.status != TaskStatus.DONE) {
-                        return "Task ${source.name} must be finished before task ${existingTask.name} can be started"
-                    }
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_START &&
+                    source.status != TaskStatus.DONE) {
+                    return "Task ${source.name} must be finished before task ${existingTask.name} can be started"
                 }
 
-                if (parentTaskConnection.type == TaskConnectionType.START_TO_START) {
-                    if (source.status == TaskStatus.NOT_STARTED) {
-                        return "Task ${source.name} must be started before task ${existingTask.name} can be started"
-                    }
+                if (parentTaskConnection.type == TaskConnectionType.START_TO_START &&
+                    source.status == TaskStatus.NOT_STARTED) {
+                    return "Task ${source.name} must be started before task ${existingTask.name} can be started"
                 }
 
-                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_FINISH) {
-                    if (source.status != TaskStatus.DONE) {
-                        return "Task ${source.name} must be finished before task ${existingTask.name} can be finished"
-                    }
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_FINISH &&
+                    source.status != TaskStatus.DONE) {
+                    return "Task ${source.name} must be finished before task ${existingTask.name} can be finished"
                 }
             }
 
