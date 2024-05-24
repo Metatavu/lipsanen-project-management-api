@@ -157,17 +157,20 @@ class TaskConnectionController {
             return ("Source and target tasks cannot be the same")
 
         return when (type) {
-            TaskConnectionType.START_TO_START -> if (sourceTask.startDate > targetTask.startDate) {
-                "Source task start date cannot be after target task start date"
-            } else null
+            TaskConnectionType.START_TO_START ->
+                if (sourceTask.startDate > targetTask.startDate) {
+                    "Source task start date cannot be after target task start date"
+                } else null
 
-            TaskConnectionType.FINISH_TO_FINISH -> if (sourceTask.endDate > targetTask.endDate) {
-                "Source task end date cannot be after target task end date"
-            } else null
+            TaskConnectionType.FINISH_TO_FINISH ->
+                if (sourceTask.endDate > targetTask.endDate) {
+                    "Source task end date cannot be after target task end date"
+                } else null
 
-            TaskConnectionType.FINISH_TO_START -> if (sourceTask.endDate > targetTask.startDate) {
-                "Source task end date cannot be after target task start date"
-            } else null
+            TaskConnectionType.FINISH_TO_START ->
+                if (sourceTask.endDate > targetTask.startDate) {
+                    "Source task end date cannot be after target task start date"
+                } else null
         }
     }
 
