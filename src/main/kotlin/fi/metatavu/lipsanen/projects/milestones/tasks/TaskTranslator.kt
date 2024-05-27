@@ -15,6 +15,12 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
     @Inject
     lateinit var metadataTranslator: MetadataTranslator
 
+    @Inject
+    lateinit var taskAttachmentRepository: TaskAttachmentRepository
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
     override suspend fun translate(entity: TaskEntity): Task {
         return Task(
             id = entity.id,
@@ -23,6 +29,11 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             endDate = entity.endDate,
             milestoneId = entity.milestone.id,
             status = entity.status,
+            userRole = entity.userRole,
+            estimatedDuration = entity.estimatedDuration,
+            estimatedReadiness = entity.estimatedReadiness,
+            attachmentUrls = taskAttachmentRepository.listByTask(entity).map { it.attachmentUrl },
+            assigneeIds = taskAssigneeRepository.listByTask(entity).map { it.assigneeId },
             metadata = metadataTranslator.translate(entity)
         )
     }

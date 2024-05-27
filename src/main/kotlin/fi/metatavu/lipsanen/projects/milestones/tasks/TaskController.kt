@@ -1,5 +1,8 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
+import fi.metatavu.lipsanen.api.model.Task
+import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.ProjectEntity
@@ -29,6 +32,12 @@ class TaskController {
 
     @Inject
     lateinit var proposalController: ChangeProposalController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var taskAttachmentRepository: TaskAttachmentRepository
 
     /**
      * Lists tasks
@@ -76,16 +85,37 @@ class TaskController {
      * @return created task
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
-        return taskEntityRepository.create(
+        val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
             startDate = task.startDate,
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
+            userRole = task.userRole ?: UserRole.USER,
+            estimatedDuration = task.estimatedDuration,
+            estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
             lastModifierId = userId
         )
+
+        task.assigneeIds?.forEach { assigneeId ->
+            taskAssigneeRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                assigneeId = assigneeId
+            )
+        }
+
+        task.attachmentUrls?.forEach { attachmentUrl ->
+            taskAttachmentRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                attachmentUrl = attachmentUrl
+            )
+        }
+
+        return taskEntity
     }
 
     /**
@@ -140,44 +170,42 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
+        // Handle updating task assignees
+        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
+        val newAssignees = newTask.assigneeIds ?: emptyList()
+        existingAssignees.forEach { existingAssignee ->
+            if (existingAssignee.assigneeId !in newAssignees) {
+                taskAssigneeRepository.deleteSuspending(existingAssignee)
+            }
+        }
+        newAssignees.forEach { newAssigneeId ->
+            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
+            }
+        }
+
+        // Handle updating task attachments
+        val existingAttachments = taskAttachmentRepository.listByTask(existingTask)
+        val newAttachments = newTask.attachmentUrls ?: emptyList()
+        existingAttachments.forEach { existingAttachment ->
+            if (existingAttachment.attachmentUrl !in newAttachments) {
+                taskAttachmentRepository.deleteSuspending(existingAttachment)
+            }
+        }
+        newAttachments.forEach { newAttachmentUrl ->
+            if (existingAttachments.none { it.attachmentUrl == newAttachmentUrl }) {
+                taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
+            }
+        }
         val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
         updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
         updatedTask.name = newTask.name
+        updatedTask.userRole = newTask.userRole ?: UserRole.USER
+        updatedTask.estimatedDuration = newTask.estimatedDuration
+        updatedTask.estimatedReadiness = newTask.estimatedReadiness
         updatedTask.lastModifierId = userId
-        return taskEntityRepository.persistSuspending(updatedTask)
-    }
 
-    /**
-     * Updates a task
-     *
-     * @param existingTask existing task
-     * @param newStartDate new start date
-     * @param newEndDate new end date
-     * @param milestone milestone
-     * @param userId user id
-     * @param proposalMode if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
-     * @return updated task
-     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
-     */
-    suspend fun update(
-        existingTask: TaskEntity,
-        newStartDate: LocalDate,
-        newEndDate: LocalDate,
-        milestone: MilestoneEntity,
-        userId: UUID,
-        proposalMode: Boolean
-    ): TaskEntity {
-        //if the task extends beyond the milestone, the milestone is updated to fit that task
-        if (newStartDate < milestone.startDate) {
-            milestone.startDate = newStartDate
-        }
-        if (newEndDate > milestone.endDate) {
-            milestone.endDate = newEndDate
-        }
-
-        val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalMode)
-        updatedTask.lastModifierId = userId
-        return taskEntityRepository.persistSuspending(updatedTask)
+        return taskEntityRepository.persistSuspending(existingTask)
     }
 
     /**
@@ -191,6 +219,12 @@ class TaskController {
         }
         proposalController.list(foundTask).forEach {
             proposalController.delete(it)
+        }
+        taskAssigneeRepository.listByTask(foundTask).forEach {
+            taskAssigneeRepository.deleteSuspending(it)
+        }
+        taskAttachmentRepository.listByTask(foundTask).forEach {
+            taskAttachmentRepository.deleteSuspending(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
     }

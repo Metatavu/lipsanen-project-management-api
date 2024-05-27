@@ -6,6 +6,7 @@ import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -35,6 +36,11 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     @Inject
     lateinit var taskConnectionRepository: TaskConnectionRepository
 
+    @Inject
+    lateinit var userController: UserController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
     lateinit var vertx: Vertx
@@ -68,6 +74,12 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
             if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
+            }
+
+            task.assigneeIds?.forEach { assigneeId ->
+                if (userController.findUser(assigneeId) == null) {
+                    return@async createBadRequest("Assignee with id $assigneeId not found")
+                }
             }
 
             val createdTask = taskController.create(
@@ -114,6 +126,17 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
             if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
+            }
+
+            if (task.assigneeIds != null) {
+                val existingAssignees = taskAssigneeRepository.listByTask(foundTask)
+                if (existingAssignees.size != task.assigneeIds.size || !existingAssignees.map { it.assigneeId }.containsAll(task.assigneeIds)) {
+                    task.assigneeIds.forEach { assigneeId ->
+                        if (userController.findUser(assigneeId) == null) {
+                            return@async createNotFound("Assignee with id $assigneeId not found")
+                        }
+                    }
+                }
             }
 
             // Verify that nothing blocks it from updating

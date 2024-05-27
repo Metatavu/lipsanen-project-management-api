@@ -1,9 +1,10 @@
 package fi.metatavu.lipsanen.users
 
+import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
-import fi.metatavu.lipsanen.projects.ProjectController
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -33,6 +34,9 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @Inject
     lateinit var companyController: CompanyController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
     lateinit var vertx: Vertx
@@ -82,6 +86,10 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
     override fun deleteUser(userId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
+        val assignedToTasks = taskAssigneeRepository.listByAssignee(userId).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
+        if (assignedToTasks.isNotEmpty()) {
+            return@async createConflict("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
+        }
         userController.deleteUser(userId)
         createNoContent()
     }.asUni()

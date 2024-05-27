@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import jakarta.enterprise.context.ApplicationScoped
@@ -33,6 +34,9 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         endDate: LocalDate,
         milestone: MilestoneEntity,
         status: TaskStatus,
+        userRole: UserRole?,
+        estimatedDuration: String?,
+        estimatedReadiness: String?,
         creatorId: UUID,
         lastModifierId: UUID
     ): TaskEntity {
@@ -43,6 +47,9 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         taskEntity.endDate = endDate
         taskEntity.milestone = milestone
         taskEntity.status = status
+        taskEntity.userRole = userRole
+        taskEntity.estimatedDuration = estimatedDuration
+        taskEntity.estimatedReadiness = estimatedReadiness
         taskEntity.creatorId = creatorId
         taskEntity.lastModifierId = lastModifierId
         return persistSuspending(taskEntity)

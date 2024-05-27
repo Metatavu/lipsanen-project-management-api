@@ -14,9 +14,7 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.http.Method
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.util.*
@@ -31,6 +29,10 @@ import java.util.*
 )
 class TaskTestIT : AbstractFunctionalTest() {
 
+    val userId1 = UUID.fromString("f4c1e6a1-705a-471a-825d-1982b5112ebd")
+    val userId2 = UUID.fromString("ef89e98e-6aa3-4511-9b80-ff98bd87fe36")
+    val userId3 = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
+
     @Test
     fun testTaskCreate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
@@ -40,8 +42,15 @@ class TaskTestIT : AbstractFunctionalTest() {
             status = TaskStatus.NOT_STARTED,    //always created as not started
             startDate = "2022-01-01",
             endDate = "2022-01-31",
-            milestoneId = milestone.id!!
+            milestoneId = milestone.id!!,
+            assigneeIds = arrayOf(userId2, userId1),
+            userRole = UserRole.USER,
+            estimatedDuration = "1d",
+            estimatedReadiness = "10%",
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
+
         )
+
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
 
         assertNotNull(task)
@@ -51,6 +60,11 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.startDate, task.startDate)
         assertEquals(taskData.endDate, task.endDate)
         assertEquals(taskData.milestoneId, task.milestoneId)
+        assertEquals(taskData.assigneeIds!!.toList(), task.assigneeIds!!.toList())
+        assertEquals(taskData.userRole, task.userRole)
+        assertEquals(taskData.estimatedDuration, task.estimatedDuration)
+        assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
+        assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
     }
 
     @Test
@@ -97,15 +111,22 @@ class TaskTestIT : AbstractFunctionalTest() {
                             startDate = "2022-01-01",
                             endDate = "2022-01-31",
                             milestoneId = UUID.randomUUID(),
-                            status = TaskStatus.NOT_STARTED
-                        )
+                            status = TaskStatus.NOT_STARTED,
+                        ),
+                        Task(       //wrong assignee id
+                            name = "Milestone",
+                            startDate = "2022-01-01",
+                            endDate = "2022-01-31",
+                            milestoneId = milestone.id,
+                            status = TaskStatus.NOT_STARTED,
+                            assigneeIds = arrayOf(UUID.randomUUID())
+                        ),
                     ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
                 )
             )
             .build()
             .test()
-
     }
 
     @Test
@@ -238,11 +259,28 @@ class TaskTestIT : AbstractFunctionalTest() {
                 originalEndDate = "2022-01-31"
             )
         )
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, Task(
+            name = "Task",
+            startDate = "2022-01-01",
+            endDate = "2022-01-31",
+            status = TaskStatus.NOT_STARTED,
+            assigneeIds = arrayOf(userId1, userId2),
+            userRole = UserRole.USER,
+            estimatedDuration = "1d",
+            estimatedReadiness = "10%",
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
+            milestoneId = milestone.id
+        ))
         val taskUpdateData = task.copy(
             name = "Task2",
             startDate = "2022-01-03",
-            endDate = "2022-02-01"
+            endDate = "2022-02-01",
+            status = TaskStatus.IN_PROGRESS,
+            assigneeIds = arrayOf(userId3, userId2),
+            userRole = UserRole.ADMIN,
+            estimatedDuration = "2d",
+            estimatedReadiness = "20%",
+            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
         )
         val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)
 
@@ -252,10 +290,22 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.startDate, updatedTask.startDate)
         assertEquals(taskUpdateData.endDate, updatedTask.endDate)
 
+        assertEquals(2, updatedTask.assigneeIds?.size)
+        assertEquals(taskUpdateData.assigneeIds!!.toList(), updatedTask.assigneeIds!!.toList())
+        assertEquals(taskUpdateData.userRole, updatedTask.userRole)
+        assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
+        assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
+        assertEquals(2, updatedTask.attachmentUrls?.size)
+        assertEquals(taskUpdateData.attachmentUrls!!.toList(), updatedTask.attachmentUrls!!.toList())
+
         // verify that the end of the milestone extended to the new task length
         val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
         assertEquals(milestone.startDate, foundMilestone.startDate)
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
+
+        // Verify that the user cannot be removed
+        tb.admin.user.assertDeleteFailStatus(409, userId2)
+        tb.admin.user.assertDeleteFailStatus(409, userId3)
     }
 
     /*
@@ -487,6 +537,16 @@ class TaskTestIT : AbstractFunctionalTest() {
 
                         ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
                     expectedStatus = 400
+                )
+            )
+            .body(
+                InvalidValueTestScenarioBody(
+                    values = listOf(
+                        task.copy(
+                            assigneeIds = arrayOf(UUID.randomUUID())
+                        )
+                    ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
+                    expectedStatus = 404
                 )
             )
             .build()

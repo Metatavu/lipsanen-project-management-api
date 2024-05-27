@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.persistence.Metadata
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import jakarta.persistence.*
@@ -31,6 +32,15 @@ class TaskEntity : Metadata() {
 
     @Enumerated(EnumType.STRING)
     lateinit var status: TaskStatus
+
+    @Enumerated(EnumType.STRING)
+    var userRole: UserRole? = null
+
+    @Column(nullable = true)
+    var estimatedDuration: String? = null
+
+    @Column(nullable = true)
+    var estimatedReadiness: String? = null
 
     override lateinit var creatorId: UUID
 
