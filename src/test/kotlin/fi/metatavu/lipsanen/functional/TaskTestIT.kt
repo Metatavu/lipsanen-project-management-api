@@ -265,8 +265,7 @@ class TaskTestIT : AbstractFunctionalTest() {
     Task:   |t1-|
                 |t2-|
                     |t3-----|
-                        |t4-|
-
+                        |t4-----|
     With expected outcome after moving t1 to 3-4
     Day:    1   2   3   4   5   6
     Task:           |t1-|
@@ -346,8 +345,20 @@ class TaskTestIT : AbstractFunctionalTest() {
         )
     }
 
-    /**
-     * Same setup as in tsetUpdateTaskConnectionsForward but the task4 is updated backwards
+    /*
+    Test case for cascade updating the tasks backwards:
+    Source:
+    Day:    1   2   3   4   5   6
+    Task:   |t1-|
+                |t2-|
+                    |t3-----|
+                        |t4-----|
+    With expected outcome after moving t4 to 2-4
+    Day:    1   2   3   4   5   6
+    Task:   |t1-|
+                |t2-|
+                |t3-----|
+                |t4-----|
      */
     @Test
     fun testUpdateTaskConnectionsBackwards() = createTestBuilder().use { tb ->

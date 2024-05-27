@@ -307,14 +307,14 @@ class TaskController {
             val currentTask = tasks.removeFirst()
             val connections = taskConnectionController.list(currentTask, TaskConnectionRole.TARGET)
             for (connection in connections) {
-                var updated = 0
+                var updated = false
                 val sourceTask = connection.source
                 val targetTask = connection.target
                 val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
                 when (connection.type) {
                     TaskConnectionType.FINISH_TO_START -> {
                         if (sourceTask.endDate > targetTask.startDate) {
-                            updated = 1
+                            updated = true
                             sourceTask.endDate = targetTask.startDate
                             sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
                         }
@@ -322,7 +322,7 @@ class TaskController {
 
                     TaskConnectionType.START_TO_START -> {
                         if (sourceTask.startDate > targetTask.startDate) {
-                            updated = 1
+                            updated = true
                             sourceTask.startDate = targetTask.startDate
                             sourceTask.endDate = sourceTask.startDate.plusDays(taskLength)
                         }
@@ -330,14 +330,14 @@ class TaskController {
 
                     TaskConnectionType.FINISH_TO_FINISH -> {
                         if (sourceTask.endDate > targetTask.endDate) {
-                            updated = 1
+                            updated = true
                             sourceTask.endDate = targetTask.endDate
                             sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
                         }
                     }
                 }
 
-                if (updated == 1) {
+                if (updated) {
                     updatableTasks.add(sourceTask)
                 }
                 tasks.add(sourceTask)
@@ -360,14 +360,14 @@ class TaskController {
             val currentTask = tasks.removeFirst()
             val connections = taskConnectionController.list(currentTask, TaskConnectionRole.SOURCE)
             for (connection in connections) {
-                var updated = 0
+                var updated = false
                 val sourceTask = connection.source
                 val targetTask = connection.target
                 val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
                 when (connection.type) {
                     TaskConnectionType.FINISH_TO_START -> {
                         if (sourceTask.endDate > targetTask.startDate) {
-                            updated = 1
+                            updated = true
                             targetTask.startDate = sourceTask.endDate
                             targetTask.endDate = targetTask.startDate.plusDays(taskLength)
                         }
@@ -375,7 +375,7 @@ class TaskController {
 
                     TaskConnectionType.START_TO_START -> {
                         if (targetTask.startDate < sourceTask.startDate) {
-                            updated = 1
+                            updated = true
                             targetTask.startDate = sourceTask.startDate
                             targetTask.endDate = targetTask.startDate.plusDays(taskLength)
                         }
@@ -383,7 +383,7 @@ class TaskController {
 
                     TaskConnectionType.FINISH_TO_FINISH -> {
                         if (targetTask.endDate < sourceTask.endDate) {
-                            updated = 1
+                            updated = true
                             targetTask.endDate = sourceTask.endDate
                             targetTask.startDate = targetTask.endDate.minusDays(taskLength)
                         }
@@ -391,7 +391,7 @@ class TaskController {
                 }
 
 
-                if (updated == 1) {
+                if (updated) {
                     updatableTasks.add(targetTask)
                 }
                 tasks.add(targetTask)
