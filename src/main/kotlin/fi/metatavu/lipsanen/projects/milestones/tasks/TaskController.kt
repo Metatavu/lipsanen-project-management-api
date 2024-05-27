@@ -147,7 +147,7 @@ class TaskController {
     }
 
     /**
-     * Updates a task
+     * Updates a task (from REST entity)
      *
      * @param existingTask existing task
      * @param newTask new task
@@ -206,6 +206,39 @@ class TaskController {
         updatedTask.lastModifierId = userId
 
         return taskEntityRepository.persistSuspending(existingTask)
+    }
+
+    /**
+     * Updates a task (from proposal)
+     *
+     * @param existingTask existing task
+     * @param newStartDate new start date
+     * @param newEndDate new end date
+     * @param milestone milestone
+     * @param userId user id
+     * @param proposalMode if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
+     * @return updated task
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
+     */
+    suspend fun update(
+        existingTask: TaskEntity,
+        newStartDate: LocalDate,
+        newEndDate: LocalDate,
+        milestone: MilestoneEntity,
+        userId: UUID,
+        proposalMode: Boolean
+    ): TaskEntity {
+        //if the task extends beyond the milestone, the milestone is updated to fit that task
+        if (newStartDate < milestone.startDate) {
+            milestone.startDate = newStartDate
+        }
+        if (newEndDate > milestone.endDate) {
+            milestone.endDate = newEndDate
+        }
+
+        val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalMode)
+        updatedTask.lastModifierId = userId
+        return taskEntityRepository.persistSuspending(updatedTask)
     }
 
     /**
