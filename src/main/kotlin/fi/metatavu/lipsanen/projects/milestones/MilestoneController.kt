@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones
 
 import fi.metatavu.lipsanen.api.model.Milestone
+import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
@@ -17,6 +18,9 @@ import java.util.*
  */
 @ApplicationScoped
 class MilestoneController {
+
+    @Inject
+    lateinit var projectController: ProjectController
 
     @Inject
     lateinit var milestoneRepository: MilestoneRepository
@@ -86,19 +90,29 @@ class MilestoneController {
      *
      * @param existingMilestone existing milestone
      * @param updateData update data
+     * @param milestoneTasks milestone tasks
+     * @param isProjectPlanningStage is project in planning stage (affects original dates)
      * @param userId user id
      * @return updated milestone
      */
-    suspend fun update(existingMilestone: MilestoneEntity, updateData: Milestone, milestoneTasks: List<TaskEntity>, userId: UUID): MilestoneEntity {
+    suspend fun update(
+        existingMilestone: MilestoneEntity,
+        updateData: Milestone,
+        milestoneTasks: List<TaskEntity>,
+        userId: UUID,
+        isProjectPlanningStage: Boolean = false
+    ): MilestoneEntity {
         if (existingMilestone.startDate != updateData.startDate || existingMilestone.endDate != updateData.endDate) {
-            updateTaskEstimations(existingMilestone, milestoneTasks, updateData.startDate, updateData.endDate, userId)
+            updateTasksLengthWithinMilestone(existingMilestone, milestoneTasks, updateData.startDate, updateData.endDate, userId)
+        }
+
+        if (isProjectPlanningStage) {
+            existingMilestone.originalStartDate = updateData.originalStartDate
+            existingMilestone.originalEndDate = updateData.originalEndDate
         }
 
         existingMilestone.startDate = updateData.startDate
         existingMilestone.endDate = updateData.endDate
-        // NOTE: original start and end dates should not be updated once project is out of planning stage
-        existingMilestone.originalStartDate = updateData.originalStartDate
-        existingMilestone.originalEndDate = updateData.originalEndDate
         existingMilestone.name = updateData.name
         existingMilestone.lastModifierId = userId
         return milestoneRepository.persistSuspending(existingMilestone)
@@ -113,7 +127,7 @@ class MilestoneController {
      * @param endDate new end date
      * @param userId user id
      */
-    private suspend fun updateTaskEstimations(
+    private suspend fun updateTasksLengthWithinMilestone(
         existingMilestone: MilestoneEntity,
         milestoneTasks: List<TaskEntity>,
         startDate: LocalDate,
@@ -165,17 +179,6 @@ class MilestoneController {
     }
 
     /**
-     * Checks if milestone is part of the same project
-     *
-     * @param project project
-     * @param milestone milestone
-     * @return true if milestone is part of the same project
-     */
-    fun partOfSameProject(project: ProjectEntity, milestone: MilestoneEntity): Boolean {
-        return project == milestone.project
-    }
-
-    /**
      * Do the checks if milestone dates can be adjusted, e.g.
      * if it is delayed it should not be delayed to later than any task end
      * if it is shortened it should not be shortened to earlier than any task start
@@ -197,9 +200,7 @@ class MilestoneController {
                 return "Milestone cannot be shortened to earlier than task ${it.name} start date"
             }
         }
-
         return null
     }
-
 
 }

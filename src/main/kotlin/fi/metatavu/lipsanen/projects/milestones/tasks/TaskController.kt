@@ -3,15 +3,19 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.UserRole
+import fi.metatavu.lipsanen.api.model.*
+import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
+import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -68,7 +72,8 @@ class TaskController {
      * @return list of tasks
      */
     suspend fun list(milestones: List<MilestoneEntity>): List<TaskEntity> {
-        return taskEntityRepository.find("milestone in :milestones", Parameters().and("milestones", milestones)).list<TaskEntity>().awaitSuspending()
+        return taskEntityRepository.find("milestone in :milestones", Parameters().and("milestones", milestones))
+            .list<TaskEntity>().awaitSuspending()
     }
 
     /**
@@ -142,13 +147,14 @@ class TaskController {
     }
 
     /**
-     * Updates a task
+     * Updates a task (from REST entity)
      *
      * @param existingTask existing task
      * @param newTask new task
      * @param milestone milestone
      * @param userId user id
      * @return updated task
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -156,9 +162,7 @@ class TaskController {
         milestone: MilestoneEntity,
         userId: UUID
     ): TaskEntity {
-        /*
-        if the tasks extends beyond the milestone, the milestone is updated to fit that task
-         */
+        //if the task extends beyond the milestone, the milestone is updated to fit that task
         if (newTask.startDate < milestone.startDate) {
             milestone.startDate = newTask.startDate
         }
@@ -193,19 +197,48 @@ class TaskController {
                 taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
             }
         }
-
-        with(existingTask) {
-            startDate = newTask.startDate
-            endDate = newTask.endDate
-            status = newTask.status
-            name = newTask.name
-            lastModifierId = userId
-            userRole = newTask.userRole ?: UserRole.USER
-            estimatedDuration = newTask.estimatedDuration
-            estimatedReadiness = newTask.estimatedReadiness
-        }
+        val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
+        updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
+        updatedTask.name = newTask.name
+        updatedTask.userRole = newTask.userRole ?: UserRole.USER
+        updatedTask.estimatedDuration = newTask.estimatedDuration
+        updatedTask.estimatedReadiness = newTask.estimatedReadiness
+        updatedTask.lastModifierId = userId
 
         return taskEntityRepository.persistSuspending(existingTask)
+    }
+
+    /**
+     * Updates a task (from proposal)
+     *
+     * @param existingTask existing task
+     * @param newStartDate new start date
+     * @param newEndDate new end date
+     * @param milestone milestone
+     * @param userId user id
+     * @param proposalMode if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
+     * @return updated task
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
+     */
+    suspend fun update(
+        existingTask: TaskEntity,
+        newStartDate: LocalDate,
+        newEndDate: LocalDate,
+        milestone: MilestoneEntity,
+        userId: UUID,
+        proposalMode: Boolean
+    ): TaskEntity {
+        //if the task extends beyond the milestone, the milestone is updated to fit that task
+        if (newStartDate < milestone.startDate) {
+            milestone.startDate = newStartDate
+        }
+        if (newEndDate > milestone.endDate) {
+            milestone.endDate = newEndDate
+        }
+
+        val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalMode)
+        updatedTask.lastModifierId = userId
+        return taskEntityRepository.persistSuspending(updatedTask)
     }
 
     /**
@@ -237,6 +270,200 @@ class TaskController {
      */
     suspend fun persist(startsFirst: TaskEntity): TaskEntity {
         return taskEntityRepository.persistSuspending(startsFirst)
+    }
+
+    /**
+     * Helper method for checking if task can be updated (used by api)
+     *
+     * @param existingTask existing task
+     * @param newStatus new status
+     * @return error message or null if no errors
+     */
+    suspend fun isNotUpdatable(existingTask: TaskEntity, newStatus: TaskStatus): String? {
+        if (existingTask.status != newStatus) {
+            val parentTasks = taskConnectionController.list(existingTask, TaskConnectionRole.TARGET)
+            for (parentTaskConnection in parentTasks) {
+                val source = parentTaskConnection.source
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_START &&
+                    source.status != TaskStatus.DONE) {
+                    return "Task ${source.name} must be finished before task ${existingTask.name} can be started"
+                }
+
+                if (parentTaskConnection.type == TaskConnectionType.START_TO_START &&
+                    source.status == TaskStatus.NOT_STARTED) {
+                    return "Task ${source.name} must be started before task ${existingTask.name} can be started"
+                }
+
+                if (parentTaskConnection.type == TaskConnectionType.FINISH_TO_FINISH &&
+                    source.status != TaskStatus.DONE) {
+                    return "Task ${source.name} must be finished before task ${existingTask.name} can be finished"
+                }
+            }
+
+        }
+        return null
+    }
+
+    /**
+     * Updates task dates
+     *
+     * @param movableTask task to update
+     * @param newStartDate new start date
+     * @param newEndDate new end date
+     * @param milestone milestone
+     * @param proposalMode if the task update happens in proposal mode - if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
+     * @return updated task
+     * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
+     */
+    private suspend fun updateTaskDates(
+        movableTask: TaskEntity,
+        newStartDate: LocalDate,
+        newEndDate: LocalDate,
+        milestone: MilestoneEntity,
+        proposalMode: Boolean = false
+    ): TaskEntity {
+        if (movableTask.startDate == newStartDate && movableTask.endDate == newEndDate) {
+            return movableTask
+        }
+
+        val moveForward = movableTask.endDate < newEndDate
+        val moveBackward = movableTask.startDate > newStartDate
+        movableTask.startDate = newStartDate
+        movableTask.endDate = newEndDate
+
+        taskEntityRepository.persistSuspending(movableTask) //Save the task at this point so that when listing connections it is up-to-date
+        Panache.flush()
+
+        val updatableTasks = mutableListOf<TaskEntity>()
+        if (moveForward) {
+            updateTaskConnectionsForward(movableTask, updatableTasks)
+        }
+        if (moveBackward) {
+            updateTaskConnectionsBackward(movableTask, updatableTasks)
+        }
+
+        // Check if the dependent tasks are still within the milestone
+        updatableTasks.forEach {
+            if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
+                throw TaskOutsideMilestoneException(it.id, it.startDate, it.endDate)
+            }
+        }
+        updatableTasks.forEach { taskEntityRepository.persistSuspending(it) }
+
+        //in proposal model cancel all the proposals that affect the moved tasks
+        if (proposalMode) {
+            proposalController.list(updatableTasks.distinctBy { it.id }).forEach {
+                it.status = ChangeProposalStatus.REJECTED
+                proposalController.persist(it)
+            }
+        }
+
+        return movableTask
+    }
+
+    /**
+     * Cascade update task connections backward (all parents of movedTask recursively)
+     *
+     * @param movedTask task to update
+     * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
+     */
+    private suspend fun updateTaskConnectionsBackward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+        val tasks = ArrayDeque<TaskEntity>()
+        tasks.add(movedTask)
+        while (tasks.isNotEmpty()) {
+            val currentTask = tasks.removeFirst()
+            val connections = taskConnectionController.list(currentTask, TaskConnectionRole.TARGET)
+            for (connection in connections) {
+                var updated = false
+                val sourceTask = connection.source
+                val targetTask = connection.target
+                val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
+                when (connection.type) {
+                    TaskConnectionType.FINISH_TO_START -> {
+                        if (sourceTask.endDate > targetTask.startDate) {
+                            updated = true
+                            sourceTask.endDate = targetTask.startDate
+                            sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.START_TO_START -> {
+                        if (sourceTask.startDate > targetTask.startDate) {
+                            updated = true
+                            sourceTask.startDate = targetTask.startDate
+                            sourceTask.endDate = sourceTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.FINISH_TO_FINISH -> {
+                        if (sourceTask.endDate > targetTask.endDate) {
+                            updated = true
+                            sourceTask.endDate = targetTask.endDate
+                            sourceTask.startDate = sourceTask.endDate.minusDays(taskLength)
+                        }
+                    }
+                }
+
+                if (updated) {
+                    updatableTasks.add(sourceTask)
+                }
+                tasks.add(sourceTask)
+            }
+
+        }
+    }
+
+    /**
+     * Cascade update task connections forward (all children of movedTask recursively)
+     *
+     * @param movedTask task to update
+     * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
+     */
+    private suspend fun updateTaskConnectionsForward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+        val tasks = ArrayDeque<TaskEntity>()
+        tasks.add(movedTask)
+
+        while (tasks.isNotEmpty()) {
+            val currentTask = tasks.removeFirst()
+            val connections = taskConnectionController.list(currentTask, TaskConnectionRole.SOURCE)
+            for (connection in connections) {
+                var updated = false
+                val sourceTask = connection.source
+                val targetTask = connection.target
+                val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
+                when (connection.type) {
+                    TaskConnectionType.FINISH_TO_START -> {
+                        if (sourceTask.endDate > targetTask.startDate) {
+                            updated = true
+                            targetTask.startDate = sourceTask.endDate
+                            targetTask.endDate = targetTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.START_TO_START -> {
+                        if (targetTask.startDate < sourceTask.startDate) {
+                            updated = true
+                            targetTask.startDate = sourceTask.startDate
+                            targetTask.endDate = targetTask.startDate.plusDays(taskLength)
+                        }
+                    }
+
+                    TaskConnectionType.FINISH_TO_FINISH -> {
+                        if (targetTask.endDate < sourceTask.endDate) {
+                            updated = true
+                            targetTask.endDate = sourceTask.endDate
+                            targetTask.startDate = targetTask.endDate.minusDays(taskLength)
+                        }
+                    }
+                }
+
+
+                if (updated) {
+                    updatableTasks.add(targetTask)
+                }
+                tasks.add(targetTask)
+            }
+        }
     }
 
 }

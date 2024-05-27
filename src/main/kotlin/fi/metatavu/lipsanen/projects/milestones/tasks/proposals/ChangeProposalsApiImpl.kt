@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.spec.ChangeProposalsApi
+import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -132,9 +133,17 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         }
         hasProposalEditingRights(userId, foundProposal)?.let { return@async it }
 
-        val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
+        if (changeProposal.status != foundProposal.status && !isAdmin()) {
+            return@async createForbidden("Status can be changed only by admin")
+        }
+        try {
+            val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
+            createOk(changeProposalTranslator.translate(updatedProposal))
 
-        createOk(changeProposalTranslator.translate(updatedProposal))
+        } catch (e: TaskOutsideMilestoneException) {
+            return@async createBadRequest(e.message!!)
+        }
+
     }.asUni()
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)

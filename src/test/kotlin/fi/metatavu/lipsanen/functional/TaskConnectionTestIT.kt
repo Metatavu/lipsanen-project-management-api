@@ -113,13 +113,13 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionUpdate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
+        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, startDate = "2021-01-01", endDate = "2021-01-02")
+        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, startDate = "2021-01-02", endDate = "2021-01-03")
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
                 sourceTaskId = createdTask.id!!,
                 targetTaskId = createdTask2.id!!,
-                TaskConnectionType.START_TO_START
+                TaskConnectionType.FINISH_TO_FINISH
             )
         )
 

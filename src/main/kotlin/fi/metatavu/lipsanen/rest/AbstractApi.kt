@@ -24,6 +24,12 @@ abstract class AbstractApi {
     @Inject
     lateinit var identity: SecurityIdentity
 
+    @Inject
+    lateinit var projectController: ProjectController
+
+    @Inject
+    lateinit var milestoneController: MilestoneController
+
     /**
      * Checks if user is admin
      *
@@ -220,12 +226,6 @@ abstract class AbstractApi {
     fun createNotFoundMessage(entity: String, id: UUID): String {
         return "$entity with id $id not found"
     }
-
-    @Inject
-    lateinit var projectController: ProjectController
-
-    @Inject
-    lateinit var milestoneController: MilestoneController
 
     /**
      * Helper method for getting project or milestone or an error response

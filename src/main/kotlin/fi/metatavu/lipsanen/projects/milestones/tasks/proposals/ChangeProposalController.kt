@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -19,6 +20,9 @@ class ChangeProposalController {
 
     @Inject
     lateinit var proposalRepository: ChangeProposalRepository
+
+    @Inject
+    lateinit var taskController: TaskController
 
     /**
      * Creates a new proposal
@@ -49,7 +53,8 @@ class ChangeProposalController {
     /**
      * Lists change proposals
      *
-     * @param task task
+     * @param milestone milestone
+     * @param taskFilter task filter
      * @param first first result
      * @param max max results
      * @return list of change proposals
@@ -95,6 +100,19 @@ class ChangeProposalController {
     }
 
     /**
+     * List proposals for tasks
+     *
+     * @param tasks tasks
+     * @return proposals for tasks
+     */
+    suspend fun list(tasks: List<TaskEntity>): List<ChangeProposalEntity> {
+        return proposalRepository
+            .find("task in :tasks", Parameters.with("tasks", tasks))
+            .list<ChangeProposalEntity>()
+            .awaitSuspending()
+    }
+
+    /**
      * Finds a proposal for task
      *
      * @param task task
@@ -125,6 +143,7 @@ class ChangeProposalController {
      * @param changeProposal change proposal
      * @param userId user id
      * @return updated proposal
+     * @throws IllegalArgumentException
      */
     suspend fun update(
         foundProposal: ChangeProposalEntity,
@@ -136,7 +155,53 @@ class ChangeProposalController {
         foundProposal.startDate = changeProposal.startDate
         foundProposal.endDate = changeProposal.endDate
         foundProposal.lastModifierId = userId
-        return proposalRepository.persistSuspending(foundProposal)
+
+        if (foundProposal.status != changeProposal.status) {
+            when (changeProposal.status) {
+                ChangeProposalStatus.APPROVED -> {
+                    foundProposal.status = changeProposal.status
+                    approveChangeProposal(foundProposal, userId)
+                }
+
+                ChangeProposalStatus.REJECTED -> {
+                    foundProposal.status = changeProposal.status
+                }
+
+                else -> {
+                    // cannot change status to pending
+                }
+            }
+        }
+        return persist(foundProposal)
+    }
+
+    /**
+     * Apply change proposal to the task:
+     *  - change the task dates
+     *  - find other proposals that got affected by this task's update and that belong to this task and auto-reject them
+     *
+     *  @param proposal found proposal
+     *  @param userId user id
+     *  @throws IllegalArgumentException if the proposal is not approved
+     */
+    private suspend fun approveChangeProposal(proposal: ChangeProposalEntity, userId: UUID) {
+        // Update the task which will also do cascade updates and checks for milestone update validity
+        taskController.update(
+            existingTask = proposal.task,
+            newStartDate = proposal.startDate ?: proposal.task.startDate,
+            newEndDate = proposal.endDate ?: proposal.task.endDate,
+            milestone = proposal.task.milestone,
+            proposalMode = true,
+            userId = userId
+        )
+
+        // reject all other proposals that affect the task
+        list(proposal.task).forEach {
+            if (it.id != proposal.id) {
+                it.status = ChangeProposalStatus.REJECTED
+                persist(it)
+            }
+        }
     }
 
     /**
@@ -146,5 +211,14 @@ class ChangeProposalController {
      */
     suspend fun delete(proposal: ChangeProposalEntity) {
         proposalRepository.deleteSuspending(proposal)
+    }
+
+    /**
+     * Persists a proposal
+     *
+     * @param changeProposal change proposal
+     */
+    suspend fun persist(changeProposal: ChangeProposalEntity): ChangeProposalEntity {
+        return proposalRepository.persistSuspending(changeProposal)
     }
 }

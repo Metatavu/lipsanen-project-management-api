@@ -11,6 +11,8 @@ import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.ChangeProposal
 import fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus
+import fi.metatavu.lipsanen.test.client.models.TaskConnection
+import fi.metatavu.lipsanen.test.client.models.TaskConnectionType
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -157,7 +159,6 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         val changeProposal = tb.admin.changeProposal.create(
             projectId = project.id,
             milestoneId = milestone.id,
-            taskId = task1.id,
             changeProposal = proposalData
         )!!
 
@@ -316,6 +317,92 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         assertEquals(updateData.comment, updatedProposal.comment)
         assertEquals(updateData.startDate, updatedProposal.startDate)
         assertEquals(updateData.endDate, updatedProposal.endDate)
+    }
+
+    @Test
+    fun testApplyChangeProposal() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val milestone = tb.admin.milestone.create(projectId = project.id!!, startDate = "2024-01-01", endDate = "2024-12-31")
+        val task1 = tb.admin.task.create(
+            projectId = project.id,
+            milestoneId = milestone.id!!,
+            startDate = "2024-01-01",
+            endDate = "2024-01-31"
+        )
+        val task2 = tb.admin.task.create(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            startDate = "2024-02-01",
+            endDate = "2024-02-29"
+        )
+        val task3 = tb.admin.task.create(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            startDate = "2024-03-01",
+            endDate = "2024-03-31"
+        )
+
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(task1.id!!, task2.id!!, TaskConnectionType.FINISH_TO_START)
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(task2.id, task3.id!!, TaskConnectionType.FINISH_TO_START)
+        )
+        tb.admin.taskConnection.create(
+            projectId = project.id,
+            taskConnection = TaskConnection(task1.id, task3.id, TaskConnectionType.FINISH_TO_START)
+        )
+
+        // create 4 proposals for various tasks
+        tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id)!!
+        val proposal2 = tb.admin.changeProposal.create(
+            projectId = project.id, milestoneId = milestone.id, ChangeProposal(
+                reason = "reason",
+                comment = "comment",
+                status = ChangeProposalStatus.PENDING,
+                taskId = task1.id,
+                startDate = "2024-02-01",
+                endDate = "2024-02-15"
+            )
+        )!!
+        tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task2.id)!!
+        tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)!!
+
+        // approve single proposal
+        tb.admin.changeProposal.updateChangeProposal(
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = proposal2.id!!,
+            changeProposal = proposal2.copy(status = ChangeProposalStatus.APPROVED)
+        )
+
+        // Check the status of all other proposals
+        val allProposals = tb.admin.changeProposal.listChangeProposals(project.id, milestone.id)
+        assertEquals(4, allProposals.size)
+        allProposals.forEach {
+            if (it.id == proposal2.id) {
+                assertEquals(ChangeProposalStatus.APPROVED, it.status)
+            } else {
+                assertEquals(ChangeProposalStatus.REJECTED, it.status)
+            }
+        }
+
+        //check that incorrect proposal (breaking the milestone logic) cannot be applied
+        val invalidApproval = tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id)!!
+
+        tb.admin.changeProposal.assertUpdateFail(
+            expectedStatus = 400,
+            projectId = project.id,
+            milestoneId = milestone.id,
+            changeProposalId = invalidApproval.id!!,
+            changeProposal = invalidApproval.copy(
+                status = ChangeProposalStatus.APPROVED,
+                startDate = "2024-11-01",
+                endDate = "2024-11-10",
+            )
+        )
     }
 
     @Test
