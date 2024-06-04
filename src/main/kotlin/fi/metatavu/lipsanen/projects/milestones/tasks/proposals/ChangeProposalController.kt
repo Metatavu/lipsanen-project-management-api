@@ -2,6 +2,8 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
+import fi.metatavu.lipsanen.api.model.NotificationType
+import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
@@ -23,6 +25,9 @@ class ChangeProposalController {
 
     @Inject
     lateinit var taskController: TaskController
+
+    @Inject
+    lateinit var notificationsController: NotificationsController
 
     /**
      * Creates a new proposal
@@ -157,6 +162,7 @@ class ChangeProposalController {
         foundProposal.lastModifierId = userId
 
         if (foundProposal.status != changeProposal.status) {
+            notifyProposalUpdateStatus(foundProposal, userId, changeProposal.status)
             when (changeProposal.status) {
                 ChangeProposalStatus.APPROVED -> {
                     foundProposal.status = changeProposal.status
@@ -176,6 +182,27 @@ class ChangeProposalController {
     }
 
     /**
+     * Create notifications about proposal status updates
+     *
+     * @param proposal proposal
+     * @param userId user id
+     * @param newStatus new status
+     */
+    private suspend fun notifyProposalUpdateStatus(
+        proposal: ChangeProposalEntity,
+        userId: UUID,
+        newStatus: ChangeProposalStatus
+    ) {
+        notificationsController.createAndNotify(
+            message = "Change proposal status changed to $newStatus",
+            type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
+            taskEntity = proposal.task,
+            receiverIds = listOf(proposal.creatorId),
+            creatorId = userId
+        )
+    }
+
+    /**
      * Apply change proposal to the task:
      *  - change the task dates
      *  - find other proposals that got affected by this task's update and that belong to this task and auto-reject them
@@ -186,7 +213,7 @@ class ChangeProposalController {
      */
     private suspend fun approveChangeProposal(proposal: ChangeProposalEntity, userId: UUID) {
         // Update the task which will also do cascade updates and checks for milestone update validity
-        taskController.update(
+        taskController.applyTaskProposal(
             existingTask = proposal.task,
             newStartDate = proposal.startDate ?: proposal.task.startDate,
             newEndDate = proposal.endDate ?: proposal.task.endDate,

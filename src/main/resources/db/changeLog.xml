@@ -210,4 +210,43 @@
             </column>
         </createTable>
     </changeSet>
+
+    <changeSet id="notifications" author="katja danilova">
+        <createTable tableName="notification">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="message" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+        <createTable tableName="notificationevent">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="notification_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_NOTIFICATIONEVENT_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="receiverid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="readstatus" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>
