@@ -93,8 +93,7 @@ class NotificationsController {
             task = taskEntity
         )
 
-        val projectGroup = taskEntity.milestone.project.keycloakGroupId
-        val notificationReceivers = (usersController.getProjectAdmins(projectGroup).map { UUID.fromString(it.id) } + receiverIds).distinct()
+        val notificationReceivers = (usersController.getAdmins().map { UUID.fromString(it.id) } + receiverIds).distinct()
 
         notificationReceivers.forEach { receiverId ->
             notificationEventsController.create(

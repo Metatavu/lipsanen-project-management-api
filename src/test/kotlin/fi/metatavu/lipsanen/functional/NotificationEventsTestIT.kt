@@ -33,13 +33,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
 
         val users = tb.admin.user.listUsers(null, null, null, true)
-
-        //assign Admin to the project
         val admin = users.find { it.firstName == "admin" }
-        tb.admin.user.updateUser(
-            userId = admin!!.id!!,
-            user = admin.copy(projectIds = arrayOf(project1.id))
-        )
 
         val user = users.find { it.firstName == "user" }
         val task1 = tb.admin.task.create(
@@ -67,7 +61,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertNotNull(notificationEvent.notification.message)
 
         val notificationEventsForAdmin = tb.admin.notificationEvent.list(
-            userId = admin.id!!,
+            userId = admin!!.id!!,
             projectId = project1.id
         )
         assertEquals(1, notificationEventsForAdmin.size)

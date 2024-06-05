@@ -121,25 +121,13 @@ class UserController {
     }
 
     /**
-     * Finds the admins assigned to the project (keycloak group)
-     *
-     * @param groupId projectGroup
+     * Finds the admins
      */
-    suspend fun getProjectAdmins(groupId: UUID): List<UserRepresentation> {
-        val adminRoleUsers = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameUsersGet(
+    suspend fun getAdmins(): Array<UserRepresentation> {
+        return keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameUsersGet(
             realm = keycloakAdminClient.getRealm(),
             roleName = "admin"
         )
-
-        val allGroupMembers = keycloakAdminClient.getGroupApi().realmGroupsIdMembersGet(
-            realm = keycloakAdminClient.getRealm(),
-            id = groupId.toString()
-        )
-        return adminRoleUsers.filter { adminUser ->
-            allGroupMembers.any { groupMember ->
-                groupMember.id == adminUser.id
-            }
-        }
     }
 
     /**
