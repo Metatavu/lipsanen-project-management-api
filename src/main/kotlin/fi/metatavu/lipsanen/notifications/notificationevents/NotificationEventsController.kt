@@ -86,7 +86,7 @@ class NotificationEventsController {
      * @param modifierId modifier id
      * @return updated notification event
      */
-    suspend fun updateNotificationStatus(
+    suspend fun updateNotificationEvent(
         existingEntity: NotificationEventEntity,
         updateBody: NotificationEvent,
         modifierId: UUID

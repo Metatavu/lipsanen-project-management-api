@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import io.quarkus.panache.common.Parameters
@@ -29,6 +30,9 @@ class ChangeProposalController {
     @Inject
     lateinit var notificationsController: NotificationsController
 
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
     /**
      * Creates a new proposal
      *
@@ -42,7 +46,7 @@ class ChangeProposalController {
         proposal: ChangeProposal,
         creatorId: UUID
     ): ChangeProposalEntity {
-        return proposalRepository.create(
+        val created = proposalRepository.create(
             id = UUID.randomUUID(),
             task = task,
             reason = proposal.reason,
@@ -53,6 +57,8 @@ class ChangeProposalController {
             creatorId = creatorId,
             lastModifierId = creatorId
         )
+        notifyProposalCreateStatus(created, creatorId)
+        return created
     }
 
     /**
@@ -182,7 +188,7 @@ class ChangeProposalController {
     }
 
     /**
-     * Create notifications about proposal status updates
+     * Create notifications about proposal status updates and sends notifications to task assignees, proposal creator
      *
      * @param proposal proposal
      * @param userId user id
@@ -197,7 +203,26 @@ class ChangeProposalController {
             message = "Change proposal status changed to $newStatus",
             type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
             taskEntity = proposal.task,
-            receiverIds = listOf(proposal.creatorId),
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            creatorId = userId
+        )
+    }
+
+    /**
+     * Create notifications about proposal creation and sends notifications to task assignees, proposal creator
+     *
+     * @param proposal proposal
+     * @param userId user id
+     */
+    private suspend fun notifyProposalCreateStatus(
+        proposal: ChangeProposalEntity,
+        userId: UUID
+    ) {
+        notificationsController.createAndNotify(
+            message = "Change proposal created",
+            type = NotificationType.CHANGE_PROPOSAL_CREATED,
+            taskEntity = proposal.task,
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
             creatorId = userId
         )
     }

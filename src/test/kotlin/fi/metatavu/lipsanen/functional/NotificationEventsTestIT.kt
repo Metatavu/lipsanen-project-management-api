@@ -146,7 +146,12 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             userId = admin.id!!,
             projectId = project1.id
         )
-        assertEquals(1, notificationEvents.size)
+        assertEquals(2, notificationEvents.size)
+        val proposalCreated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_CREATED }
+        assertEquals(task1.id, proposalCreated!!.notification.taskId)
+        assertEquals(false, proposalCreated.read)
+        assertEquals(admin.id, proposalCreated.receiverId)
+        assertNotNull(proposalCreated.notification.message)
         val proposalUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED }
         assertEquals(task1.id, proposalUpdated!!.notification.taskId)
         assertEquals(false, proposalUpdated.read)

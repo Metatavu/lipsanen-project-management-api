@@ -149,7 +149,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             }
 
             try {
-                val updatedTask = taskController.applyTaskProposal(
+                val updatedTask = taskController.update(
                     existingTask = foundTask,
                     newTask = task,
                     milestone = projectMilestone.first,

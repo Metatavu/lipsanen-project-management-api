@@ -70,7 +70,7 @@ class NotificationsController {
     }
 
     /**
-     * Creates a new notification and sends the notification events to the needed receivers (e.g. project admins + custom receivers)
+     *Creates a new notification and sends the notification events to the needed receivers (e.g. admins + custom receivers)
      *
      * @param message notification message
      * @param type notification type

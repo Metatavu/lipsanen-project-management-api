@@ -168,7 +168,7 @@ class TaskController {
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
-    suspend fun applyTaskProposal(
+    suspend fun update(
         existingTask: TaskEntity,
         newTask: Task,
         milestone: MilestoneEntity,

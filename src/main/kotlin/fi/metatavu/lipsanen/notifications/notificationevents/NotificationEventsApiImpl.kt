@@ -101,7 +101,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             return@async createForbidden("User does not have access to notification event")
         }
 
-        val updatedNotificationEvent = notificationEventController.updateNotificationStatus(
+        val updatedNotificationEvent = notificationEventController.updateNotificationEvent(
             existingEntity = notificationEventEntity,
             updateBody = notificationEvent,
             modifierId = loggedInUserId
