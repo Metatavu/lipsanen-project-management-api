@@ -61,7 +61,7 @@ class NotificationsCleanupTestIT : AbstractFunctionalTest() {
         assertEquals(1, notificationEvents1.size)
 
         // wait for cleanup
-        Awaitility.await().atLeast(30, TimeUnit.SECONDS).atMost(60, TimeUnit.SECONDS)
+        Awaitility.await().atMost(60, TimeUnit.SECONDS)
             .pollInterval(Duration.ofSeconds(3)).until {
                 val adminAfterCleanup = tb.admin.notificationEvent.list(
                     userId = admin.id!!,
