@@ -1,10 +1,8 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
-import fi.metatavu.lipsanen.api.model.Task
-import fi.metatavu.lipsanen.api.model.TaskStatus
-import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
+import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
@@ -38,6 +36,9 @@ class TaskController {
 
     @Inject
     lateinit var taskAttachmentRepository: TaskAttachmentRepository
+
+    @Inject
+    lateinit var notificationsController: NotificationsController
 
     /**
      * Lists tasks
@@ -77,7 +78,7 @@ class TaskController {
     }
 
     /**
-     * Creates a new task
+     * Creates a new task and triggers the needed notifications
      *
      * @param milestone milestone
      * @param task task
@@ -106,6 +107,7 @@ class TaskController {
                 assigneeId = assigneeId
             )
         }
+        notifyTaskAssignments(taskEntity, task.assigneeIds ?: emptyList(), userId)
 
         task.attachmentUrls?.forEach { attachmentUrl ->
             taskAttachmentRepository.create(
@@ -116,6 +118,16 @@ class TaskController {
         }
 
         return taskEntity
+    }
+
+    /**
+     * Finds a task
+     *
+     * @param taskId task id
+     * @return found task or null if not found
+     */
+    suspend fun find(taskId: UUID): TaskEntity? {
+        return taskEntityRepository.findByIdSuspending(taskId)
     }
 
     /**
@@ -170,21 +182,34 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        // Handle updating task assignees
-        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
-        val newAssignees = newTask.assigneeIds ?: emptyList()
-        existingAssignees.forEach { existingAssignee ->
-            if (existingAssignee.assigneeId !in newAssignees) {
-                taskAssigneeRepository.deleteSuspending(existingAssignee)
-            }
-        }
-        newAssignees.forEach { newAssigneeId ->
-            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
-                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
-            }
+        updateAssignees(existingTask, newTask.assigneeIds, userId)
+        updateAttachments(existingTask, newTask)
+        if (existingTask.status != newTask.status) {
+            notifyTaskStatusChange(existingTask, newTask.assigneeIds ?: emptyList(), userId)
         }
 
-        // Handle updating task attachments
+        val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
+        updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
+        updatedTask.name = newTask.name
+        updatedTask.userRole = newTask.userRole ?: UserRole.USER
+        updatedTask.estimatedDuration = newTask.estimatedDuration
+        updatedTask.estimatedReadiness = newTask.estimatedReadiness
+        updatedTask.lastModifierId = userId
+
+
+        return taskEntityRepository.persistSuspending(updatedTask)
+    }
+
+    /**
+     * Updates task attachments
+     *
+     * @param existingTask existing task
+     * @param newTask new task
+     */
+    suspend fun updateAttachments(
+        existingTask: TaskEntity,
+        newTask: Task
+    ) {
         val existingAttachments = taskAttachmentRepository.listByTask(existingTask)
         val newAttachments = newTask.attachmentUrls ?: emptyList()
         existingAttachments.forEach { existingAttachment ->
@@ -197,15 +222,33 @@ class TaskController {
                 taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
             }
         }
-        val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
-        updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
-        updatedTask.name = newTask.name
-        updatedTask.userRole = newTask.userRole ?: UserRole.USER
-        updatedTask.estimatedDuration = newTask.estimatedDuration
-        updatedTask.estimatedReadiness = newTask.estimatedReadiness
-        updatedTask.lastModifierId = userId
+    }
 
-        return taskEntityRepository.persistSuspending(existingTask)
+    /**
+     * Updates task assignees and sends notifications
+     *
+     * @param existingTask existing task
+     * @param newAssigneeIds new assignee ids
+     * @param userId user id
+     */
+    suspend fun updateAssignees(
+        existingTask: TaskEntity,
+        newAssigneeIds: List<UUID>?,
+        userId: UUID
+    ) {
+        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
+        val newAssignees = newAssigneeIds ?: emptyList()
+        existingAssignees.forEach { existingAssignee ->
+            if (existingAssignee.assigneeId !in newAssignees) {
+                taskAssigneeRepository.deleteSuspending(existingAssignee)
+            }
+        }
+        newAssignees.forEach { newAssigneeId ->
+            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
+                notifyTaskAssignments(existingTask, newAssignees, userId)
+            }
+        }
     }
 
     /**
@@ -220,7 +263,7 @@ class TaskController {
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
-    suspend fun update(
+    suspend fun applyTaskProposal(
         existingTask: TaskEntity,
         newStartDate: LocalDate,
         newEndDate: LocalDate,
@@ -247,6 +290,9 @@ class TaskController {
      * @param foundTask task to delete
      */
     suspend fun delete(foundTask: TaskEntity) {
+        notificationsController.list(task = foundTask).forEach {
+            notificationsController.delete(it)
+        }
         taskConnectionController.list(foundTask).forEach {
             taskConnectionController.delete(it)
         }
@@ -302,6 +348,42 @@ class TaskController {
 
         }
         return null
+    }
+
+    /**
+     * Creates notifications of task assignments
+     *
+     * @param task task
+     * @param assignees task assignees
+     * @param userId modifier id
+     */
+    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
+        taskAssigneeRepository.listByTask(task).forEach {
+            notificationsController.createAndNotify(
+                message = "User has been assigned to task ${task.name}",
+                type = NotificationType.TASK_ASSIGNED,
+                taskEntity = task,
+                receiverIds = assignees,
+                creatorId = userId
+            )
+        }
+    }
+
+    /**
+     * Creates notifications of task status updates
+     *
+     * @param task task
+     * @param assignees task assignees
+     * @param userId modifier id
+     */
+    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
+        notificationsController.createAndNotify(
+            message = "Status changed to ${task.status}",
+            type = NotificationType.TASK_STATUS_CHANGED,
+            taskEntity = task,
+            receiverIds = assignees,
+            creatorId = userId
+        )
     }
 
     /**

@@ -29,6 +29,8 @@ class TestBuilderAuthentication(
     val task = TaskTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
     val taskConnection = TaskConnectionTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
     val changeProposal = ChangeProposalTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
+    val notification = NotificationTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
+    val notificationEvent = NotificationEventsTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
 
     override fun createClient(authProvider: AccessTokenProvider): ApiClient {
         val result = ApiClient(ApiTestSettings.apiBasePath)

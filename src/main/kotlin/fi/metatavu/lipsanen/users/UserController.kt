@@ -15,6 +15,12 @@ import java.util.*
 
 /**
  * Controller for managing users
+ *
+ * User's assignment logic:
+ * ROLES defined the roles of the user within the project (currently ADMIN, USER)
+ * GROUPS define the groups the user belongs to (projects)
+ * COMPANY_ID attribute defines the company the user belongs to,
+ * ROLES+GROUPS are used for access rights checks.
  */
 @ApplicationScoped
 class UserController {
@@ -112,6 +118,16 @@ class UserController {
         )
 
         return users
+    }
+
+    /**
+     * Finds the admins
+     */
+    suspend fun getAdmins(): Array<UserRepresentation> {
+        return keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameUsersGet(
+            realm = keycloakAdminClient.getRealm(),
+            roleName = "admin"
+        )
     }
 
     /**

@@ -2,7 +2,10 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
+import fi.metatavu.lipsanen.api.model.NotificationType
+import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import io.quarkus.panache.common.Parameters
@@ -24,6 +27,12 @@ class ChangeProposalController {
     @Inject
     lateinit var taskController: TaskController
 
+    @Inject
+    lateinit var notificationsController: NotificationsController
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
     /**
      * Creates a new proposal
      *
@@ -37,7 +46,7 @@ class ChangeProposalController {
         proposal: ChangeProposal,
         creatorId: UUID
     ): ChangeProposalEntity {
-        return proposalRepository.create(
+        val created = proposalRepository.create(
             id = UUID.randomUUID(),
             task = task,
             reason = proposal.reason,
@@ -48,6 +57,8 @@ class ChangeProposalController {
             creatorId = creatorId,
             lastModifierId = creatorId
         )
+        notifyProposalCreateStatus(created, creatorId)
+        return created
     }
 
     /**
@@ -157,6 +168,7 @@ class ChangeProposalController {
         foundProposal.lastModifierId = userId
 
         if (foundProposal.status != changeProposal.status) {
+            notifyProposalUpdateStatus(foundProposal, userId, changeProposal.status)
             when (changeProposal.status) {
                 ChangeProposalStatus.APPROVED -> {
                     foundProposal.status = changeProposal.status
@@ -176,6 +188,46 @@ class ChangeProposalController {
     }
 
     /**
+     * Create notifications about proposal status updates and sends notifications to task assignees, proposal creator
+     *
+     * @param proposal proposal
+     * @param userId user id
+     * @param newStatus new status
+     */
+    private suspend fun notifyProposalUpdateStatus(
+        proposal: ChangeProposalEntity,
+        userId: UUID,
+        newStatus: ChangeProposalStatus
+    ) {
+        notificationsController.createAndNotify(
+            message = "Change proposal status changed to $newStatus",
+            type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
+            taskEntity = proposal.task,
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            creatorId = userId
+        )
+    }
+
+    /**
+     * Create notifications about proposal creation and sends notifications to task assignees, proposal creator
+     *
+     * @param proposal proposal
+     * @param userId user id
+     */
+    private suspend fun notifyProposalCreateStatus(
+        proposal: ChangeProposalEntity,
+        userId: UUID
+    ) {
+        notificationsController.createAndNotify(
+            message = "Change proposal created",
+            type = NotificationType.CHANGE_PROPOSAL_CREATED,
+            taskEntity = proposal.task,
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            creatorId = userId
+        )
+    }
+
+    /**
      * Apply change proposal to the task:
      *  - change the task dates
      *  - find other proposals that got affected by this task's update and that belong to this task and auto-reject them
@@ -186,7 +238,7 @@ class ChangeProposalController {
      */
     private suspend fun approveChangeProposal(proposal: ChangeProposalEntity, userId: UUID) {
         // Update the task which will also do cascade updates and checks for milestone update validity
-        taskController.update(
+        taskController.applyTaskProposal(
             existingTask = proposal.task,
             newStartDate = proposal.startDate ?: proposal.task.startDate,
             newEndDate = proposal.endDate ?: proposal.task.endDate,

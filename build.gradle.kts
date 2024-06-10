@@ -34,6 +34,7 @@ dependencies {
     implementation("io.quarkus:quarkus-resteasy-reactive-jackson")
     implementation("io.quarkus:quarkus-oidc")
     implementation("io.quarkus:quarkus-kotlin")
+    implementation("io.quarkus:quarkus-scheduler")
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
