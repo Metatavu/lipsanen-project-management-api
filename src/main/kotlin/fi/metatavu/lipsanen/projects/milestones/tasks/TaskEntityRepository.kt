@@ -35,8 +35,8 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         milestone: MilestoneEntity,
         status: TaskStatus,
         userRole: UserRole?,
-        estimatedDuration: String?,
-        estimatedReadiness: String?,
+        estimatedDuration: Float?,
+        estimatedReadiness: Int?,
         creatorId: UUID,
         lastModifierId: UUID
     ): TaskEntity {

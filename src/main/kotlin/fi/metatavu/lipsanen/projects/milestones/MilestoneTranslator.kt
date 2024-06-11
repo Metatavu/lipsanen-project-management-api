@@ -23,6 +23,7 @@ class MilestoneTranslator : AbstractTranslator<MilestoneEntity, Milestone>() {
             endDate = entity.endDate,
             originalStartDate = entity.originalStartDate,
             originalEndDate = entity.originalEndDate,
+            estimatedReadiness = entity.estimatedReadiness,
             metadata = metadataTranslator.translate(entity)
         )
     }
