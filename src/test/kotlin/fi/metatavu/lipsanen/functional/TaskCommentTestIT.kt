@@ -92,13 +92,12 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
     fun testCreateTaskComment() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = ApiTestSettings.userId)
 
-        val users = tb.admin.user.listUsers(null, null, null, false)
         val taskCommentData = TaskComment(
             taskId = task.id!!,
             comment = "comment",
-            referencedUsers = users.map { it.id!! }.toTypedArray()
+            referencedUsers = arrayOf(ApiTestSettings.userId)
         )
 
         val createdComment = tb.admin.taskComment.create(
@@ -117,7 +116,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
     fun testCreateTaskCommentFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = ApiTestSettings.userId)
         val taskComment = TaskComment(
             taskId = task.id!!,
             comment = "comment",
@@ -164,6 +163,20 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                                     taskId = UUID.randomUUID()
                                 )
                             )
+                        ),
+                        SimpleInvalidValueProvider(
+                            jacksonObjectMapper().writeValueAsString(
+                                taskComment.copy(
+                                    referencedUsers = arrayOf(UUID.randomUUID())
+                                )
+                            )
+                        ),
+                        SimpleInvalidValueProvider(
+                            jacksonObjectMapper().writeValueAsString(
+                                taskComment.copy(
+                                    referencedUsers = arrayOf(ApiTestSettings.user1Id)
+                                )
+                            )
                         )
                     ),
                     expectedStatus = 400
@@ -195,8 +208,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment =
-            tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertFindFail(

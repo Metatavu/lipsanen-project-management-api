@@ -81,7 +81,8 @@ class TaskTestBuilderResource(
 
     fun create(
         projectId: UUID,
-        milestoneId: UUID
+        milestoneId: UUID,
+        assigneeId: UUID ?= null
     ): Task {
         return create(
             projectId = projectId,
@@ -91,7 +92,8 @@ class TaskTestBuilderResource(
                 startDate = "2022-01-01",
                 status = TaskStatus.NOT_STARTED,
                 milestoneId = milestoneId,
-                endDate = "2022-01-31"
+                endDate = "2022-01-31",
+                assigneeIds = assigneeId?.let { arrayOf(it) }
             )
         )
     }

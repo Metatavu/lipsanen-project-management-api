@@ -3,7 +3,6 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.comments
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.api.model.TaskComment
 import fi.metatavu.lipsanen.notifications.NotificationsController
-import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
@@ -31,9 +30,6 @@ class TaskCommentController {
 
     @Inject
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
-
-    @Inject
-    lateinit var notificationEventsController: NotificationEventsController
 
     /**
      * Lists task comments

@@ -77,6 +77,11 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
             createNotFoundMessage(TASK, taskId)
         )
 
+        taskComment.referencedUsers.forEach { referencedUserId ->
+            if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
+                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
+            }
+        }
         val createdComment = taskCommentController.createTaskComment(task, taskComment, userId)
         createOk(taskCommentTranslator.translate(createdComment))
     }.asUni()
@@ -93,7 +98,6 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
                 createNotFoundMessage(TASK, taskId)
             )
 
-            //todo same for all others
             val comment = taskCommentController.find(commentId)
             if (comment == null || comment.task.id != task.id) return@async createNotFound(
                 createNotFoundMessage(TASK_COMMENT, commentId)
@@ -130,6 +134,12 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         )
 
         if (comment.creatorId != userId) return@async createForbidden("Cannot edit not own comment")
+
+        taskComment.referencedUsers.forEach { referencedUserId ->
+            if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
+                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
+            }
+        }
 
         val updatedComment = taskCommentController.updateTaskComment(comment, taskComment, userId)
         createOk(taskCommentTranslator.translate(updatedComment))

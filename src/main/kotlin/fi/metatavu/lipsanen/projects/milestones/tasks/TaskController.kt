@@ -3,17 +3,20 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.notifications.NotificationsController
+import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import org.jboss.logging.Logger
 import java.time.LocalDate
 import java.util.*
 
@@ -43,6 +46,15 @@ class TaskController {
 
     @Inject
     lateinit var taskCommentController: TaskCommentController
+
+    @Inject
+    lateinit var projectController: ProjectController
+
+    @Inject
+    lateinit var userController: UserController
+
+    @Inject
+    lateinit var logger: Logger
 
     /**
      * Lists tasks
@@ -82,7 +94,7 @@ class TaskController {
     }
 
     /**
-     * Creates a new task and triggers the needed notifications
+     * Creates a new task and triggers the needed notifications, assigns users to the project if not yet done
      *
      * @param milestone milestone
      * @param task task
@@ -105,6 +117,10 @@ class TaskController {
         )
 
         task.assigneeIds?.forEach { assigneeId ->
+            if (!projectController.hasAccessToProject(milestone.project, assigneeId)) {
+                logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
+                userController.assignUserToProjectGroups(userController.findUser(assigneeId)!!, emptyArray(), listOf(milestone.project.keycloakGroupId))
+            }
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
@@ -245,6 +261,10 @@ class TaskController {
         }
         newAssignees.forEach { newAssigneeId ->
             if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
+                if (!projectController.hasAccessToProject(existingTask.milestone.project, newAssigneeId)) {
+                    logger.info("Assigning user $newAssigneeId to project ${existingTask.milestone.project.keycloakGroupId} because of the task assignment")
+                    userController.assignUserToProjectGroups(userController.findUser(newAssigneeId)!!, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
+                }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
                 notifyTaskAssignments(existingTask, newAssignees, userId)
             }
