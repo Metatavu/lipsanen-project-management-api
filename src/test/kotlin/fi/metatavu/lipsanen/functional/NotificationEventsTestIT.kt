@@ -2,13 +2,13 @@ package fi.metatavu.lipsanen.functional
 
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
+import fi.metatavu.lipsanen.test.client.models.NotificationType
 import fi.metatavu.lipsanen.test.client.models.Task
 import fi.metatavu.lipsanen.test.client.models.TaskStatus
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.*
 
@@ -28,7 +28,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
      * Tests some fail scenarios
      */
     @Test
-    fun createNotificationsTaskAssigned() = createTestBuilder().use { tb ->
+    fun createNotificationsTaskAssignedTest() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
 
@@ -82,7 +82,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
      * Tests creating task status changed notification and task assigned notifications
      */
     @Test
-    fun createNotificationTaskStatusChanged() = createTestBuilder().use { tb ->
+    fun createNotificationTaskStatusChangedTset() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val user = tb.admin.user.listUsers().find { it.firstName == "user" }
@@ -124,7 +124,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
      * Tests creating change proposal status changed notification
      */
     @Test
-    fun createNotificationChangeProposalStatusChanged() = createTestBuilder().use { tb ->
+    fun createNotificationChangeProposalStatusChangedTest() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val admin = tb.admin.user.listUsers().find { it.firstName == "admin" }!!
@@ -166,7 +166,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
      * Tests creating task assigned notification and updating it as read as well as dismissing it
      */
     @Test
-    fun updateNotificationTaskAssigned() = createTestBuilder().use { tb ->
+    fun updateNotificationTaskAssignedTest() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val admin = tb.admin.user.listUsers().find { it.firstName == "admin" }!!
@@ -220,6 +220,81 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
 
         // Cleanup
         notificationEvents.forEach { tb.admin.notification.delete(it.notification.id!!) }
+    }
+
+    /**
+     * Tests that leaving a comment notifies task assignees, mentioned users and admin.
+     * Test scenario:
+     * Admin leaves notification on task assigned to user1, mentions another user2.
+     * It is checked whether user1, user2 received the notifications.
+     * todo sending notifications to users not in project does not make sense.
+     */
+    @Test
+    fun commentLeftTest() = createTestBuilder().use { tb ->
+        val project1 = tb.admin.project.create()
+        val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
+        val allUsers = tb.admin.user.listUsers()
+
+        val user = allUsers.find { it.firstName == "user" }
+        val userId = user!!.id!!
+        val user1 = allUsers.find { it.firstName == "user1" }!!.id!!
+        val user2 = allUsers.find { it.firstName == "user2" }!!.id!!
+        val admin = allUsers.find { it.firstName == "admin" }!!.id!!
+        tb.admin.user.updateUser(
+            userId,
+            user = user.copy(projectIds = arrayOf(project1.id))
+        )
+
+        val task = tb.admin.task.create(
+            projectId = project1.id, milestoneId = milestone1.id!!, task = Task(
+                name = "Task 1",
+                startDate = "2024-01-01",
+                endDate = "2024-01-02",
+                assigneeIds = arrayOf(user1),
+                status = TaskStatus.NOT_STARTED,
+                milestoneId = milestone1.id
+            )
+        )
+
+        val comment = tb.user.taskComment.create(
+            projectId = project1.id,
+            milestoneId = milestone1.id,
+            taskId = task.id!!,
+            taskComment = fi.metatavu.lipsanen.test.client.models.TaskComment(
+                comment = "Comment",
+                referencedUsers = arrayOf(user2),
+                taskId = task.id!!
+            )
+        )
+
+        val userNotifications = tb.user.notificationEvent.list(
+            userId = userId,
+            projectId = project1.id
+        )
+        assertEquals(0, userNotifications.size)
+
+        val adminNotifications = tb.admin.notificationEvent.list(
+            userId = admin,
+            projectId = project1.id
+        )
+        assertEquals(2, adminNotifications.size)
+        assertTrue(adminNotifications.any { it.notification.type == NotificationType.COMMENT_LEFT })
+
+        val user1Notifications = tb.user1.notificationEvent.list(
+            userId = user1,
+            projectId = project1.id
+        )
+        assertEquals(2, user1Notifications.size)
+        assertTrue(user1Notifications.any { it.notification.type == NotificationType.COMMENT_LEFT })
+
+        val user2Notifications = tb.user2.notificationEvent.list(
+            userId = user2,
+            projectId = project1.id
+        )
+        assertEquals(1, user2Notifications.size)
+
+        assertEquals(comment.id!!, user2Notifications[0].notification.commentId)
+        assertEquals(task.id, user1Notifications[0].notification.taskId)
     }
 
 }

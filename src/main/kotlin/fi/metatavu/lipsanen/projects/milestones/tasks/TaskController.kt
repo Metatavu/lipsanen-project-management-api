@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import io.quarkus.hibernate.reactive.panache.Panache
@@ -39,6 +40,9 @@ class TaskController {
 
     @Inject
     lateinit var notificationsController: NotificationsController
+
+    @Inject
+    lateinit var taskCommentController: TaskCommentController
 
     /**
      * Lists tasks
@@ -138,10 +142,8 @@ class TaskController {
      * @return found task or null if not found
      */
     suspend fun find(milestone: MilestoneEntity, taskId: UUID): TaskEntity? {
-        return taskEntityRepository.find(
-            "milestone = :milestone and id = :id",
-            Parameters.with("milestone", milestone).and("id", taskId)
-        ).firstResult<TaskEntity?>().awaitSuspending()
+        return taskEntityRepository.findByIdSuspending(taskId)
+            ?.takeIf { it.milestone.id == milestone.id }
     }
 
     /**
@@ -152,10 +154,8 @@ class TaskController {
      * @return found task or null if not found
      */
     suspend fun find(project: ProjectEntity, taskId: UUID): TaskEntity? {
-        return taskEntityRepository.find(
-            "milestone.project = :project and id = :id",
-            Parameters.with("project", project).and("id", taskId)
-        ).firstResult<TaskEntity?>().awaitSuspending()
+        return taskEntityRepository.findByIdSuspending(taskId)
+            ?.takeIf { it.milestone.project.id == project.id }
     }
 
     /**
@@ -305,6 +305,9 @@ class TaskController {
         taskAttachmentRepository.listByTask(foundTask).forEach {
             taskAttachmentRepository.deleteSuspending(it)
         }
+        taskCommentController.listTaskComments(foundTask).first.forEach {
+            taskCommentController.deleteTaskComment(it)
+        }
         taskEntityRepository.deleteSuspending(foundTask)
     }
 
@@ -354,34 +357,32 @@ class TaskController {
      * Creates notifications of task assignments
      *
      * @param task task
-     * @param assignees task assignees
+     * @param receivers task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
-        taskAssigneeRepository.listByTask(task).forEach {
-            notificationsController.createAndNotify(
-                message = "User has been assigned to task ${task.name}",
-                type = NotificationType.TASK_ASSIGNED,
-                taskEntity = task,
-                receiverIds = assignees,
-                creatorId = userId
-            )
-        }
+    private suspend fun notifyTaskAssignments(task: TaskEntity, receivers: List<UUID>, userId: UUID) {
+        notificationsController.createAndNotify(
+            message = "User has been assigned to task ${task.name}",
+            type = NotificationType.TASK_ASSIGNED,
+            taskEntity = task,
+            receiverIds = receivers,
+            creatorId = userId
+        )
     }
 
     /**
      * Creates notifications of task status updates
      *
      * @param task task
-     * @param assignees task assignees
+     * @param receivers task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
+    private suspend fun notifyTaskStatusChange(task: TaskEntity, receivers: List<UUID>, userId: UUID) {
         notificationsController.createAndNotify(
             message = "Status changed to ${task.status}",
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
-            receiverIds = assignees,
+            receiverIds = receivers,
             creatorId = userId
         )
     }

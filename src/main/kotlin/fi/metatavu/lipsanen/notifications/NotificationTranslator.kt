@@ -16,6 +16,7 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
             type = entity.type,
             message = entity.message,
             taskId = entity.task?.id,
+            commentId = entity.comment?.id,
         )
     }
 }

@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.notifications
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.persistence.Metadata
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import jakarta.persistence.*
 import java.util.*
 
@@ -24,6 +25,9 @@ class NotificationEntity: Metadata() {
 
     @ManyToOne
     var task: TaskEntity? = null
+
+    @ManyToOne
+    var comment: TaskCommentEntity? = null
 
     override lateinit var creatorId: UUID
 

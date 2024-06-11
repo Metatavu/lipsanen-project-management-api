@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.NotificationEvent
 import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
@@ -35,6 +36,7 @@ class NotificationEventsController {
         notification: NotificationEntity? = null,
         readStatus: Boolean? = null,
         task: TaskEntity? = null,
+        comment: TaskCommentEntity? = null,
         first: Int? = null,
         max: Int? = null
     ): Pair<List<NotificationEventEntity>, Long> {
@@ -44,6 +46,7 @@ class NotificationEventsController {
             notification = notification,
             readStatus = readStatus,
             task = task,
+            comment = comment,
             first = first,
             max = max
         )

@@ -474,7 +474,31 @@
     "realmRoles" : [ "user", "default-roles-lipsanen-user-management" ],
     "notBefore" : 0,
     "groups" : [ ]
-  }, {
+  },
+     {
+      "id" : "3d8d282a-e64b-4529-891f-8bad5ce9d8d9",
+      "username" : "user1",
+      "firstName" : "user1",
+      "lastName" : "user1",
+      "email" : "user1@example.com",
+      "emailVerified" : false,
+      "createdTimestamp" : 1711461068898,
+      "enabled" : true,
+      "totp" : false,
+       "credentials" : [ {
+         "id" : "039eff11-fd85-42e9-b083-fe3e99f7fd43",
+         "type" : "password",
+         "userLabel" : "My password",
+         "createdDate" : 1718124706506,
+         "secretData" : "{\"value\":\"jho2t9WTxOO3XZNNEIBzv7cHtaXNkIJsDQsfFY4Nb+p6AlNLGIyU/CSWL2SzL/Lchse4IHpH2Ir1YdoSoubuUQ==\",\"salt\":\"/mEyjqWSJL5JbiOytywsOA==\",\"additionalParameters\":{}}",
+         "credentialData" : "{\"hashIterations\":210000,\"algorithm\":\"pbkdf2-sha512\",\"additionalParameters\":{}}"
+       } ],
+      "disableableCredentialTypes" : [ ],
+      "requiredActions" : [ ],
+      "realmRoles" : [ "user", "default-roles-lipsanen-user-management" ],
+      "notBefore" : 0,
+      "groups" : [ ]
+    } , {
     "id" : "ef89e98e-6aa3-4511-9b80-ff98bd87fe36",
     "username" : "user2",
     "firstName" : "user2",
@@ -494,7 +518,7 @@
     } ],
     "disableableCredentialTypes" : [ ],
     "requiredActions" : [ ],
-    "realmRoles" : [  "user",  "default-roles-lipsanen-user-management" ],
+    "realmRoles" : [ "user", "default-roles-lipsanen-user-management" ],
     "notBefore" : 0,
     "groups" : [ ]
   } ],
@@ -1282,7 +1306,7 @@
       "subType" : "authenticated",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "saml-role-list-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-full-name-mapper", "saml-user-attribute-mapper", "oidc-address-mapper", "oidc-usermodel-property-mapper", "saml-user-property-mapper", "oidc-usermodel-attribute-mapper" ]
+        "allowed-protocol-mapper-types" : [ "saml-user-property-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-address-mapper", "saml-user-attribute-mapper", "oidc-usermodel-attribute-mapper", "oidc-usermodel-property-mapper", "saml-role-list-mapper", "oidc-full-name-mapper" ]
       }
     }, {
       "id" : "b20d3c85-69c5-429f-b785-abae638d743a",
@@ -1317,7 +1341,7 @@
       "subType" : "anonymous",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-usermodel-property-mapper", "oidc-usermodel-attribute-mapper", "saml-user-property-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-full-name-mapper", "saml-role-list-mapper", "saml-user-attribute-mapper", "oidc-address-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-usermodel-attribute-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper", "saml-role-list-mapper", "oidc-address-mapper", "oidc-usermodel-property-mapper", "oidc-full-name-mapper" ]
       }
     }, {
       "id" : "bbda7502-e813-4b35-b05b-969f6ffa1947",
@@ -1922,6 +1946,14 @@
     "priority" : 90,
     "config" : { }
   }, {
+    "alias" : "delete_credential",
+    "name" : "Delete Credential",
+    "providerId" : "delete_credential",
+    "enabled" : true,
+    "defaultAction" : false,
+    "priority" : 100,
+    "config" : { }
+  }, {
     "alias" : "update_user_locale",
     "name" : "Update User Locale",
     "providerId" : "update_user_locale",
@@ -1951,7 +1983,7 @@
     "cibaInterval" : "5",
     "realmReusableOtpCode" : "false"
   },
-  "keycloakVersion" : "24.0.1",
+  "keycloakVersion" : "24.0.4",
   "userManagedAccessAllowed" : false,
   "clientProfiles" : {
     "profiles" : [ ]
