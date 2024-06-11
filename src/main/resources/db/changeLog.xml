@@ -257,5 +257,8 @@
             <column name="estimatedduration" type="float"/>
             <column name="estimatedreadiness" type="integer"/>
         </addColumn>
+        <addColumn tableName="milestone">
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
     </changeSet>
 </databaseChangeLog>
