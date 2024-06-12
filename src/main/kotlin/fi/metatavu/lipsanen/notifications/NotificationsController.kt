@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.quarkus.scheduler.Scheduled
 import io.smallrye.mutiny.coroutines.asUni
@@ -75,7 +76,7 @@ class NotificationsController {
      * @param message notification message
      * @param type notification type
      * @param taskEntity task
-     * @param receiverIds receiver ids
+     * @param receivers receiver ids
      * @param creatorId creator id
      * @return created notification
      */
@@ -83,7 +84,7 @@ class NotificationsController {
         message: String,
         type: NotificationType,
         taskEntity: TaskEntity,
-        receiverIds: List<UUID> = emptyList(),
+        receivers: List<UserEntity> = emptyList(),
         creatorId: UUID,
     ): NotificationEntity {
         val notification = notificationRepository.create(
@@ -93,12 +94,16 @@ class NotificationsController {
             task = taskEntity
         )
 
-        val notificationReceivers = (usersController.getAdmins().map { UUID.fromString(it.id) } + receiverIds).distinct()
+        //todo remember about keycloak id difference
+        val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }
+        val adminEntities = adminKeycloakIds.map { usersController.findUserByKeycloakId(it) }.filterNotNull()
 
-        notificationReceivers.forEach { receiverId ->
+        val notificationReceivers = (adminEntities + receivers).distinctBy { it.id }
+
+        notificationReceivers.forEach { receiver ->
             notificationEventsController.create(
                 notification = notification,
-                receiverId = receiverId,
+                receiver = receiver,
                 creatorId = creatorId
             )
         }

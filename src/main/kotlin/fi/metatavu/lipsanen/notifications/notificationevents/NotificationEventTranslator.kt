@@ -23,7 +23,7 @@ class NotificationEventTranslator : AbstractTranslator<NotificationEventEntity, 
         return NotificationEvent(
             id = entity.id,
             notification = notificationTranslator.translate(entity.notification),
-            receiverId = entity.receiverId,
+            receiverId = entity.receiver.id,
             read = entity.readStatus!!,
             metadata = metadataTranslator.translate(entity)
         )

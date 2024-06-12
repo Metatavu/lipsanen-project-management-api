@@ -28,6 +28,9 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
         return TestBuilderAuthentication(this, authProvider)
     }
 
+    fun getUser(username: String, password: String): TestBuilderAuthentication {
+        return createTestBuilderAuthentication(username, password)
+    }
     /**
      * Creates test builder authenticatior for given user
      *

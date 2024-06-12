@@ -280,6 +280,15 @@
             SELECT 1 FROM user WHERE keycloakId = task_assignee.assigneeid
             );
         </sql>
+        <!-- fill user table based on notifications -->
+        <sql>
+            INSERT INTO user (id, keycloakId)
+            SELECT DISTINCT UUID(), receiverid
+            FROM notificationevent
+            WHERE NOT EXISTS (
+            SELECT 1 FROM user WHERE keycloakId = notificationevent.receiverid
+            );
+        </sql>
         <!-- do for all others -->
     </changeSet>
 
@@ -294,6 +303,18 @@
             SET user_id = (SELECT id FROM user WHERE keycloakId = task_assignee.assigneeid);
         </sql>
         <dropColumn tableName="task_assignee" columnName="assigneeid"/>
+
+        <addColumn tableName="notificationevent">
+            <column name="receiver_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+        <sql>
+            UPDATE notificationevent
+            SET receiver_id = (SELECT id FROM user WHERE keycloakId = notificationevent.receiverid);
+        </sql>
+        <dropColumn tableName="notificationevent" columnName="receiverid"/>
     </changeSet>
+
 
 </databaseChangeLog>

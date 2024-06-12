@@ -219,6 +219,10 @@ class UserController {
         return userRepository.findByIdSuspending(userId)
     }
 
+    suspend fun findUserByKeycloakId(keycloakId: UUID): UserEntity? {
+        return userRepository.findByKeycloakId(keycloakId)
+    }
+
     /**
      * Finds a user by id
      *

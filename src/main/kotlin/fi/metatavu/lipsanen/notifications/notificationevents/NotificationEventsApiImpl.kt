@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.spec.NotificationEventsApi
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -38,6 +39,9 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
     lateinit var taskController: TaskController
 
     @Inject
+    lateinit var userController: UserController
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
@@ -50,9 +54,11 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         readStatus: Boolean?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        if (userId != loggedInUserId) {
+        if (userId != loggedInUserId && !isAdmin()) {
             return@async createBadRequest("User id does not match logged in user id")
         }
+
+        val receiverFilter = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
 
         val projectFilter = if (projectId != null) {
             projectController.findProject(projectId) ?: return@async createNotFound(createNotFoundMessage(PROJECT, projectId))
@@ -64,13 +70,14 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
 
         // No access rights checks since the user is the receiver of the notification
         val (notificationEvents, count) = notificationEventController.list(
-            userId = userId,
+            receiver = receiverFilter,
             project = projectFilter,
             readStatus = readStatus,
             task = taskFilter,
             first = first,
             max = max
         )
+        //todo checks for deleting users
 
         createOk(notificationEventTranslator.translate(notificationEvents), count)
     }.asUni()
@@ -81,7 +88,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@async createNotFound("Notification event not found")
-            if (notificationEvent.receiverId != loggedInUserId) {
+            if (notificationEvent.receiver.keycloakId != loggedInUserId && !isAdmin()) {
                 return@async createForbidden("User does not have access to notification event")
             }
 
@@ -97,7 +104,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val notificationEventEntity = notificationEventController.find(notificationEventId)
             ?: return@async createNotFound("Notification event not found")
-        if (notificationEventEntity.receiverId != loggedInUserId) {
+        if (notificationEventEntity.receiver.keycloakId != loggedInUserId && !isAdmin()) {
             return@async createForbidden("User does not have access to notification event")
         }
 
@@ -116,7 +123,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@async createNotFound("Notification event not found")
-            if (notificationEvent.receiverId != loggedInUserId) {
+            if (notificationEvent.receiver.keycloakId != loggedInUserId && !isAdmin()) {
                 return@async createForbidden("User does not have access to notification event")
             }
 

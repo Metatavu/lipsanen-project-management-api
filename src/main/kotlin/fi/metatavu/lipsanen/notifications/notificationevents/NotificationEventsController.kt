@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.NotificationEvent
 import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
@@ -20,7 +21,7 @@ class NotificationEventsController {
     /**
      * Lists notification events
      *
-     * @param userId user id
+     * @param receiver user id
      * @param project project
      * @param notification notification
      * @param readStatus read status
@@ -30,7 +31,7 @@ class NotificationEventsController {
      * @return pair of list of notification events and total count
      */
     suspend fun list(
-        userId: UUID? = null,
+        receiver: UserEntity? = null,
         project: ProjectEntity? = null,
         notification: NotificationEntity? = null,
         readStatus: Boolean? = null,
@@ -39,7 +40,7 @@ class NotificationEventsController {
         max: Int? = null
     ): Pair<List<NotificationEventEntity>, Long> {
         return notificationEventRepository.list(
-            userId = userId,
+            receiver = receiver,
             project = project,
             notification = notification,
             readStatus = readStatus,
@@ -57,11 +58,11 @@ class NotificationEventsController {
      * @param creatorId creator id
      * @return created notification event
      */
-    suspend fun create(notification: NotificationEntity, receiverId: UUID, creatorId: UUID): NotificationEventEntity {
+    suspend fun create(notification: NotificationEntity, receiver: UserEntity, creatorId: UUID): NotificationEventEntity {
         return notificationEventRepository.create(
             id = UUID.randomUUID(),
             notification = notification,
-            receiverId = receiverId,
+            receiver = receiver,
             read = false,
             creatorId = creatorId,
             lastModifierId = creatorId

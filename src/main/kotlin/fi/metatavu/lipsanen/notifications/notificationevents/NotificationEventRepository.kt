@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -20,7 +21,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
      *
      * @param id id
      * @param notification notification
-     * @param receiverId receiver id
+     * @param receiver receiver id
      * @param read read status
      * @param creatorId creator id
      * @param lastModifierId last modifier id
@@ -29,7 +30,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
     suspend fun create(
         id: UUID,
         notification: NotificationEntity,
-        receiverId: UUID,
+        receiver: UserEntity,
         read: Boolean,
         creatorId: UUID,
         lastModifierId: UUID
@@ -37,7 +38,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
         val notificationEvent = NotificationEventEntity()
         notificationEvent.id = id
         notificationEvent.notification = notification
-        notificationEvent.receiverId = receiverId
+        notificationEvent.receiver = receiver
         notificationEvent.readStatus = read
         notificationEvent.creatorId = creatorId
         notificationEvent.lastModifierId = lastModifierId
@@ -47,7 +48,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
     /**
      * Lists notification events
      *
-     * @param userId user id
+     * @param receiver user id
      * @param projectId project id
      * @param notification notification
      * @param first first result
@@ -55,7 +56,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
      * @return pair of list of notification events and total count
      */
     suspend fun list(
-        userId: UUID?,
+        receiver: UserEntity?,
         project: ProjectEntity?,
         task: TaskEntity?,
         readStatus: Boolean?,
@@ -66,9 +67,9 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
         val sb = StringBuilder()
         val parameters = Parameters()
 
-        if (userId != null) {
-            addCondition(sb, ("receiverId = :receiverId"))
-            parameters.and("receiverId", userId)
+        if (receiver != null) {
+            addCondition(sb, ("receiver = :receiver"))
+            parameters.and("receiver", receiver)
         }
 
         if (project != null) {

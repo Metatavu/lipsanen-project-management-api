@@ -9,6 +9,7 @@ import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -105,15 +106,16 @@ class TaskController {
             lastModifierId = userId
         )
 
-        task.assigneeIds?.forEach { assigneeId ->
+        val assignees = task.assigneeIds?.map { assigneeId ->
             val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
                 user = user
             )
-        }
-        notifyTaskAssignments(taskEntity, task.assigneeIds ?: emptyList(), userId)
+            user
+        } ?: emptyList()
+        notifyTaskAssignments(taskEntity, assignees, userId)
 
         task.attachmentUrls?.forEach { attachmentUrl ->
             taskAttachmentRepository.create(
@@ -190,9 +192,11 @@ class TaskController {
         }
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
+        //todo flush?
+        Panache.flush()
         updateAttachments(existingTask, newTask)
         if (existingTask.status != newTask.status) {
-            notifyTaskStatusChange(existingTask, newTask.assigneeIds ?: emptyList(), userId)
+            notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
 
         val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
@@ -244,11 +248,11 @@ class TaskController {
         newAssigneeIds: List<UUID>?,
         userId: UUID
     ) {
-        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
-        val assignedUserIds = existingAssignees.map { it.user.id }
+        val assigmedUsers = taskAssigneeRepository.listByTask(existingTask)
+        val assignedUserIds = assigmedUsers.map { it.user.id }
         val newAssignees = newAssigneeIds ?: emptyList()
 
-        existingAssignees.forEach { existingAssignee ->
+        assigmedUsers.forEach { existingAssignee ->
             if (existingAssignee.user.id !in newAssignees) {
                 taskAssigneeRepository.deleteSuspending(existingAssignee)
             }
@@ -257,7 +261,7 @@ class TaskController {
             if (assignedUserIds.none { it == newAssigneeId }) {
                 val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
-                notifyTaskAssignments(existingTask, newAssignees, userId)
+                notifyTaskAssignments(existingTask, listOf(user), userId)
             }
         }
     }
@@ -368,13 +372,13 @@ class TaskController {
      * @param assignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
+    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         taskAssigneeRepository.listByTask(task).forEach {
             notificationsController.createAndNotify(
                 message = "User has been assigned to task ${task.name}",
                 type = NotificationType.TASK_ASSIGNED,
                 taskEntity = task,
-                receiverIds = assignees,
+                receivers = assignees,
                 creatorId = userId
             )
         }
@@ -387,12 +391,12 @@ class TaskController {
      * @param assignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UUID>, userId: UUID) {
+    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
             message = "Status changed to ${task.status}",
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
-            receiverIds = assignees,
+            receivers = assignees,
             creatorId = userId
         )
     }
