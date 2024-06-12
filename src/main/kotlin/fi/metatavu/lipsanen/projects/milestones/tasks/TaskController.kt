@@ -12,7 +12,6 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnection
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
-import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -123,7 +122,14 @@ class TaskController {
             val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
             if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) { //todo clear diff between keycloak and normal id
                 logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
-                userController.assignUserToProjectGroups(userController.findUser(assigneeId)!!, emptyArray(), listOf(milestone.project.keycloakGroupId))
+                val keycloakUser = userController.findKeycloakUser(user.keycloakId)
+                if (keycloakUser != null) {
+                    userController.assignUserToProjectGroups(
+                        keycloakUser,
+                        emptyArray(),
+                        listOf(milestone.project.keycloakGroupId)
+                    )
+                }
             }
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
@@ -275,7 +281,10 @@ class TaskController {
                 val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
                 if (!projectController.hasAccessToProject(existingTask.milestone.project, user.keycloakId)) {
                     logger.info("Assigning user $newAssigneeId to project ${existingTask.milestone.project.keycloakGroupId} because of the task assignment")
-                    userController.assignUserToProjectGroups(userController.findUser(newAssigneeId)!!, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
+                    val keycloakUser = userController.findKeycloakUser(user.keycloakId)
+                    if (keycloakUser != null) {
+                        userController.assignUserToProjectGroups(keycloakUser, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
+                    }
                 }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
                 notifyTaskAssignments(existingTask, listOf(user), userId)
