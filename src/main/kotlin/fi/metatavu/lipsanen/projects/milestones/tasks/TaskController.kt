@@ -4,18 +4,22 @@ import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.notifications.NotificationsController
+import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import org.jboss.logging.Logger
 import java.time.LocalDate
 import java.util.*
 
@@ -44,7 +48,16 @@ class TaskController {
     lateinit var notificationsController: NotificationsController
 
     @Inject
+    lateinit var taskCommentController: TaskCommentController
+
+    @Inject
+    lateinit var projectController: ProjectController
+
+    @Inject
     lateinit var userController: UserController
+
+    @Inject
+    lateinit var logger: Logger
 
     /**
      * Lists tasks
@@ -84,7 +97,7 @@ class TaskController {
     }
 
     /**
-     * Creates a new task and triggers the needed notifications
+     * Creates a new task and triggers the needed notifications, assigns users to the project if not yet done
      *
      * @param milestone milestone
      * @param task task
@@ -108,6 +121,10 @@ class TaskController {
 
         val assignees = task.assigneeIds?.map { assigneeId ->
             val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
+            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) { //todo clear diff between keycloak and normal id
+                logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
+                userController.assignUserToProjectGroups(userController.findUser(assigneeId)!!, emptyArray(), listOf(milestone.project.keycloakGroupId))
+            }
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
@@ -146,10 +163,8 @@ class TaskController {
      * @return found task or null if not found
      */
     suspend fun find(milestone: MilestoneEntity, taskId: UUID): TaskEntity? {
-        return taskEntityRepository.find(
-            "milestone = :milestone and id = :id",
-            Parameters.with("milestone", milestone).and("id", taskId)
-        ).firstResult<TaskEntity?>().awaitSuspending()
+        return taskEntityRepository.findByIdSuspending(taskId)
+            ?.takeIf { it.milestone.id == milestone.id }
     }
 
     /**
@@ -160,10 +175,8 @@ class TaskController {
      * @return found task or null if not found
      */
     suspend fun find(project: ProjectEntity, taskId: UUID): TaskEntity? {
-        return taskEntityRepository.find(
-            "milestone.project = :project and id = :id",
-            Parameters.with("project", project).and("id", taskId)
-        ).firstResult<TaskEntity?>().awaitSuspending()
+        return taskEntityRepository.findByIdSuspending(taskId)
+            ?.takeIf { it.milestone.project.id == project.id }
     }
 
     /**
@@ -260,6 +273,10 @@ class TaskController {
         newAssignees.forEach { newAssigneeId ->
             if (assignedUserIds.none { it == newAssigneeId }) {
                 val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
+                if (!projectController.hasAccessToProject(existingTask.milestone.project, user.keycloakId)) {
+                    logger.info("Assigning user $newAssigneeId to project ${existingTask.milestone.project.keycloakGroupId} because of the task assignment")
+                    userController.assignUserToProjectGroups(userController.findUser(newAssigneeId)!!, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
+                }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
                 notifyTaskAssignments(existingTask, listOf(user), userId)
             }
@@ -320,6 +337,9 @@ class TaskController {
         taskAttachmentRepository.listByTask(foundTask).forEach {
             taskAttachmentRepository.deleteSuspending(it)
         }
+        taskCommentController.listTaskComments(foundTask).first.forEach {
+            taskCommentController.deleteTaskComment(it)
+        }
         taskEntityRepository.deleteSuspending(foundTask)
     }
 
@@ -369,7 +389,7 @@ class TaskController {
      * Creates notifications of task assignments
      *
      * @param task task
-     * @param assignees task assignees
+     * @param receivers task assignees
      * @param userId modifier id
      */
     private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {

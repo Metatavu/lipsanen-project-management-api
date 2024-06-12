@@ -32,9 +32,9 @@ class UserTestIT: AbstractFunctionalTest() {
         val project = it.admin.project.create()
         val createdCompany = it.admin.company.create()
         val userData = User(
-            firstName = "Test",
-            lastName = "User",
-            email = "user1@example.com",
+            firstName = "usertest",
+            lastName = "usertest",
+            email = "usertest@example.com",
             projectIds = arrayOf(project.id!!),
             companyId = createdCompany.id,
             roles = emptyArray()
@@ -77,7 +77,7 @@ class UserTestIT: AbstractFunctionalTest() {
     @Test
     fun testListUsers() = createTestBuilder().use {
         val users = it.admin.user.listUsers(null, null, null, true)
-        assertEquals(3, users.size)
+        assertEquals(4, users.size)
         users.forEach { user ->
             assertTrue(fi.metatavu.lipsanen.test.client.models.UserRole.USER == user.roles!![0] || fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN == user.roles!![0])
         }
@@ -86,13 +86,13 @@ class UserTestIT: AbstractFunctionalTest() {
         assertEquals(2, pagedUsers.size)
 
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
-        assertEquals(2, pagedUsers2.size)
+        assertEquals(3, pagedUsers2.size)
 
         val pagedUsers3 = it.admin.user.listUsers(first = 2, max = 3)
-        assertEquals(2, pagedUsers3.size)
+        assertEquals(3, pagedUsers3.size)
 
         val pagedUsers4 = it.admin.user.listUsers(first = 3, max = 2)
-        assertEquals(1, pagedUsers4.size)
+        assertEquals(2, pagedUsers4.size)
 
         // Filter by company
         val company = it.admin.company.create()
@@ -142,9 +142,9 @@ class UserTestIT: AbstractFunctionalTest() {
         val project = it.admin.project.create()
         val project2 = it.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
         val userData = User(
-            firstName = "Test",
-            lastName = "User",
-            email = "user1@example.com",
+            firstName = "usertest",
+            lastName = "usertest",
+            email = "usertest@example.com",
             projectIds = arrayOf(project.id!!),
             roles = emptyArray()
         )
@@ -172,9 +172,9 @@ class UserTestIT: AbstractFunctionalTest() {
     @Test
     fun testDeleteUser() = createTestBuilder().use {
         val userData = User(
-            firstName = "Test",
-            lastName = "User",
-            email = "user1@example.com",
+            firstName = "usertest",
+            lastName = "usertest",
+            email = "usertest@example.com",
             roles = emptyArray()
         )
         val createdUser = it.admin.user.create(userData)

@@ -63,7 +63,7 @@ class UserController {
                 id = userId.toString(),
                 briefRepresentation = true
             )
-            } catch (e: Exception) {
+        } catch (e: Exception) {
             logger.error("Failed to list user groups", e)
             emptyArray()
         }
@@ -174,7 +174,7 @@ class UserController {
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignUserToGroups(keycloakUser, emptyArray(), groupIds)
+            assignUserToProjectGroups(foundUser, emptyArray(), groupIds)
 
             // Assign user to USER role
             val userRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
@@ -274,7 +274,7 @@ class UserController {
                 userRepresentation = updatedRepresentation
             )
 
-            assignUserToGroups(currentKeycloakRepresentation, currentKeycloakRepresentation.groups, updateGroups)
+            assignUserToProjectGroups(currentKeycloakRepresentation, currentKeycloakRepresentation.groups, updateGroups)
             UserFullRepresentation(
                 userRepresentation = keycloakAdminClient.getUserApi().realmUsersIdGet(
                     realm = keycloakAdminClient.getRealm(),
@@ -348,7 +348,7 @@ class UserController {
      * @param currentGroups current groups
      * @param updateGroups new groups
      */
-    private suspend fun assignUserToGroups(
+    suspend fun assignUserToProjectGroups(
         existingUser: UserRepresentation,
         currentGroups: Array<String>?,
         updateGroups: List<UUID>?

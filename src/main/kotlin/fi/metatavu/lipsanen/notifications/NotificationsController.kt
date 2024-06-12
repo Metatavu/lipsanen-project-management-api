@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.notifications
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
@@ -71,12 +72,23 @@ class NotificationsController {
     }
 
     /**
+     * Lists notifications for a comment
+     *
+     * @param comment task comment
+     * @return list of notifications
+     */
+    suspend fun list(comment: TaskCommentEntity): List<NotificationEntity> {
+        return notificationRepository.list("comment", comment).awaitSuspending()
+    }
+
+    /**
      *Creates a new notification and sends the notification events to the needed receivers (e.g. admins + custom receivers)
      *
      * @param message notification message
      * @param type notification type
      * @param taskEntity task
-     * @param receivers receiver ids
+     * @param comment task comment
+     * @param receiverIds receiver ids
      * @param creatorId creator id
      * @return created notification
      */
@@ -85,13 +97,15 @@ class NotificationsController {
         type: NotificationType,
         taskEntity: TaskEntity,
         receivers: List<UserEntity> = emptyList(),
+        comment: TaskCommentEntity? = null,
         creatorId: UUID,
     ): NotificationEntity {
         val notification = notificationRepository.create(
             id = UUID.randomUUID(),
             type = type,
             message = message,
-            task = taskEntity
+            task = taskEntity,
+            comment = comment
         )
 
         //todo remember about keycloak id difference

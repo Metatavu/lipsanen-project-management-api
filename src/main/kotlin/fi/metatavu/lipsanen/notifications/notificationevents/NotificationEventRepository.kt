@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.users.UserEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
@@ -48,7 +49,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
     /**
      * Lists notification events
      *
-     * @param receiver user id
+     * @param userId user id
      * @param projectId project id
      * @param notification notification
      * @param first first result
@@ -59,6 +60,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
         receiver: UserEntity?,
         project: ProjectEntity?,
         task: TaskEntity?,
+        comment: TaskCommentEntity?,
         readStatus: Boolean?,
         notification: NotificationEntity?,
         first: Int?,
@@ -90,6 +92,11 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
         if (notification != null) {
             addCondition(sb, ("notification = :notification"))
             parameters.and("notification", notification)
+        }
+
+        if (comment != null) {
+            addCondition(sb, ("notification.comment = :comment"))
+            parameters.and("comment", comment)
         }
 
         return applyFirstMaxToQuery(

@@ -135,10 +135,11 @@ class ChangeProposalController {
      * @return found proposal or null if not found
      */
     suspend fun find(task: TaskEntity, changeProposalId: UUID): ChangeProposalEntity? {
-        return proposalRepository.find(
-            "id=:id and task=:task",
-            Parameters.with("task", task).and("id", changeProposalId)
-        ).firstResult<ChangeProposalEntity>().awaitSuspending()
+        val proposal = proposalRepository.findByIdSuspending(changeProposalId)
+        if (proposal?.task?.id == task.id) {
+            return proposal
+        }
+        return null
     }
 
     /**
