@@ -123,6 +123,7 @@ class TaskController {
             if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) { //todo clear diff between keycloak and normal id
                 logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
                 val keycloakUser = userController.findKeycloakUser(user.keycloakId)
+                println("keycloakUser: ${keycloakUser?.firstName}")
                 if (keycloakUser != null) {
                     userController.assignUserToProjectGroups(
                         keycloakUser,

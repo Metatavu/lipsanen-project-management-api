@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks.comments
 
 import fi.metatavu.lipsanen.persistence.AbstractRepository
+import fi.metatavu.lipsanen.users.UserEntity
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
@@ -29,11 +30,11 @@ class TaskCommentUserRepository : AbstractRepository<TaskCommentUser, UUID>() {
      * @param userId user id
      * @return created task comment user
      */
-    suspend fun create(randomUUID: UUID, createdComment: TaskCommentEntity, userId: UUID): TaskCommentUser {
+    suspend fun create(randomUUID: UUID, createdComment: TaskCommentEntity, user: UserEntity): TaskCommentUser {
         val taskCommentUser = TaskCommentUser()
         taskCommentUser.id = randomUUID
         taskCommentUser.taskComment = createdComment
-        taskCommentUser.userId = userId
+        taskCommentUser.user = user
         return persistSuspending(taskCommentUser)
     }
 }

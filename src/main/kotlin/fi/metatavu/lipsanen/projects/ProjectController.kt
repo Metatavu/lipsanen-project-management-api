@@ -218,11 +218,12 @@ class ProjectController {
      * Checks if a user has access to a project
      *
      * @param project project
-     * @param userId user id
+     * @param keycloakUserId user id
      * @return true if user has access to the project; false otherwise
      */
-    suspend fun hasAccessToProject(project: ProjectEntity, userId: UUID): Boolean {
-        return userController.listUserGroups(userId).any { it.id == project.keycloakGroupId.toString() }
+    suspend fun hasAccessToProject(project: ProjectEntity, keycloakUserId: UUID): Boolean {
+        println("ProjectController.hasAccessToProject()")
+        return userController.listUserGroups(keycloakUserId).any { it.id == project.keycloakGroupId.toString() }
     }
 
     /**

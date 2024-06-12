@@ -107,9 +107,8 @@ class UserTestIT: AbstractFunctionalTest() {
     @Test
     fun testFindUser() = createTestBuilder().use {
         //Check that user with login history has some last login info
-        val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
-        val foundUser = it.admin.user.findUser(adminId)
-        assertNotNull(foundUser.lastLoggedIn)
+        val foundUser = it.admin.user.listUsers().find { it.firstName == "admin" }
+        assertNotNull(foundUser?.lastLoggedIn)
 
         val foundUserWithRole = it.admin.user.findUser(adminId, true)
         assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN, foundUserWithRole.roles!![0])

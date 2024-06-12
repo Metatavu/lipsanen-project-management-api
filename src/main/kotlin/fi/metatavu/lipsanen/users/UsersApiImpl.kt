@@ -44,8 +44,10 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @WithTransaction
     override fun listUsers(companyId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val ( users, count ) = userController.listUsers(companyId, first, max)
+        //todo updates the list with the keycloak data if missing
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count.toLong())
     }.asUni()
 
@@ -84,7 +86,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         }
         user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
         val updatedUser = userController.updateUser(
-            userId = userId,
             existingUser = existingUser,
             updateData = user,
             updateGroups = keycloakGroupIds

@@ -1,5 +1,6 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks.comments
 
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.persistence.*
 import java.util.*
 
@@ -16,6 +17,6 @@ class TaskCommentUser {
     @ManyToOne
     lateinit var taskComment: TaskCommentEntity
 
-    @Column(nullable = false)
-    lateinit var userId: UUID
+    @ManyToOne
+    lateinit var user: UserEntity
 }

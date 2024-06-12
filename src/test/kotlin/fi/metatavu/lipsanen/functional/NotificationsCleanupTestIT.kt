@@ -49,7 +49,8 @@ class NotificationsCleanupTestIT : AbstractFunctionalTest() {
             )
         )
 
-        val notificationEvents = tb.user.notificationEvent.list(
+        //todo check notification event auth
+        val notificationEvents = tb.admin.notificationEvent.list(
             userId = user.id!!,
             projectId = project1.id
         )

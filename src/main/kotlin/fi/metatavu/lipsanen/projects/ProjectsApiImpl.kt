@@ -45,6 +45,7 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
         val keycloakGroupIds = if (isAdmin()) {
             null
         } else {
+            println("Project api impl list projects")
             userController.listUserGroups(userId).map { UUID.fromString(it.id) }
         }
 

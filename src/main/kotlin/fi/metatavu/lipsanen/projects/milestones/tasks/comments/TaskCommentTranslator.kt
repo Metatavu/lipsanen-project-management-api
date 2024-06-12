@@ -22,7 +22,7 @@ class TaskCommentTranslator : AbstractTranslator<TaskCommentEntity, TaskComment>
         return TaskComment(
             id = entity.id,
             comment = entity.comment,
-            referencedUsers = taskCommentUserRepository.list(entity).map { it.userId },
+            referencedUsers = taskCommentUserRepository.list(entity).map { it.user.id },
             taskId = entity.task.id,
             metadata = metadataTranslator.translate(entity),
         )

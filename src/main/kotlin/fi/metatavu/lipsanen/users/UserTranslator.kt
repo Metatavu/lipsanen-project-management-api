@@ -25,13 +25,14 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
     lateinit var projectController: ProjectController
 
     override suspend fun translate(entity: UserFullRepresentation): User {
-        val userRepresentation = entity.userRepresentation!!
+        println("UserTranslator.translate()")
+        val userRepresentation = entity.userRepresentation
         val userGroups = userController.listUserGroups(UUID.fromString(userRepresentation.id))
         val projects = projectController.listProjects(keycloakGroupIds = userGroups.map { UUID.fromString(it.id) }, null, null)
         val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
         val company = userRepresentation.attributes?.get("companyId")?.firstOrNull()
         return User(
-            id = entity.userEntity!!.id,
+            id = entity.userEntity.id,
             email = userRepresentation.email ?: "",
             firstName = userRepresentation.firstName ?: "",
             lastName = userRepresentation.lastName ?: "",

@@ -92,7 +92,7 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         )
 
         // join the project
-        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        val getUser = tb.admin.user.listUsers().find { it.firstName == "user" }!!
         tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
         assertNotNull(
             tb.admin.changeProposal.listChangeProposals(
@@ -235,7 +235,7 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         assertEquals(changeProposal.id, foundChangeProposal.id)
 
         // join the project
-        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        val getUser = tb.admin.user.listUsers().find { it.firstName == "user" }!!
         tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
         assertNotNull(
             tb.user.changeProposal.findChangeProposal(
@@ -476,10 +476,9 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
 
         // access rights
-        val getUser = tb.admin.user.findUser(tb.admin.user.user1Id)
+        val getUser = tb.admin.user.listUsers().find { it.firstName == "user" }!!
         tb.admin.user.updateUser(userId = getUser.id!!, user = getUser.copy(projectIds = arrayOf(project.id)))
-        val proposal =
-            tb.user.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)!!
+        val proposal = tb.user.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task1.id!!)!!
         tb.user.changeProposal.deleteProposal(
             projectId = project.id,
             milestoneId = milestone.id,

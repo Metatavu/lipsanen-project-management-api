@@ -53,14 +53,14 @@ class UserController {
     /**
      * Lists user groups
      *
-     * @param userId user id
+     * @param keycloakUserId user id
      * @return user groups
      */
-    suspend fun listUserGroups(userId: UUID): Array<GroupRepresentation> {
+    suspend fun listUserGroups(keycloakUserId: UUID): Array<GroupRepresentation> {
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdGroupsGet(
                 realm = keycloakAdminClient.getRealm(),
-                id = userId.toString(),
+                id = keycloakUserId.toString(),
                 briefRepresentation = true
             )
         } catch (e: Exception) {
@@ -106,16 +106,16 @@ class UserController {
             }
         }
 
-        val userFullRepresentations = users.mapNotNull {
-            val userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id))
-            if (userEntity != null) {
-                UserFullRepresentation(
-                    userEntity = userEntity,
-                    userRepresentation = it
-                )
-            } else {
-                null
-            }
+        //todo is it ok
+        val userFullRepresentations = users.map {
+            val userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id)) ?: userRepository.create(
+                id = UUID.randomUUID(),
+                keycloakId = UUID.fromString(it.id)
+            )
+            UserFullRepresentation(
+                userEntity = userEntity,
+                userRepresentation = it
+            )
         }.toTypedArray()
         return userFullRepresentations to usersCount
     }
@@ -154,7 +154,7 @@ class UserController {
      * @return created user
      */
     suspend fun createUser(user: User, groupIds: List<UUID>?): UserFullRepresentation? {
-        var keycloakUser: UserRepresentation? = null
+        var keycloakUser: UserRepresentation?
         var userEntity: UserEntity? = null
         try {
             keycloakAdminClient.getUsersApi().realmUsersPost(
@@ -174,7 +174,7 @@ class UserController {
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignUserToProjectGroups(foundUser, emptyArray(), groupIds)
+            assignUserToProjectGroups(keycloakUser, emptyArray(), groupIds)
 
             // Assign user to USER role
             val userRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
@@ -252,11 +252,11 @@ class UserController {
      * @return updated user
      */
     suspend fun updateUser(
-        userId: UUID,
         existingUser: UserEntity,
         updateData: User,
         updateGroups: List<UUID>?
     ): UserFullRepresentation? {
+        println("updating user ${existingUser.id} with keycloak id ${existingUser.keycloakId}")
         val currentKeycloakRepresentation = findKeycloakUser(existingUser.keycloakId) ?: return null
         val updatedRepresentation = currentKeycloakRepresentation.copy(
             firstName = updateData.firstName,
@@ -270,7 +270,7 @@ class UserController {
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdPut(
                 realm = keycloakAdminClient.getRealm(),
-                id = userId.toString(),
+                id = existingUser.keycloakId.toString(),
                 userRepresentation = updatedRepresentation
             )
 
@@ -278,7 +278,7 @@ class UserController {
             UserFullRepresentation(
                 userRepresentation = keycloakAdminClient.getUserApi().realmUsersIdGet(
                     realm = keycloakAdminClient.getRealm(),
-                    id = userId.toString()
+                    id = existingUser.keycloakId.toString()
                 ),
                 userEntity = existingUser
             )
@@ -374,6 +374,7 @@ class UserController {
                 )
             }
         }
+        println("User ${existingUser.id} assigned to groups ${updateGroups?.joinToString()}")
     }
 
     companion object {

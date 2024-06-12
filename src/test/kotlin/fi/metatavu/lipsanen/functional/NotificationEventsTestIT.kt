@@ -246,7 +246,6 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val allUsers = tb.admin.user.listUsers()
 
-        //todo remake this test too
         val user = allUsers.find { it.firstName == "user" }!!.id!!
         val user1 = allUsers.find { it.firstName == "user1" }!!.id!!
         val user2 = allUsers.find { it.firstName == "user2" }!!.id!!
@@ -280,7 +279,8 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             )
         )
 
-        val userNotifications = tb.user.notificationEvent.list(
+        //todo check events auth for user
+        val userNotifications = tb.admin.notificationEvent.list(
             userId = user,
             projectId = project1.id
         )

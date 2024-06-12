@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.spec.TaskCommentsApi
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -36,6 +37,9 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
 
     @Inject
     lateinit var taskCommentTranslator: TaskCommentTranslator
+
+    @Inject
+    lateinit var userController: UserController
 
     @Inject
     lateinit var vertx: Vertx
@@ -78,8 +82,11 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         )
 
         taskComment.referencedUsers.forEach { referencedUserId ->
-            if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
-                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
+            val user = userController.findUser(referencedUserId) ?: return@async createBadRequest(
+                "Referenced user $referencedUserId does not exist"
+            )
+            if (!projectController.hasAccessToProject(task.milestone.project, user.keycloakId)) {
+                return@async createBadRequest("Referenced user $referencedUserId has no access to the project")
             }
         }
         val createdComment = taskCommentController.createTaskComment(task, taskComment, userId)
@@ -136,7 +143,10 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         if (comment.creatorId != userId) return@async createForbidden("Cannot edit not own comment")
 
         taskComment.referencedUsers.forEach { referencedUserId ->
-            if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
+            val user = userController.findUser(referencedUserId) ?: return@async createBadRequest(
+                "Referenced user $referencedUserId does not exist"
+            )
+            if (!projectController.hasAccessToProject(task.milestone.project, user.keycloakId)) {
                 return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
             }
         }
