@@ -22,6 +22,7 @@ class MilestoneRepository : AbstractRepository<MilestoneEntity, UUID>() {
      * @param endDate end date
      * @param originalStartDate original start date
      * @param originalEndDate original end date
+     * @param estimatedReadiness estimated readiness
      * @param creatorId creator id
      * @param lastModifierId last modifier id
      * @return created milestone
@@ -34,6 +35,7 @@ class MilestoneRepository : AbstractRepository<MilestoneEntity, UUID>() {
         endDate: LocalDate,
         originalStartDate: LocalDate,
         originalEndDate: LocalDate,
+        estimatedReadiness: Int?,
         creatorId: UUID,
         lastModifierId: UUID
     ): MilestoneEntity {
@@ -45,6 +47,7 @@ class MilestoneRepository : AbstractRepository<MilestoneEntity, UUID>() {
         milestone.endDate = endDate
         milestone.originalStartDate = originalStartDate
         milestone.originalEndDate = originalEndDate
+        milestone.estimatedReadiness = estimatedReadiness
         milestone.creatorId = creatorId
         milestone.lastModifierId = lastModifierId
         return persistSuspending(milestone)
