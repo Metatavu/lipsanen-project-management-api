@@ -203,7 +203,7 @@ class ChangeProposalController {
             message = "Change proposal status changed to $newStatus",
             type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
             taskEntity = proposal.task,
-            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.user.id },
             creatorId = userId
         )
     }
@@ -222,7 +222,7 @@ class ChangeProposalController {
             message = "Change proposal created",
             type = NotificationType.CHANGE_PROPOSAL_CREATED,
             taskEntity = proposal.task,
-            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.user.id },
             creatorId = userId
         )
     }

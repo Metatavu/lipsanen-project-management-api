@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.spec.TasksApi
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
+import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -76,19 +77,16 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            task.assigneeIds?.forEach { assigneeId ->
-                if (userController.findUser(assigneeId) == null) {
-                    return@async createBadRequest("Assignee with id $assigneeId not found")
-                }
+            try {
+                val createdTask = taskController.create(
+                    milestone = projectMilestone!!.first,
+                    task = task,
+                    userId = userId
+                )
+                createOk(taskTranslator.translate(createdTask))
+            } catch (e: UserNotFoundException) {
+                createBadRequest(e.message!!)
             }
-
-            val createdTask = taskController.create(
-                milestone = projectMilestone!!.first,
-                task = task,
-                userId = userId
-            )
-
-            createOk(taskTranslator.translate(createdTask))
         }.asUni()
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
@@ -128,17 +126,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            if (task.assigneeIds != null) {
-                val existingAssignees = taskAssigneeRepository.listByTask(foundTask)
-                if (existingAssignees.size != task.assigneeIds.size || !existingAssignees.map { it.assigneeId }.containsAll(task.assigneeIds)) {
-                    task.assigneeIds.forEach { assigneeId ->
-                        if (userController.findUser(assigneeId) == null) {
-                            return@async createNotFound("Assignee with id $assigneeId not found")
-                        }
-                    }
-                }
-            }
-
             // Verify that nothing blocks it from updating
             val updateError = taskController.isNotUpdatable(
                 existingTask = foundTask,
@@ -157,6 +144,8 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 )
                 return@async createOk(taskTranslator.translate(updatedTask))
             } catch (e: TaskOutsideMilestoneException) {
+                return@async createBadRequest(e.message!!)
+            } catch (e: UserNotFoundException) {
                 return@async createBadRequest(e.message!!)
             }
 

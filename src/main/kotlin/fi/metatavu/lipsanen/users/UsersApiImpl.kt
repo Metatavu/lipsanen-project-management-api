@@ -8,8 +8,10 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
 import io.smallrye.mutiny.coroutines.asUni
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import io.vertx.core.Vertx
 import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
@@ -48,6 +50,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @WithTransaction
     override fun createUser(user: User): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val existingUsers = userController.countUserByEmail(user.email)
         if (existingUsers > 0) {
@@ -64,10 +67,16 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
     override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val foundUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
-        createOk(userTranslator.translate(foundUser, includeRoles))
+        val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@async createInternalServerError("Failed to find user")
+        createOk(userTranslator.translate(
+            UserFullRepresentation(
+            userEntity = foundUser,
+            userRepresentation = foundUserRepresentation
+        ), includeRoles))
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @WithTransaction
     override fun updateUser(userId: UUID, user: User): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val existingUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
         val keycloakGroupIds = user.projectIds?.map {
@@ -84,13 +93,16 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @WithTransaction
     override fun deleteUser(userId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
-        val assignedToTasks = taskAssigneeRepository.listByAssignee(userId).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
+        val user = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
+        //todo mode checks
+        val assignedToTasks = taskAssigneeRepository.listByAssignee(user).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
         if (assignedToTasks.isNotEmpty()) {
+            println("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
             return@async createConflict("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
         }
-        userController.deleteUser(userId)
+        userController.deleteUser(user)
         createNoContent()
     }.asUni()
 }

@@ -2,11 +2,13 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
+import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -39,6 +41,9 @@ class TaskController {
 
     @Inject
     lateinit var notificationsController: NotificationsController
+
+    @Inject
+    lateinit var userController: UserController
 
     /**
      * Lists tasks
@@ -84,6 +89,7 @@ class TaskController {
      * @param task task
      * @param userId user id
      * @return created task
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
         val taskEntity = taskEntityRepository.create(
@@ -93,7 +99,6 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
-            userRole = task.userRole ?: UserRole.USER,
             estimatedDuration = task.estimatedDuration,
             estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
@@ -101,10 +106,11 @@ class TaskController {
         )
 
         task.assigneeIds?.forEach { assigneeId ->
+            val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
-                assigneeId = assigneeId
+                user = user
             )
         }
         notifyTaskAssignments(taskEntity, task.assigneeIds ?: emptyList(), userId)
@@ -167,6 +173,7 @@ class TaskController {
      * @param userId user id
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -191,7 +198,7 @@ class TaskController {
         val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
         updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
         updatedTask.name = newTask.name
-        updatedTask.userRole = newTask.userRole ?: UserRole.USER
+       // todo updatedTask.userRole = newTask.userRole ?: UserRole.USER
         updatedTask.estimatedDuration = newTask.estimatedDuration
         updatedTask.estimatedReadiness = newTask.estimatedReadiness
         updatedTask.lastModifierId = userId
@@ -230,6 +237,7 @@ class TaskController {
      * @param existingTask existing task
      * @param newAssigneeIds new assignee ids
      * @param userId user id
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun updateAssignees(
         existingTask: TaskEntity,
@@ -237,15 +245,18 @@ class TaskController {
         userId: UUID
     ) {
         val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
+        val assignedUserIds = existingAssignees.map { it.user.id }
         val newAssignees = newAssigneeIds ?: emptyList()
+
         existingAssignees.forEach { existingAssignee ->
-            if (existingAssignee.assigneeId !in newAssignees) {
+            if (existingAssignee.user.id !in newAssignees) {
                 taskAssigneeRepository.deleteSuspending(existingAssignee)
             }
         }
         newAssignees.forEach { newAssigneeId ->
-            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
-                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
+            if (assignedUserIds.none { it == newAssigneeId }) {
+                val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
                 notifyTaskAssignments(existingTask, newAssignees, userId)
             }
         }

@@ -21,7 +21,6 @@ class UserTestBuilderResource (
 ) : ApiTestBuilderResource<User, UsersApi>(testBuilder, apiClient) {
 
     val user1Id = UUID.fromString("f4c1e6a1-705a-471a-825d-1982b5112ebd")
-    val user2Id = UUID.fromString("ef89e98e-6aa3-4511-9b80-ff98bd87fe37")
 
     override fun clean(p0: User?) {
         p0?.id?.let { api.deleteUser(it) }
@@ -40,6 +39,14 @@ class UserTestBuilderResource (
      */
     fun create(user: User): User {
         return addClosable(api.createUser(user))
+    }
+
+    fun create(username: String): User {
+        return addClosable(api.createUser(User(
+            email = "$username@example.com",
+            firstName = "username",
+            lastName = "username"
+        )))
     }
 
     /**

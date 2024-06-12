@@ -34,7 +34,7 @@ class TaskEntity : Metadata() {
     lateinit var status: TaskStatus
 
     @Enumerated(EnumType.STRING)
-    var userRole: UserRole? = null
+    var userRole: UserRole? = null  //todo drop this field
 
     @Column(nullable = true)
     var estimatedDuration: Float? = null

@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.persistence.AbstractRepository
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -24,12 +25,12 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
     suspend fun create(
         id: UUID,
         task: TaskEntity,
-        assigneeId: UUID
+        user: UserEntity
     ): TaskAssigneeEntity {
         val taskAssigneeEntity = TaskAssigneeEntity()
         taskAssigneeEntity.id = id
         taskAssigneeEntity.task = task
-        taskAssigneeEntity.assigneeId = assigneeId
+        taskAssigneeEntity.user = user
         return persistSuspending(taskAssigneeEntity)
     }
 
@@ -46,21 +47,21 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
         queryBuilder.append("task = :task")
         params.and("task", task)
 
-        return find(queryBuilder.toString(), Sort.ascending("assigneeId"), params).list<TaskAssigneeEntity>().awaitSuspending()
+        return find(queryBuilder.toString(), Sort.ascending("id"), params).list<TaskAssigneeEntity>().awaitSuspending()
     }
 
     /**
-     * Lists task assignees by assignee
+     * Lists task assignments by the user
      *
      * @param assigneeId assignee id
      * @return list of task assignees
      */
-    suspend fun listByAssignee(assigneeId: UUID): List<TaskAssigneeEntity> {
+    suspend fun listByAssignee(user: UserEntity): List<TaskAssigneeEntity> {
         val queryBuilder = StringBuilder()
         val params = Parameters()
 
-        queryBuilder.append("assigneeId = :assigneeId")
-        params.and("assigneeId", assigneeId)
+        queryBuilder.append("user = :user")
+        params.and("user", user)
 
         return find(queryBuilder.toString(), params).list<TaskAssigneeEntity>().awaitSuspending()
     }

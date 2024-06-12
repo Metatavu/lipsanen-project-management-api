@@ -32,6 +32,9 @@ class UserController {
     lateinit var keycloakAdminClient: KeycloakAdminClient
 
     @Inject
+    lateinit var userRepository: UserRepository
+
+    @Inject
     lateinit var logger: Logger
 
     /**
@@ -73,13 +76,14 @@ class UserController {
      * @param max max results
      * @return users
      */
-    suspend fun listUsers(companyId: UUID?, first: Int?, max: Int?): Pair<Array<UserRepresentation>, Int> {
+    suspend fun listUsers(companyId: UUID?, first: Int?, max: Int?): Pair<Array<UserFullRepresentation>, Int> {
         var users = keycloakAdminClient.getUsersApi().realmUsersGet(
             realm = keycloakAdminClient.getRealm(),
             first = first ?: 0,
             max = max?.plus(1)  ?: 10,  // +1 to account for possible admin user that has to be removed
             q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
         )
+        //todo company id to the user entity
 
         var usersCount = if(companyId == null ) {
             keycloakAdminClient.getUsersApi().realmUsersCountGet(
@@ -102,7 +106,18 @@ class UserController {
             }
         }
 
-        return users to usersCount
+        val userFullRepresentations = users.mapNotNull {
+            val userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id))
+            if (userEntity != null) {
+                UserFullRepresentation(
+                    userEntity = userEntity,
+                    userRepresentation = it
+                )
+            } else {
+                null
+            }
+        }.toTypedArray()
+        return userFullRepresentations to usersCount
     }
 
     /**
@@ -138,8 +153,10 @@ class UserController {
      * @param groupIds user group ids to assign to
      * @return created user
      */
-    suspend fun createUser(user: User, groupIds: List<UUID>?): UserRepresentation? {
-        val createdUser = try {
+    suspend fun createUser(user: User, groupIds: List<UUID>?): UserFullRepresentation? {
+        var keycloakUser: UserRepresentation? = null
+        var userEntity: UserEntity? = null
+        try {
             keycloakAdminClient.getUsersApi().realmUsersPost(
                 realm = keycloakAdminClient.getRealm(),
                 userRepresentation = UserRepresentation(
@@ -152,12 +169,12 @@ class UserController {
                 )
             )
 
-            val foundUser = keycloakAdminClient.getUsersApi().realmUsersGet(
+            keycloakUser = keycloakAdminClient.getUsersApi().realmUsersGet(
                 realm = keycloakAdminClient.getRealm(),
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignUserToGroups(foundUser, emptyArray(), groupIds)
+            assignUserToGroups(keycloakUser, emptyArray(), groupIds)
 
             // Assign user to USER role
             val userRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
@@ -165,12 +182,15 @@ class UserController {
                 realm = keycloakAdminClient.getRealm()
             )
             keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmPost(
-                id = foundUser.id.toString(),
+                id = keycloakUser.id.toString(),
                 realm = keycloakAdminClient.getRealm(),
                 roleRepresentation = arrayOf(userRole)
             )
 
-            foundUser
+            userEntity = userRepository.create(
+                id = UUID.randomUUID(),
+                keycloakId = UUID.fromString(keycloakUser.id)
+            )
         } catch (e: Exception) {
             logger.error("Failed to create user:", e)
             return null
@@ -179,31 +199,37 @@ class UserController {
         try {
             keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
                 realm = keycloakAdminClient.getRealm(),
-                id = createdUser.id!!,
+                id = keycloakUser.id!!,
                 requestBody = arrayOf("UPDATE_PASSWORD"),
                 lifespan = null
             )
         } catch (e: Exception) {
             logger.error("Failed sending email to user", e)
             // Delete the user if the email sending fails
-            deleteUser(UUID.fromString(createdUser.id))
+            deleteUser(userEntity)
         }
 
-        return createdUser
+        return UserFullRepresentation(
+            userEntity = userEntity!!,
+            userRepresentation = keycloakUser
+        )
     }
 
+    suspend fun findUser(userId: UUID): UserEntity? {
+        return userRepository.findByIdSuspending(userId)
+    }
 
     /**
      * Finds a user by id
      *
-     * @param userId user id
+     * @param keycloakId user id
      * @return found user or null if not found
      */
-    suspend fun findUser(userId: UUID): UserRepresentation? {
+    suspend fun findKeycloakUser(keycloakId: UUID): UserRepresentation? {
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdGet(
                 realm = keycloakAdminClient.getRealm(),
-                id = userId.toString()
+                id = keycloakId.toString()
             )
         } catch (e: Exception) {
             logger.error("Failed to find user", e)
@@ -221,8 +247,14 @@ class UserController {
      *
      * @return updated user
      */
-    suspend fun updateUser(userId: UUID, existingUser: UserRepresentation, updateData: User, updateGroups: List<UUID>?): UserRepresentation? {
-        val updatedRepresentation = existingUser.copy(
+    suspend fun updateUser(
+        userId: UUID,
+        existingUser: UserEntity,
+        updateData: User,
+        updateGroups: List<UUID>?
+    ): UserFullRepresentation? {
+        val currentKeycloakRepresentation = findKeycloakUser(existingUser.keycloakId) ?: return null
+        val updatedRepresentation = currentKeycloakRepresentation.copy(
             firstName = updateData.firstName,
             lastName = updateData.lastName,
             attributes = if (updateData.companyId != null) {
@@ -238,10 +270,13 @@ class UserController {
                 userRepresentation = updatedRepresentation
             )
 
-            assignUserToGroups(existingUser, existingUser.groups, updateGroups)
-            keycloakAdminClient.getUserApi().realmUsersIdGet(
-                realm = keycloakAdminClient.getRealm(),
-                id = userId.toString()
+            assignUserToGroups(currentKeycloakRepresentation, currentKeycloakRepresentation.groups, updateGroups)
+            UserFullRepresentation(
+                userRepresentation = keycloakAdminClient.getUserApi().realmUsersIdGet(
+                    realm = keycloakAdminClient.getRealm(),
+                    id = userId.toString()
+                ),
+                userEntity = existingUser
             )
         } catch (e: Exception) {
             logger.error("Failed to update user", e)
@@ -254,12 +289,13 @@ class UserController {
      *
      * @param userId user id
      */
-    suspend fun deleteUser(userId: UUID) {
+    suspend fun deleteUser(userEntity: UserEntity) {
         try {
             keycloakAdminClient.getUserApi().realmUsersIdDelete(
                 realm = keycloakAdminClient.getRealm(),
-                id = userId.toString()
+                id = userEntity.keycloakId.toString()
             )
+            userRepository.deleteSuspending(userEntity)
         } catch (e: Exception) {
             logger.error("Failed to delete user", e)
         }

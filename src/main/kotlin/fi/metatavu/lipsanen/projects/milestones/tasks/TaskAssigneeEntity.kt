@@ -1,14 +1,15 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks
 
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.persistence.*
 import java.util.*
 
 /**
- * Entity for task assignees
+ * Entity to connect tasks and assigned users
  */
 @Entity
 @Table(name = "task_assignee")
-class TaskAssigneeEntity {
+class TaskAssigneeEntity { //todo rename
 
     @Id
     lateinit var id: UUID
@@ -16,6 +17,6 @@ class TaskAssigneeEntity {
     @ManyToOne
     lateinit var task: TaskEntity
 
-    @Column(nullable = false)
-    lateinit var assigneeId: UUID
+    @ManyToOne
+    lateinit var user: UserEntity
 }

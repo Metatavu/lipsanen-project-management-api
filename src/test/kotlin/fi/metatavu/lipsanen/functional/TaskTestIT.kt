@@ -29,22 +29,23 @@ import java.util.*
 )
 class TaskTestIT : AbstractFunctionalTest() {
 
-    val userId1 = UUID.fromString("f4c1e6a1-705a-471a-825d-1982b5112ebd")
-    val userId2 = UUID.fromString("ef89e98e-6aa3-4511-9b80-ff98bd87fe36")
-    val userId3 = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
-
     @Test
     fun testTaskCreate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
+
+        val testUser1 = tb.admin.user.create("test0")
+        val testUser2 = tb.admin.user.create("test1")
+        println("testUser1: $testUser1")
+        println("testUser2: $testUser2")
         val taskData = Task(
             name = "Task",
             status = TaskStatus.NOT_STARTED,    //always created as not started
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             milestoneId = milestone.id!!,
-            assigneeIds = arrayOf(userId2, userId1),
-            userRole = UserRole.USER,
+            assigneeIds = arrayOf(testUser1.id!!, testUser2.id!!),
+           //todo  userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
@@ -60,8 +61,8 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.startDate, task.startDate)
         assertEquals(taskData.endDate, task.endDate)
         assertEquals(taskData.milestoneId, task.milestoneId)
-        assertEquals(taskData.assigneeIds!!.toList(), task.assigneeIds!!.toList())
-        assertEquals(taskData.userRole, task.userRole)
+        assertEquals(taskData.assigneeIds!!.toSet(), task.assigneeIds!!.toSet())
+       //todo  assertEquals(taskData.userRole, task.userRole)
         assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
         assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
@@ -250,6 +251,9 @@ class TaskTestIT : AbstractFunctionalTest() {
     @Test
     fun testTaskUpdate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
+        val testUser1 = tb.admin.user.create("test0").id!!
+        val testUser2 = tb.admin.user.create("test1").id!!
+        val testUser3 = tb.admin.user.create("test2").id!!
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!, Milestone(
                 name = "Milestone",
@@ -264,8 +268,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             status = TaskStatus.NOT_STARTED,
-            assigneeIds = arrayOf(userId1, userId2),
-            userRole = UserRole.USER,
+            assigneeIds = arrayOf(testUser1, testUser2),
+          //todo  userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
@@ -276,8 +280,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-03",
             endDate = "2022-02-01",
             status = TaskStatus.IN_PROGRESS,
-            assigneeIds = arrayOf(userId3, userId2),
-            userRole = UserRole.ADMIN,
+            assigneeIds = arrayOf(testUser2, testUser3),
+            //todo   userRole = UserRole.ADMIN,
             estimatedDuration = 2.0f,
             estimatedReadiness = 20,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
@@ -291,8 +295,8 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.endDate, updatedTask.endDate)
 
         assertEquals(2, updatedTask.assigneeIds?.size)
-        assertEquals(taskUpdateData.assigneeIds!!.toList(), updatedTask.assigneeIds!!.toList())
-        assertEquals(taskUpdateData.userRole, updatedTask.userRole)
+        assertEquals(taskUpdateData.assigneeIds!!.toSet(), updatedTask.assigneeIds!!.toSet())
+        //todo       assertEquals(taskUpdateData.userRole, updatedTask.userRole)
         assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
         assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
         assertEquals(2, updatedTask.attachmentUrls?.size)
@@ -304,8 +308,8 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
 
         // Verify that the user cannot be removed
-        tb.admin.user.assertDeleteFailStatus(409, userId2)
-        tb.admin.user.assertDeleteFailStatus(409, userId3)
+        tb.admin.user.assertDeleteFailStatus(409, testUser2)
+        tb.admin.user.assertDeleteFailStatus(409, testUser3)
     }
 
     /*
@@ -546,7 +550,7 @@ class TaskTestIT : AbstractFunctionalTest() {
                             assigneeIds = arrayOf(UUID.randomUUID())
                         )
                     ).map { SimpleInvalidValueProvider(jacksonObjectMapper().writeValueAsString(it)) },
-                    expectedStatus = 404
+                    expectedStatus = 400
                 )
             )
             .build()

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.*
 
+//todo all the tests that just use keycloak will not work
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
 @QuarkusTestResource.List(
