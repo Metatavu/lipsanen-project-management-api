@@ -45,8 +45,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             milestoneId = milestone.id!!,
             assigneeIds = arrayOf(userId2, userId1),
             userRole = UserRole.USER,
-            estimatedDuration = "1d",
-            estimatedReadiness = "10%",
+            estimatedDuration = 1.5f,
+            estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
 
         )
@@ -266,8 +266,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             status = TaskStatus.NOT_STARTED,
             assigneeIds = arrayOf(userId1, userId2),
             userRole = UserRole.USER,
-            estimatedDuration = "1d",
-            estimatedReadiness = "10%",
+            estimatedDuration = 1.5f,
+            estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
             milestoneId = milestone.id
         ))
@@ -278,8 +278,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             status = TaskStatus.IN_PROGRESS,
             assigneeIds = arrayOf(userId3, userId2),
             userRole = UserRole.ADMIN,
-            estimatedDuration = "2d",
-            estimatedReadiness = "20%",
+            estimatedDuration = 2.0f,
+            estimatedReadiness = 20,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
         )
         val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)

@@ -250,6 +250,18 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="readiness_type_modification" author="josh dallos">
+        <dropColumn tableName="task" columnName="estimatedduration"/>
+        <dropColumn tableName="task" columnName="estimatedreadiness"/>
+        <addColumn tableName="task">
+            <column name="estimatedduration" type="float"/>
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+        <addColumn tableName="milestone">
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+    </changeSet>
+
     <changeSet id="comments" author="katja danilova">
         <createTable tableName="taskcomment">
             <column name="id" type="binary(16)">
