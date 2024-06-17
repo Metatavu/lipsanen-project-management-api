@@ -79,7 +79,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
 
         taskComment.referencedUsers.forEach { referencedUserId ->
             if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
-                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
+                return@async createBadRequest("Referenced user $referencedUserId does not belong to the project")
             }
         }
         val createdComment = taskCommentController.createTaskComment(task, taskComment, userId)
@@ -137,7 +137,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
 
         taskComment.referencedUsers.forEach { referencedUserId ->
             if (!projectController.hasAccessToProject(task.milestone.project, referencedUserId)) {
-                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
+                return@async createBadRequest("Referenced user $referencedUserId does not belong to the project")
             }
         }
 
