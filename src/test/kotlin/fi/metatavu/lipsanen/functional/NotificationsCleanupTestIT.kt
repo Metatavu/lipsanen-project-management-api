@@ -31,7 +31,7 @@ class NotificationsCleanupTestIT : AbstractFunctionalTest() {
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
 
-        val users = tb.admin.user.listUsers(null, null, null, true)
+        val users = tb.admin.user.listUsers(null, null, null)
 
         val user = users.find { it.firstName == "user" }
         val admin = users.find { it.firstName == "admin" }

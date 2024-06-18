@@ -36,8 +36,7 @@ class UserTestIT: AbstractFunctionalTest() {
             lastName = "usertest",
             email = "usertest@example.com",
             projectIds = arrayOf(project.id!!),
-            companyId = createdCompany.id,
-            roles = emptyArray()
+            companyId = createdCompany.id
         )
         val createdUser = it.admin.user.create(userData)
         assertEquals(userData.firstName, createdUser.firstName)
@@ -48,8 +47,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertNotNull(createdUser.id)
         assertNull(createdUser.lastLoggedIn)
 
-        val foundUser = it.admin.user.findUser(createdUser.id!!, true)
-        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.USER, foundUser.roles!![0])
+        val foundUser = it.admin.user.findUser(createdUser.id!!)
 
         val smptTestPort = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-port", Int::class.java)
         val smtpTestHost = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-host", String::class.java)
@@ -76,11 +74,8 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testListUsers() = createTestBuilder().use {
-        val users = it.admin.user.listUsers(null, null, null, true)
+        val users = it.admin.user.listUsers(null, null, null)
         assertEquals(4, users.size)
-        users.forEach { user ->
-            assertTrue(fi.metatavu.lipsanen.test.client.models.UserRole.USER == user.roles!![0] || fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN == user.roles!![0])
-        }
 
         val pagedUsers = it.admin.user.listUsers(first = 0, max = 2)
         assertEquals(2, pagedUsers.size)
@@ -109,9 +104,6 @@ class UserTestIT: AbstractFunctionalTest() {
         //Check that user with login history has some last login info
         val foundUser = it.admin.user.listUsers().find { it.firstName == "admin" }
         assertNotNull(foundUser?.lastLoggedIn)
-
-        val foundUserWithRole = it.admin.user.findUser(adminId, true)
-        assertEquals(fi.metatavu.lipsanen.test.client.models.UserRole.ADMIN, foundUserWithRole.roles!![0])
     }
 
     @Test
@@ -144,8 +136,7 @@ class UserTestIT: AbstractFunctionalTest() {
             firstName = "usertest",
             lastName = "usertest",
             email = "usertest@example.com",
-            projectIds = arrayOf(project.id!!),
-            roles = emptyArray()
+            projectIds = arrayOf(project.id!!)
         )
         val createdUser = it.admin.user.create(userData)
 
@@ -173,8 +164,7 @@ class UserTestIT: AbstractFunctionalTest() {
         val userData = User(
             firstName = "usertest",
             lastName = "usertest",
-            email = "usertest@example.com",
-            roles = emptyArray()
+            email = "usertest@example.com"
         )
         val createdUser = it.admin.user.create(userData)
 

@@ -21,6 +21,7 @@ import jakarta.ws.rs.core.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -45,10 +46,10 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
     @WithTransaction
-    override fun listUsers(companyId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+    override fun listUsers(companyId: UUID?, first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val ( users, count ) = userController.listUsers(companyId, first, max)
         //todo updates the list with the keycloak data if missing
-        createOk(users.map { userTranslator.translate(it, includeRoles) }, count.toLong())
+        createOk(users.map { userTranslator.translate(it) }, count.toLong())
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
@@ -67,14 +68,14 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+    override fun findUser(userId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val foundUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
         val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@async createInternalServerError("Failed to find user")
         createOk(userTranslator.translate(
             UserFullRepresentation(
             userEntity = foundUser,
             userRepresentation = foundUserRepresentation
-        ), includeRoles))
+        )))
     }.asUni()
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)

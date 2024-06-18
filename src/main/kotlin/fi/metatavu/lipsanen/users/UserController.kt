@@ -25,6 +25,9 @@ import java.util.*
 @ApplicationScoped
 class UserController {
 
+    @ConfigProperty(name = "environment")
+    lateinit var environment: Optional<String>
+
     @ConfigProperty(name = "lipsanen.keycloak.admin.user")
     lateinit var keycloakAdminUser: String
 
@@ -70,7 +73,8 @@ class UserController {
     }
 
     /**
-     * Lists users (except for admin user)
+     * Lists users (except for admin user) from keycloak and local db
+     * If the test mode then users are created to the local db if they are not found
      *
      * @param first first result
      * @param max max results
@@ -106,17 +110,23 @@ class UserController {
             }
         }
 
-        //todo is it ok
         val userFullRepresentations = users.map {
-            val userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id)) ?: userRepository.create(
-                id = UUID.randomUUID(),
-                keycloakId = UUID.fromString(it.id)
-            )
+            var userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id))
+            if (userEntity == null && environment.isPresent && environment.get() == "test"){
+                userEntity = userRepository.create(
+                    id = UUID.randomUUID(),
+                    keycloakId = UUID.fromString(it.id)
+                )
+            }
+
+            if (userEntity == null) {
+                return@map null
+            }
             UserFullRepresentation(
                 userEntity = userEntity,
                 userRepresentation = it
             )
-        }.toTypedArray()
+        }.filterNotNull().toTypedArray()
         return userFullRepresentations to usersCount
     }
 
@@ -154,7 +164,7 @@ class UserController {
      * @return created user
      */
     suspend fun createUser(user: User, groupIds: List<UUID>?): UserFullRepresentation? {
-        var keycloakUser: UserRepresentation?
+        val keycloakUser: UserRepresentation?
         var userEntity: UserEntity? = null
         try {
             keycloakAdminClient.getUsersApi().realmUsersPost(
@@ -353,6 +363,7 @@ class UserController {
         currentGroups: Array<String>?,
         updateGroups: List<UUID>?
     ) {
+        println("Assigning user ${existingUser.id} to groups ${updateGroups?.joinToString()}")
         // if group is present in current but not in update then unassign
         currentGroups?.forEach { currentGroupId ->
             if (updateGroups?.find { it.toString() == currentGroupId } == null) {

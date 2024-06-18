@@ -54,7 +54,8 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         readStatus: Boolean?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        if (userId != loggedInUserId && !isAdmin()) {
+        val requestedUser = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
+        if (requestedUser.keycloakId != loggedInUserId && !isAdmin()) {
             return@async createBadRequest("User id does not match logged in user id")
         }
 
