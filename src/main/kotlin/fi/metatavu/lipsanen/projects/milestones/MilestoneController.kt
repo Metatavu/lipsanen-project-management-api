@@ -80,10 +80,7 @@ class MilestoneController {
      * @return found milestone or null if not found
      */
     suspend fun find(project: ProjectEntity, milestoneId: UUID): MilestoneEntity? {
-        return milestoneRepository.find(
-            "project = :project and id = :id",
-            Parameters.with("project", project).and("id", milestoneId)
-        ).firstResult<MilestoneEntity?>().awaitSuspending()
+        return find(milestoneId)?.takeIf { it.project.id == project.id }
     }
 
     /**

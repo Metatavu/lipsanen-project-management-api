@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.notifications
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.OffsetDateTime
@@ -21,19 +22,22 @@ class NotificationRepository : AbstractRepository<NotificationEntity, UUID>() {
      * @param type notification type
      * @param message notification message
      * @param task task
+     * @param comment task comment
      * @return created notification
      */
     suspend fun create(
         id: UUID,
         type: NotificationType,
         message: String,
-        task: TaskEntity? = null
+        task: TaskEntity? = null,
+        comment: TaskCommentEntity? = null
     ): NotificationEntity {
         val notification = NotificationEntity()
         notification.id = id
         notification.type = type
         notification.message = message
         notification.task = task
+        notification.comment = comment
         return persistSuspending(notification)
     }
 

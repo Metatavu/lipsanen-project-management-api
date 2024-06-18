@@ -54,10 +54,8 @@ class ProjectThemeController {
      * @return found project theme or null if not found
      */
     suspend fun find(project: ProjectEntity, themeId: UUID): ProjectThemeEntity? {
-        return projectThemeRepository.find(
-            "project = :project and id = :id",
-            Parameters.with("project", project).and("id", themeId)
-        ).firstResult<ProjectThemeEntity>().awaitSuspending()
+        return projectThemeRepository.findByIdSuspending(themeId)
+            ?.takeIf { it.project == project }
     }
 
     /**

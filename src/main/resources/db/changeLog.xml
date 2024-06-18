@@ -261,4 +261,41 @@
             <column name="estimatedreadiness" type="integer"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="comments" author="katja danilova">
+        <createTable tableName="taskcomment">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_COMMENT_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="comment" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+        <createTable tableName="taskcommentuser">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="taskcomment_id" type="binary(16)">
+                <constraints foreignKeyName="FK_COMMENTUSER_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+            <column name="userid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="comment_notifications" author="katja danilova">
+        <addColumn tableName="notification">
+            <column name="comment_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

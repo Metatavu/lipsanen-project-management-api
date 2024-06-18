@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.notifications
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.quarkus.scheduler.Scheduled
@@ -70,11 +71,22 @@ class NotificationsController {
     }
 
     /**
+     * Lists notifications for a comment
+     *
+     * @param comment task comment
+     * @return list of notifications
+     */
+    suspend fun list(comment: TaskCommentEntity): List<NotificationEntity> {
+        return notificationRepository.list("comment", comment).awaitSuspending()
+    }
+
+    /**
      *Creates a new notification and sends the notification events to the needed receivers (e.g. admins + custom receivers)
      *
      * @param message notification message
      * @param type notification type
      * @param taskEntity task
+     * @param comment task comment
      * @param receiverIds receiver ids
      * @param creatorId creator id
      * @return created notification
@@ -83,6 +95,7 @@ class NotificationsController {
         message: String,
         type: NotificationType,
         taskEntity: TaskEntity,
+        comment: TaskCommentEntity? = null,
         receiverIds: List<UUID> = emptyList(),
         creatorId: UUID,
     ): NotificationEntity {
@@ -90,7 +103,8 @@ class NotificationsController {
             id = UUID.randomUUID(),
             type = type,
             message = message,
-            task = taskEntity
+            task = taskEntity,
+            comment = comment
         )
 
         val notificationReceivers = (usersController.getAdmins().map { UUID.fromString(it.id) } + receiverIds).distinct()

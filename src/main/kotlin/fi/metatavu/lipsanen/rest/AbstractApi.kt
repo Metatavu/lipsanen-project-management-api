@@ -228,7 +228,8 @@ abstract class AbstractApi {
     }
 
     /**
-     * Helper method for getting project or milestone or an error response
+     * Helper method for getting project or milestone or an error response, also checking user's access rights
+     * for the project (ignoring the admin role)
      *
      * @param projectId project id
      * @param milestoneId milestone id
@@ -246,12 +247,15 @@ abstract class AbstractApi {
                 projectId
             )
         )
-        val milestone = milestoneController.find(project, milestoneId) ?: return null to createNotFound(
-            createNotFoundMessage(
-                MILESTONE,
-                milestoneId
+        val milestone = milestoneController.find(milestoneId)
+        if (milestone == null || milestone.project.id != projectId) {
+            return null to createNotFound(
+                createNotFoundMessage(
+                    MILESTONE,
+                    milestoneId
+                )
             )
-        )
+        }
         if (!projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
@@ -273,6 +277,7 @@ abstract class AbstractApi {
         const val TASK = "Task"
         const val TASK_CONNECTION = "Task connection"
         const val CHANGE_PROPOSAL = "Change proposal"
+        const val TASK_COMMENT = "Task comment"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
         const val WRONG_PROJECT_STAGE = "Project is not in planning stage"
