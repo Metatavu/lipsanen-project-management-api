@@ -76,7 +76,6 @@ class UserController {
 
     /**
      * Lists users (except for admin user) from keycloak and local db
-     * If the test mode then users are created to the local db if they are not found
      *
      * @param first first result
      * @param max max results
@@ -105,7 +104,7 @@ class UserController {
     }
 
     /**
-     * Lists users
+     * Lists users from local db
      *
      * @param companyId company id
      * @return array of users
@@ -115,7 +114,7 @@ class UserController {
     }
 
     /**
-     * Finds the admins
+     * Lists the admins
      */
     suspend fun getAdmins(): Array<UserRepresentation> {
         return keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameUsersGet(
@@ -127,6 +126,7 @@ class UserController {
     /**
      * Creates a new user with unconfirmed password and email and sends the
      * email with reset password action to the user
+     * If test mode then no need to update the password, default password is used, no email is sent.
      *
      * @param user user
      * @param groupIds user group ids to assign to
