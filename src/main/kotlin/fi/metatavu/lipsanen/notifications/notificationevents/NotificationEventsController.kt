@@ -22,7 +22,7 @@ class NotificationEventsController {
     /**
      * Lists notification events
      *
-     * @param receiver user id
+     * @param receiver user
      * @param project project
      * @param notification notification
      * @param readStatus read status
@@ -57,11 +57,15 @@ class NotificationEventsController {
      * Creates notification event
      *
      * @param notification notification
-     * @param receiverId receiver id
+     * @param receiver receiver
      * @param creatorId creator id
      * @return created notification event
      */
-    suspend fun create(notification: NotificationEntity, receiver: UserEntity, creatorId: UUID): NotificationEventEntity {
+    suspend fun create(
+        notification: NotificationEntity,
+        receiver: UserEntity,
+        creatorId: UUID
+    ): NotificationEventEntity {
         return notificationEventRepository.create(
             id = UUID.randomUUID(),
             notification = notification,

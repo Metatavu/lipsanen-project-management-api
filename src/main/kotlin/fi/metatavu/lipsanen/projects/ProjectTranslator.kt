@@ -17,7 +17,6 @@ class ProjectTranslator : AbstractTranslator<ProjectEntity, Project>() {
     lateinit var metadataTranslator: MetadataTranslator
 
     override suspend fun translate(entity: ProjectEntity): Project {
-        println(entity.id)
         return Project(
             id = entity.id,
             name = entity.name,

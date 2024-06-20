@@ -37,7 +37,6 @@ class MilestoneController {
     suspend fun list(project: ProjectEntity): List<MilestoneEntity> {
         return milestoneRepository.list("project", Sort.by("startDate", Sort.Direction.Ascending), project)
             .awaitSuspending()
-
     }
 
     /**
@@ -118,6 +117,43 @@ class MilestoneController {
     }
 
     /**
+     * Deletes a milestone and dependent tasks
+     *
+     * @param milestone milestone
+     */
+    suspend fun delete(milestone: MilestoneEntity) {
+        taskController.list(milestone).forEach {
+            taskController.delete(it)
+        }
+        milestoneRepository.deleteSuspending(milestone)
+    }
+
+    /**
+     * Do the checks if milestone dates can be adjusted, e.g.
+     * if it is delayed it should not be delayed to later than any task end
+     * if it is shortened it should not be shortened to earlier than any task start
+     *
+     * @param existingMilestone existing milestone
+     * @param newMilestone new milestone
+     * @param tasks tasks
+     * @return string with detailed error or null if all is ok
+     */
+    fun checkForUpdateRestrictions(existingMilestone: MilestoneEntity, newMilestone: Milestone, tasks: List<TaskEntity>): String? {
+        if (newMilestone.startDate.isAfter(existingMilestone.startDate)) {
+            tasks.find { newMilestone.startDate.isAfter(it.endDate) }?.let {
+                return "Milestone cannot be delayed to later than task ${it.name} end date"
+            }
+        }
+
+        if (newMilestone.endDate.isBefore(existingMilestone.endDate)) {
+            tasks.find { newMilestone.endDate.isBefore(it.startDate) }?.let {
+                return "Milestone cannot be shortened to earlier than task ${it.name} start date"
+            }
+        }
+        return null
+    }
+
+    /**
      * Updates task estimations so that they fit within the milestone and tasks are either extended or
      * shortened
      *
@@ -162,44 +198,5 @@ class MilestoneController {
                 taskController.persist(it)
             }
         }
-
     }
-
-    /**
-     * Deletes a milestone and dependent tasks
-     *
-     * @param milestone milestone
-     */
-    suspend fun delete(milestone: MilestoneEntity) {
-        taskController.list(milestone).forEach {
-            taskController.delete(it)
-        }
-        milestoneRepository.deleteSuspending(milestone)
-    }
-
-    /**
-     * Do the checks if milestone dates can be adjusted, e.g.
-     * if it is delayed it should not be delayed to later than any task end
-     * if it is shortened it should not be shortened to earlier than any task start
-     *
-     * @param existingMilestone existing milestone
-     * @param newMilestone new milestone
-     * @param tasks tasks
-     * @return string with detailed error or null if all is ok
-     */
-    fun checkForUpdateRestrictions(existingMilestone: MilestoneEntity, newMilestone: Milestone, tasks: List<TaskEntity>): String? {
-        if (newMilestone.startDate.isAfter(existingMilestone.startDate)) {
-            tasks.find { newMilestone.startDate.isAfter(it.endDate) }?.let {
-                return "Milestone cannot be delayed to later than task ${it.name} end date"
-            }
-        }
-
-        if (newMilestone.endDate.isBefore(existingMilestone.endDate)) {
-            tasks.find { newMilestone.endDate.isBefore(it.startDate) }?.let {
-                return "Milestone cannot be shortened to earlier than task ${it.name} start date"
-            }
-        }
-        return null
-    }
-
 }

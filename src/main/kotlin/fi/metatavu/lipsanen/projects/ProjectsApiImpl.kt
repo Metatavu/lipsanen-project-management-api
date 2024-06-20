@@ -22,6 +22,9 @@ import kotlinx.coroutines.async
 import java.io.File
 import java.util.*
 
+/**
+ * Projects API implementation
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
@@ -48,7 +51,6 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
             val user = userController.findUserByKeycloakId(userId) ?: return@async createInternalServerError("Failed to find a user")
             projectController.listProjectsForUser(user, first, max)
         }
-        //todo list filtering
         return@async createOk(projects.map { projectTranslator.translate(it) }, count)
     }.asUni()
 
@@ -96,7 +98,6 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun deleteProject(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        println("deleting project $projectId")
         val existingProject = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
                 PROJECT,

@@ -22,6 +22,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import java.util.*
 
+/**
+ * Users API implementation
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
@@ -50,7 +53,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         } else null
 
         val ( users, count ) = userController.listUsers(companyFilter, first, max)
-        //todo updates the list with the keycloak data if missing
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count.toLong())
     }.asUni()
 
@@ -59,7 +61,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     override fun createUser(user: User): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val existingUsers = userController.countUserByEmail(user.email)
         if (existingUsers > 0) {
-            println("Found ${existingUsers} users with email ${user.email}")
             return@async createConflict("User with given email ${user.email} already exists!")
         }
         val projects = user.projectIds?.map {
@@ -102,11 +103,9 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @WithTransaction
     override fun deleteUser(userId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val user = userController.findUser(userId) ?: return@async createNotFound(createNotFoundMessage(USER, userId))
-        println("deleting user $userId")
-        //todo mode checks
+
         val assignedToTasks = taskAssigneeRepository.listByAssignee(user).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
         if (assignedToTasks.isNotEmpty()) {
-            println("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
             return@async createConflict("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
         }
         userController.deleteUser(user)

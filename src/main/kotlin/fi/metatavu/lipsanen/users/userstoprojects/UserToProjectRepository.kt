@@ -8,6 +8,9 @@ import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
 
+/**
+ * Repository for user to project connections
+ */
 @ApplicationScoped
 class UserToProjectRepository : AbstractRepository<UserToProjectEntity, UUID>() {
 
@@ -51,6 +54,13 @@ class UserToProjectRepository : AbstractRepository<UserToProjectEntity, UUID>() 
         return list("project", project).awaitSuspending()
     }
 
+    /**
+     * Finds connection between user and project
+     *
+     * @param user user
+     * @param project project
+     * @return user to project entity
+     */
     suspend fun list(user: UserEntity, project: ProjectEntity): UserToProjectEntity? {
         return find(
             "user = :user and project = :project",

@@ -1,6 +1,5 @@
 package fi.metatavu.lipsanen.projects
 
-import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
 import fi.metatavu.lipsanen.api.model.Project
 import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
@@ -12,7 +11,6 @@ import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import org.jboss.logging.Logger
 import java.util.*
 
 /**
@@ -39,8 +37,33 @@ class ProjectController {
     @Inject
     lateinit var userToProjectRepository: UserToProjectRepository
 
-    @Inject
-    lateinit var logger: Logger
+    /**
+     * Lists all projects
+     *
+     * @param first first
+     * @param max max
+     * @return list of projects
+     */
+    suspend fun listProjects(first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+        return projectRepository.applyFirstMaxToQuery(projectRepository.findAll(), first, max)
+    }
+
+    /**
+     * Lists projects for a user
+     *
+     * @param user user
+     * @param first first
+     * @param max max
+     * @return list of projects
+     */
+    suspend fun listProjectsForUser(user: UserEntity, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+        val (connections, count) = userToProjectRepository.applyFirstMaxToQuery(
+            userToProjectRepository.find("user", user),
+            first,
+            max
+        )
+        return connections.map { it.project } to count
+    }
 
     /**
      * Creates a new project and assigns its creator to it
@@ -50,15 +73,12 @@ class ProjectController {
      * @return created project
      */
     suspend fun createProject(project: Project, creatorId: UUID): ProjectEntity? {
-        val projectEntity = projectRepository.create(
+        return projectRepository.create(
             id = UUID.randomUUID(),
             name = project.name,
             tocomanId = project.tocomanId,
             creatorId = creatorId
         )
-
-      //  userToProjectRepository.create(UUID.randomUUID(), initialUser, projectEntity)
-        return projectEntity
     }
 
     /**
@@ -70,16 +90,12 @@ class ProjectController {
      * @return created project
      */
     suspend fun createProject(name: String, tocomanId: Int, creatorId: UUID,): ProjectEntity {
-        val projectEntity = projectRepository.create(
+        return projectRepository.create(
             id = UUID.randomUUID(),
             name = name,
-            tocomanId = tocomanId,//todo is this unique
+            tocomanId = tocomanId,
             creatorId = creatorId,
         )
-
-        println("Created project with id: ${projectEntity.id}")
-     //   userToProjectRepository.create(UUID.randomUUID(), initialUser, projectEntity)
-        return projectEntity
     }
 
     /**
@@ -110,15 +126,6 @@ class ProjectController {
      */
     suspend fun findProjectByName(name: String): ProjectEntity? {
         return projectRepository.find("name", name).firstResult<ProjectEntity?>().awaitSuspending()
-    }
-
-    /**
-     * Lists all projects
-     *
-     * @return list of projects
-     */
-    suspend fun listProjects(first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
-        return projectRepository.applyFirstMaxToQuery(projectRepository.findAll(), first, max)
     }
 
     /**
@@ -179,7 +186,6 @@ class ProjectController {
     suspend fun hasAccessToProject(project: ProjectEntity, keycloakUserId: UUID): Boolean {
         val userEntity = userController.findUserByKeycloakId(keycloakUserId) ?: return false
         val projects = userToProjectRepository.list(userEntity, project)
-        println("User has access to project: ${projects != null}")
         return projects != null
     }
 
@@ -193,12 +199,4 @@ class ProjectController {
         return project.status == ProjectStatus.PLANNING || project.status == ProjectStatus.INITIATION || project.status == ProjectStatus.DESIGN
     }
 
-    suspend fun listProjectsForUser(user: UserEntity, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
-        val (connections, count) = userToProjectRepository.applyFirstMaxToQuery(
-            userToProjectRepository.find("user", user),
-            first,
-            max
-        )
-        return connections.map { it.project } to count
-    }
 }

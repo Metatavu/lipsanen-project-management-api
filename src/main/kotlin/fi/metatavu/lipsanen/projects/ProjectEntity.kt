@@ -27,9 +27,6 @@ class ProjectEntity : Metadata() {
     @Column
     var tocomanId: Int? = null
 
-    @Column(nullable = false)
-    lateinit var keycloakGroupId: UUID  //todo drop this
-
     override lateinit var creatorId: UUID
 
     override lateinit var lastModifierId: UUID

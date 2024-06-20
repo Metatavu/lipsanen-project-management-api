@@ -22,7 +22,7 @@ class NotificationEventRepository : AbstractRepository<NotificationEventEntity, 
      *
      * @param id id
      * @param notification notification
-     * @param receiver receiver id
+     * @param receiver receiver
      * @param read read status
      * @param creatorId creator id
      * @param lastModifierId last modifier id

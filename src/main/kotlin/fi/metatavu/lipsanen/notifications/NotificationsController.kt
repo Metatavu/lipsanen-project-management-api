@@ -22,6 +22,9 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+/**
+ * Controller for notifications
+ */
 @ApplicationScoped
 class NotificationsController {
 
@@ -82,13 +85,14 @@ class NotificationsController {
     }
 
     /**
-     *Creates a new notification and sends the notification events to the needed receivers (e.g. admins + custom receivers)
+     *Creates a new notification and sends the notification events to the needed receivers
+     * (e.g. admins + custom receivers)
      *
      * @param message notification message
      * @param type notification type
      * @param taskEntity task
      * @param comment task comment
-     * @param receiverIds receiver ids
+     * @param receivers receivers
      * @param creatorId creator id
      * @return created notification
      */
@@ -112,7 +116,6 @@ class NotificationsController {
         val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUserByKeycloakId(it) }
 
         val notificationReceivers = (adminEntities + receivers).distinctBy { it.id }
-        println("sending notification $type to admins: ${adminEntities.size} and intended receivers ${receivers.size}")
         notificationReceivers.forEach { receiver ->
             notificationEventsController.create(
                 notification = notification,

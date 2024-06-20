@@ -29,7 +29,7 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             endDate = entity.endDate,
             milestoneId = entity.milestone.id,
             status = entity.status,
-            //todo userRole = entity.userRole,
+            userRole = entity.userRole,
             estimatedDuration = entity.estimatedDuration,
             estimatedReadiness = entity.estimatedReadiness,
             attachmentUrls = taskAttachmentRepository.listByTask(entity).map { it.attachmentUrl },

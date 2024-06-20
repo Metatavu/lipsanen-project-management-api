@@ -5,7 +5,7 @@ import jakarta.persistence.*
 import java.util.*
 
 /**
- * Entity class for task comment user
+ * Entity class for users referenced in task comments
  */
 @Entity
 @Table(name = "taskcommentuser")

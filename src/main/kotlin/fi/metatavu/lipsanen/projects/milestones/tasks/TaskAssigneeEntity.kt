@@ -9,7 +9,7 @@ import java.util.*
  */
 @Entity
 @Table(name = "task_assignee")
-class TaskAssigneeEntity { //todo rename
+class TaskAssigneeEntity {
 
     @Id
     lateinit var id: UUID

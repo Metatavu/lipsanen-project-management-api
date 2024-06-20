@@ -88,7 +88,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@async createNotFound("Notification event not found")
-            if (notificationEvent.receiver.keycloakId != loggedInUserId && !isAdmin()) {
+            if (!isAdmin() && notificationEvent.receiver.keycloakId != loggedInUserId) {
                 return@async createForbidden("User does not have access to notification event")
             }
 
@@ -104,7 +104,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val notificationEventEntity = notificationEventController.find(notificationEventId)
             ?: return@async createNotFound("Notification event not found")
-        if (notificationEventEntity.receiver.keycloakId != loggedInUserId && !isAdmin()) {
+        if (!isAdmin() && notificationEventEntity.receiver.keycloakId != loggedInUserId) {
             return@async createForbidden("User does not have access to notification event")
         }
 
@@ -123,7 +123,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@async createNotFound("Notification event not found")
-            if (notificationEvent.receiver.keycloakId != loggedInUserId && !isAdmin()) {
+            if (!isAdmin() && notificationEvent.receiver.keycloakId != loggedInUserId) {
                 return@async createForbidden("User does not have access to notification event")
             }
 

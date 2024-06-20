@@ -23,6 +23,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import java.util.*
 
+/**
+ * Tasks API implementation
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
@@ -39,9 +42,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
     @Inject
     lateinit var userController: UserController
-
-    @Inject
-    lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
     lateinit var vertx: Vertx

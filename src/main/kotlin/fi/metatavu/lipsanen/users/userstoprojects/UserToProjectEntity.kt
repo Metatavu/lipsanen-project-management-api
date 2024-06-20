@@ -8,9 +8,13 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.util.*
 
+/**
+ * Entity for user to project connections
+ */
 @Entity
 @Table(name = "usertoproject")
 class UserToProjectEntity {
+
     @Id
     lateinit var id: UUID
 

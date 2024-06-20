@@ -60,7 +60,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.endDate, task.endDate)
         assertEquals(taskData.milestoneId, task.milestoneId)
         assertEquals(taskData.assigneeIds!!.toSet(), task.assigneeIds!!.toSet())
-       //todo  assertEquals(taskData.userRole, task.userRole)
+        assertEquals(taskData.userRole, task.userRole)
         assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
         assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
@@ -267,7 +267,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             endDate = "2022-01-31",
             status = TaskStatus.NOT_STARTED,
             assigneeIds = arrayOf(testUser1, testUser2),
-          //todo  userRole = UserRole.USER,
+            userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
@@ -279,7 +279,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             endDate = "2022-02-01",
             status = TaskStatus.IN_PROGRESS,
             assigneeIds = arrayOf(testUser2, testUser3),
-            //todo   userRole = UserRole.ADMIN,
+            userRole = UserRole.ADMIN,
             estimatedDuration = 2.0f,
             estimatedReadiness = 20,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
@@ -294,7 +294,7 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         assertEquals(2, updatedTask.assigneeIds?.size)
         assertEquals(taskUpdateData.assigneeIds!!.toSet(), updatedTask.assigneeIds!!.toSet())
-        //todo       assertEquals(taskUpdateData.userRole, updatedTask.userRole)
+        assertEquals(taskUpdateData.userRole, updatedTask.userRole)
         assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
         assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
         assertEquals(2, updatedTask.attachmentUrls?.size)

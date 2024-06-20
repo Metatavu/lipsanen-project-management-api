@@ -34,6 +34,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
 
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
+        val adminUser = tb.admin.user.create("admin0", UserRole.ADMIN)
         val task1 = tb.admin.task.create(
             projectId = project1.id, milestoneId = milestone1.id!!, task =
             Task(
@@ -58,14 +59,12 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals(testUser, notificationEvent.receiverId)
         assertNotNull(notificationEvent.notification.message)
 
-       /* val notificationEventsForAdmin = tb.admin.notificationEvent.list(
-            userId = admin!!.id!!,
+        val notificationEventsForAdmin = tb.admin.notificationEvent.list(
+            userId = adminUser.id!!,
             projectId = project1.id
         )
         assertEquals(1, notificationEventsForAdmin.size)
-        assertEquals(admin.id, notificationEventsForAdmin[0].receiverId)
-        todo cannot check admin not since there is no admin user
-*/
+        assertEquals(adminUser.id, notificationEventsForAdmin[0].receiverId)
 
         // Test fails of access rights checks and not found
         tb.user.notificationEvent.assertListFailStatus(400, userId = testUser)
@@ -75,7 +74,6 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
 
         // Cleanup
-        //todo no way to clean up admin notifications
         tb.admin.notification.delete(notificationEvents[0].notification.id!!)
     }
 
@@ -234,7 +232,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         notificationEvents.forEach { tb.admin.notification.delete(it.notification.id!!) }
     }
 
-    /**todo
+    /**
      * Tests that leaving a comment notifies task assignees, mentioned users and admin.
      * Test scenario:
      * Admin creates task assigned to user2 (who gets assigned to the project)
@@ -260,7 +258,6 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             user = admin1.copy(projectIds = arrayOf(project1.id), roles = null)
         )
 
-        println("----assigning task")
         //user gets automatically assigned to the project
         val task = tb.admin.task.create(
             projectId = project1.id, milestoneId = milestone1.id!!, task = Task(
@@ -273,9 +270,8 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             )
         )
 
-        println("---leaving comment")
         // user 1 leaves a comment mentioning user 2
-        val comment = tb.getUser("user1@example.com").taskComment.create(
+        tb.getUser("user1@example.com").taskComment.create(
             projectId = project1.id,
             milestoneId = milestone1.id,
             taskId = task.id!!,

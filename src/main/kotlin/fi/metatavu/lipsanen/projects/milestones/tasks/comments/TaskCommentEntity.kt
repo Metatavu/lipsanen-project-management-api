@@ -5,6 +5,9 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import jakarta.persistence.*
 import java.util.*
 
+/**
+ * Entity for Task Comments
+ */
 @Table(name = "taskcomment")
 @Entity
 class TaskCommentEntity : Metadata() {

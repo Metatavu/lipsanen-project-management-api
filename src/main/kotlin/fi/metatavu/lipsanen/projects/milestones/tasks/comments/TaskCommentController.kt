@@ -35,7 +35,7 @@ class TaskCommentController {
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
-    lateinit var userController: UserController //todo remove user checks
+    lateinit var userController: UserController
 
     /**
      * Lists task comments
@@ -64,7 +64,7 @@ class TaskCommentController {
      * @param taskComment task comment
      * @param userId user id
      * @return created task comment
-     * @throws UserNotFoundException if user is not found //todo add to parent method
+     * @throws UserNotFoundException if user is not found
      */
     suspend fun createTaskComment(task: TaskEntity, taskComment: TaskComment, userId: UUID): TaskCommentEntity {
         val createdComment = taskCommentRepository.create(
@@ -100,7 +100,7 @@ class TaskCommentController {
      * @param taskComment task comment
      * @param userId user id
      * @return updated task comment
-     * @throws UserNotFoundException if user is not found //todo add to parent
+     * @throws UserNotFoundException if user is not found
      */
     suspend fun updateTaskComment(
         existingEntity: TaskCommentEntity,

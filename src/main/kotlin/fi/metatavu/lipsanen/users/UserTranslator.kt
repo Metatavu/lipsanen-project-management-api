@@ -28,9 +28,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
     @Inject
     lateinit var userToProjectRepository: UserToProjectRepository
 
-    //todo return roles back
     override suspend fun translate(entity: UserFullRepresentation): User {
-        println("UserTranslator.translate()")
         val userRepresentation = entity.userRepresentation
         val projects = userToProjectRepository.list(entity.userEntity)
         val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
@@ -55,7 +53,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
      */
     suspend fun translate(entity: UserFullRepresentation, includeRoles: Boolean?): User {
         return if (includeRoles == true) {
-            val roles = userController.getUserRealmRoles(entity.userEntity!!.keycloakId).mapNotNull {
+            val roles = userController.getUserRealmRoles(entity.userEntity.keycloakId).mapNotNull {
                 when (it.name) {
                     "admin" -> UserRole.ADMIN
                     "user" -> UserRole.USER
@@ -68,6 +66,13 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
         }
     }
 }
+
+/**
+ * User full representation
+ *
+ * @param userEntity user entity
+ * @param userRepresentation user representation
+ */
 data class UserFullRepresentation(
     val userEntity: UserEntity,
     val userRepresentation: UserRepresentation

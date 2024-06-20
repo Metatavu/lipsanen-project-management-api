@@ -8,6 +8,9 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.util.*
 
+/**
+ * Entity for users
+ */
 @Entity
 @Table(name = "user")
 class UserEntity {

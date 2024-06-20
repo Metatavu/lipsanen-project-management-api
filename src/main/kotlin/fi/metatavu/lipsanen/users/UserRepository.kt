@@ -7,21 +7,38 @@ import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
 
+/**
+ * Repository for users
+ */
 @ApplicationScoped
 class UserRepository: AbstractRepository<UserEntity, UUID>(){
 
+    /**
+     * Creates a new user
+     *
+     * @param id user id
+     * @param keycloakId keycloak id
+     * @param company company
+     * @return created user
+     */
     suspend fun create(
         id: UUID,
         keycloakId: UUID,
-        coompany: CompanyEntity?
+        company: CompanyEntity?
     ): UserEntity {
         val userEntity = UserEntity()
         userEntity.id = id
         userEntity.keycloakId = keycloakId
-        userEntity.company = coompany
+        userEntity.company = company
         return persistSuspending(userEntity)
     }
 
+    /**
+     * Finds user by keycloak id
+     *
+     * @param keycloakId keycloak id
+     * @return user
+     */
     suspend fun findByKeycloakId(keycloakId: UUID): UserEntity? {
         return find("keycloakId", keycloakId).firstResult<UserEntity>().awaitSuspending()
     }

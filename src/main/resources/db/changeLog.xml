@@ -308,45 +308,12 @@
                 <constraints nullable="false" unique="true"/>
             </column>
         </createTable>
-        <!-- fill the user table with the existing users collected from task assignees -->
-        <sql>
-            INSERT INTO user (id, keycloakId)
-            SELECT DISTINCT UUID(), assigneeid
-            FROM task_assignee
-            WHERE NOT EXISTS (
-            SELECT 1 FROM user WHERE keycloakId = task_assignee.assigneeid
-            );
-        </sql>
-        <!-- fill user table based on notifications -->
-        <sql>
-            INSERT INTO user (id, keycloakId)
-            SELECT DISTINCT UUID(), receiverid
-            FROM notificationevent
-            WHERE NOT EXISTS (
-            SELECT 1 FROM user WHERE keycloakId = notificationevent.receiverid
-            );
-        </sql>
-        <!-- fill user table based on comments -->
-        <sql>
-            INSERT INTO user (id, keycloakId)
-            SELECT DISTINCT UUID(), userid
-            FROM taskcommentuser
-            WHERE NOT EXISTS (
-            SELECT 1 FROM user WHERE keycloakId = taskcommentuser.userid
-            );
-        </sql>
-    </changeSet>
 
-    <changeSet id="modify task assignees to users" author="katja danilova">
         <addColumn tableName="task_assignee">
             <column name="user_id" type="binary(16)">
                 <constraints nullable="false" foreignKeyName="FK_TASK_ASSIGNEE_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
             </column>
         </addColumn>
-        <sql>
-            UPDATE task_assignee
-            SET user_id = (SELECT id FROM user WHERE keycloakId = task_assignee.assigneeid);
-        </sql>
         <dropColumn tableName="task_assignee" columnName="assigneeid"/>
 
         <addColumn tableName="notificationevent">
@@ -354,10 +321,6 @@
                 <constraints nullable="false" foreignKeyName="FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
             </column>
         </addColumn>
-        <sql>
-            UPDATE notificationevent
-            SET receiver_id = (SELECT id FROM user WHERE keycloakId = notificationevent.receiverid);
-        </sql>
         <dropColumn tableName="notificationevent" columnName="receiverid"/>
 
         <addColumn tableName="taskcommentuser">
@@ -365,10 +328,6 @@
                 <constraints nullable="false" foreignKeyName="FK_TASK_COMMENT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
             </column>
         </addColumn>
-        <sql>
-            UPDATE taskcommentuser
-            SET user_id = (SELECT id FROM user WHERE keycloakId = taskcommentuser.userid);
-        </sql>
         <dropColumn tableName="taskcommentuser" columnName="userid"/>
     </changeSet>
 
@@ -391,5 +350,7 @@
         </addColumn>
     </changeSet>
 
-
+    <changeSet id="remove_keycloak_references" author="katja danilova">
+        <dropColumn tableName="project" columnName="keycloakgroupid"/>
+    </changeSet>
 </databaseChangeLog>

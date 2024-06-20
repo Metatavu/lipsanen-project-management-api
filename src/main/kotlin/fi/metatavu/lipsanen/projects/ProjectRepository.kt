@@ -16,8 +16,8 @@ class ProjectRepository : AbstractRepository<ProjectEntity, UUID>() {
     /**
      * Creates a new project
      *
+     * @param id project id
      * @param name project name
-     * @param keycloakGroupId keycloak group id
      * @param tocomanId tocoman id
      * @param creatorId creator id
      * @return created project
@@ -36,7 +36,6 @@ class ProjectRepository : AbstractRepository<ProjectEntity, UUID>() {
     /**
      * Lists projects
      *
-     * @param keycloakGroupIds keycloak group ids
      * @param first first result
      * @param max max results
      * @return list of projects

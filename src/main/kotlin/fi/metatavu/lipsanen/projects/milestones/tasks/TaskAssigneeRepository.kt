@@ -19,7 +19,7 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
      *
      * @param id id
      * @param task task
-     * @param assigneeId assignee id
+     * @param user assignee
      * @return created task assignee
      */
     suspend fun create(
@@ -53,7 +53,7 @@ class TaskAssigneeRepository : AbstractRepository<TaskAssigneeEntity, UUID>() {
     /**
      * Lists task assignments by the user
      *
-     * @param assigneeId assignee id
+     * @param user assignee
      * @return list of task assignees
      */
     suspend fun listByAssignee(user: UserEntity): List<TaskAssigneeEntity> {

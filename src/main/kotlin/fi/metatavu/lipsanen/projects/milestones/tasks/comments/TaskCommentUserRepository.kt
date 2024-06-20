@@ -23,11 +23,11 @@ class TaskCommentUserRepository : AbstractRepository<TaskCommentUser, UUID>() {
     }
 
     /**
-     * Creates task comment user
+     * Creates task comment to user connection
      *
      * @param randomUUID random UUID
      * @param createdComment created comment
-     * @param userId user id
+     * @param user user
      * @return created task comment user
      */
     suspend fun create(randomUUID: UUID, createdComment: TaskCommentEntity, user: UserEntity): TaskCommentUser {

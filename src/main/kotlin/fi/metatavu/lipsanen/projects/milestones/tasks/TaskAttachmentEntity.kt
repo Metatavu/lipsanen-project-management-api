@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.util.*
 
 /**
- * Entity for task assignees
+ * Entity for task attachments
  */
 @Entity
 @Table(name = "task_attachment")

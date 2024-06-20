@@ -70,7 +70,7 @@ class ProjectTestIT : AbstractFunctionalTest() {
         val user1 = tb.admin.user.create("test1", UserRole.USER)
         val updatedUser1 = tb.admin.user.updateUser(
             user1.id!!,
-            user = user1.copy(projectIds = arrayOf(foundProject.id!!), roles = null) //todo should be null, if empty list then it overrides the roles
+            user = user1.copy(projectIds = arrayOf(foundProject.id!!), roles = null)
         )
         assertNotNull(updatedUser1)
         assertEquals(1, updatedUser1.projectIds!!.size)
@@ -81,7 +81,7 @@ class ProjectTestIT : AbstractFunctionalTest() {
     @Test
     fun findProjectFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-     //   tb.user2.project.assertFindFail(403, project.id!!)
+        tb.user.project.assertFindFail(403, project.id!!)
 
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}",
@@ -190,7 +190,5 @@ class ProjectTestIT : AbstractFunctionalTest() {
         project = tb.admin.project.findProject(imported2.id!!)
         assertEquals(1, project.tocomanId)
         assertEquals("Project 2", project.name)
-
-        println("Imported projects ${imported1.id} and ${imported2.id}")
     }
 }
