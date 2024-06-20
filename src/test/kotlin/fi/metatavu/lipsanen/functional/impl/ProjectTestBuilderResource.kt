@@ -29,7 +29,11 @@ class ProjectTestBuilderResource(
 ) : ApiTestBuilderResource<Project, ProjectsApi>(testBuilder, apiClient) {
 
     override fun clean(t: Project?) {
-        t?.id?.let { api.deleteProject(it) }
+        t?.id?.let {
+            try {
+                api.deleteProject(it)
+            } catch (_: Exception) {}
+        }
     }
 
     override fun getApi(): ProjectsApi {

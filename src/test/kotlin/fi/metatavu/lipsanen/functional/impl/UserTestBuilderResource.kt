@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.test.client.apis.UsersApi
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.User
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.fail
 import java.util.*
@@ -41,11 +42,12 @@ class UserTestBuilderResource (
         return addClosable(api.createUser(user))
     }
 
-    fun create(username: String): User {
+    fun create(username: String, role: UserRole): User {
         return addClosable(api.createUser(User(
             email = "$username@example.com",
-            firstName = "username",
-            lastName = "username"
+            firstName = username,
+            lastName = username,
+            roles = arrayOf(role)
         )))
     }
 
@@ -57,7 +59,7 @@ class UserTestBuilderResource (
      * @return found user
      */
     fun findUser(userId: UUID): User {
-        return api.findUser(userId)
+        return api.findUser(userId, includeRoles = true)
     }
 
     /**

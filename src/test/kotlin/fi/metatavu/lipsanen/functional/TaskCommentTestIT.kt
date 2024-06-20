@@ -10,6 +10,7 @@ import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.TaskComment
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -91,7 +92,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
     fun testCreateTaskComment() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val user = tb.admin.user.listUsers().find { it.firstName == "user" }!!
+        val user = tb.admin.user.create("test1", UserRole.USER)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = user.id!!)
 
         val taskCommentData = TaskComment(

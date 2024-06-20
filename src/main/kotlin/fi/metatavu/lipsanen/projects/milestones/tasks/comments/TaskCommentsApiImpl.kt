@@ -61,6 +61,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         )
 
         val (comments, count) = taskCommentController.listTaskComments(task, first, max)
+        println("first $first max $max comments count $count")
         createOk(taskCommentTranslator.translate(comments), count)
     }.asUni()
 

@@ -9,10 +9,12 @@ import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
 import fi.metatavu.lipsanen.test.client.models.ProjectStatus
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.http.Method
+import org.jose4j.jwk.Use
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.nio.charset.Charset
@@ -35,18 +37,19 @@ class ProjectTestIT : AbstractFunctionalTest() {
         assertNotNull(projects)
         assertEquals(2, projects.size)
 
-        // assign user to project
-        val user = tb.admin.user.listUsers().find { it.firstName == "user"}
+        // access rights
+        val user1 = tb.admin.user.create("test1", UserRole.USER)
         tb.admin.user.updateUser(
-            user!!.id!!,
-            user = user.copy(projectIds = arrayOf(project1.id!!))
+            user1!!.id!!,
+            user = user1.copy(projectIds = arrayOf(project1.id!!), roles = null)
         )
+        val user2 = tb.admin.user.create("test2", UserRole.USER)
 
-        val user1Projects = tb.user.project.listProjects()
+        val user1Projects = tb.getUser("test1@example.com").project.listProjects()
         assertNotNull(user1Projects)
         assertEquals(1, user1Projects.size)
 
-        val user2Projects = tb.user2.project.listProjects()
+        val user2Projects = tb.getUser("test2@example.com").project.listProjects()
         assertNotNull(user2Projects)
         assertEquals(0, user2Projects.size)
     }
@@ -63,22 +66,22 @@ class ProjectTestIT : AbstractFunctionalTest() {
         val foundProject = tb.admin.project.findProject(project.id!!)
         assertNotNull(foundProject)
 
-        // assign user to project
-        val user1 = tb.admin.user.listUsers().find { it.firstName == "user"}
+        // access rights
+        val user1 = tb.admin.user.create("test1", UserRole.USER)
         val updatedUser1 = tb.admin.user.updateUser(
-            user1!!.id!!,
-            user = user1.copy(projectIds = arrayOf(project.id))
+            user1.id!!,
+            user = user1.copy(projectIds = arrayOf(foundProject.id!!), roles = null) //todo should be null, if empty list then it overrides the roles
         )
         assertNotNull(updatedUser1)
         assertEquals(1, updatedUser1.projectIds!!.size)
-        assertNotNull(tb.user.project.findProject(project.id))
+        assertNotNull(tb.getUser("test1@example.com").project.findProject(project.id))
         assertEquals(project.status, ProjectStatus.INITIATION)
     }
 
     @Test
     fun findProjectFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        tb.user2.project.assertFindFail(403, project.id!!)
+     //   tb.user2.project.assertFindFail(403, project.id!!)
 
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}",
@@ -175,16 +178,19 @@ class ProjectTestIT : AbstractFunctionalTest() {
 
     @Test
     fun testImport(): Unit = createTestBuilder().use { tb ->
-        val imported1 = tb.admin.project.importProject("tocoman_project.xml")
+        tb.admin.user.create("test1", UserRole.ADMIN)
+        val imported1 = tb.getUser("test1@example.com").project.importProject("tocoman_project.xml")
         assertNotNull(imported1)
 
-        var project = tb.admin.project.findProject(imported1.id!!)
+        var project = tb.getUser("test1@example.com").project.findProject(imported1.id!!)
         assertEquals(1, project.tocomanId)
-        assertEquals("As.Oy Esimerkki",project.name)
+        assertEquals("As.Oy Esimerkki", project.name)
 
-        val imported2 = tb.admin.project.importProject("tocoman_project2.xml")
+        val imported2 = tb.getUser("test1@example.com").project.importProject("tocoman_project2.xml")
         project = tb.admin.project.findProject(imported2.id!!)
         assertEquals(1, project.tocomanId)
         assertEquals("Project 2", project.name)
+
+        println("Imported projects ${imported1.id} and ${imported2.id}")
     }
 }

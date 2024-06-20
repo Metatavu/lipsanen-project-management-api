@@ -22,12 +22,11 @@ class ProjectRepository : AbstractRepository<ProjectEntity, UUID>() {
      * @param creatorId creator id
      * @return created project
      */
-    suspend fun create(name: String, keycloakGroupId: String, tocomanId: Int?, creatorId: UUID): ProjectEntity {
+    suspend fun create(id: UUID, name: String, tocomanId: Int?, creatorId: UUID): ProjectEntity {
         val project = ProjectEntity()
-        project.id = UUID.randomUUID()
+        project.id = id
         project.name = name
         project.status = ProjectStatus.INITIATION
-        project.keycloakGroupId = UUID.fromString(keycloakGroupId)
         project.tocomanId = tocomanId
         project.creatorId = creatorId
         project.lastModifierId = creatorId
@@ -42,13 +41,9 @@ class ProjectRepository : AbstractRepository<ProjectEntity, UUID>() {
      * @param max max results
      * @return list of projects
      */
-    suspend fun list(keycloakGroupIds: List<UUID>?, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+    suspend fun list(first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
         val queryBuilder = StringBuilder()
         val parameters = Parameters()
-        if (keycloakGroupIds != null) {
-            queryBuilder.append("keycloakGroupId in :groupIds")
-            parameters.and("groupIds", keycloakGroupIds)
-        }
 
         return applyFirstMaxToQuery(
             query = find(queryBuilder.toString(), Sort.descending("createdAt"), parameters),

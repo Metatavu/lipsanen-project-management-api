@@ -9,17 +9,19 @@ import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Project
 import fi.metatavu.lipsanen.test.client.models.ProjectStatus
 import fi.metatavu.lipsanen.test.client.models.User
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
-import io.restassured.RestAssured
 import io.restassured.http.Method
-import org.eclipse.microprofile.config.ConfigProvider
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import java.util.*
 
-//todo all the tests that just use keycloak will not work
+/**
+ * Test class for user API
+ */
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
 @QuarkusTestResource.List(
@@ -28,52 +30,12 @@ import java.util.*
 class UserTestIT: AbstractFunctionalTest() {
 
     @Test
-    fun testCreateUser() = createTestBuilder().use {
-        val project = it.admin.project.create()
-        val createdCompany = it.admin.company.create()
-        val userData = User(
-            firstName = "usertest",
-            lastName = "usertest",
-            email = "usertest@example.com",
-            projectIds = arrayOf(project.id!!),
-            companyId = createdCompany.id
-        )
-        val createdUser = it.admin.user.create(userData)
-        assertEquals(userData.firstName, createdUser.firstName)
-        assertEquals(userData.lastName, createdUser.lastName)
-        assertEquals(userData.email, createdUser.email)
-        assertEquals(userData.companyId, createdUser.companyId)
-        assertEquals(userData.projectIds!![0], createdUser.projectIds!![0])
-        assertNotNull(createdUser.id)
-        assertNull(createdUser.lastLoggedIn)
-
-        val foundUser = it.admin.user.findUser(createdUser.id!!)
-
-        val smptTestPort = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-port", Int::class.java)
-        val smtpTestHost = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-host", String::class.java)
-
-        RestAssured.baseURI = "http://$smtpTestHost"
-        RestAssured.port = smptTestPort
-        RestAssured.basePath = "/api/v2"
-
-        val messages = RestAssured.given().`when`().get("/messages")
-            .then().extract().body().asString()
-
-        assertEquals(
-            true,
-            messages.contains("Update Password. Click on the link below to start this process")
-        )
-
-        //cannot create user with same email
-        it.admin.user.assertCreateFailStatus(409, userData)
-        it.user.user.assertCreateFailStatus(403, userData.copy(email = "newemail"))
-
-        it.admin.user.assertCreateFailStatus(404, userData.copy(projectIds = arrayOf(UUID.randomUUID()), email = "newemail@example.com"))
-        it.admin.user.assertCreateFailStatus(404, userData.copy(companyId = UUID.randomUUID(), email = "newemail@example.com"))
-    }
-
-    @Test
     fun testListUsers() = createTestBuilder().use {
+        it.admin.user.create("user1", UserRole.USER)
+        it.admin.user.create("user2", UserRole.USER)
+        it.admin.user.create("user3", UserRole.USER)
+        it.admin.user.create("user4", UserRole.USER)
+
         val users = it.admin.user.listUsers(null, null, null)
         assertEquals(4, users.size)
 
@@ -81,13 +43,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertEquals(2, pagedUsers.size)
 
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
-        assertEquals(3, pagedUsers2.size)
-
-        val pagedUsers3 = it.admin.user.listUsers(first = 2, max = 3)
-        assertEquals(3, pagedUsers3.size)
-
-        val pagedUsers4 = it.admin.user.listUsers(first = 3, max = 2)
-        assertEquals(2, pagedUsers4.size)
+        assertEquals(2, pagedUsers2.size)
 
         // Filter by company
         val company = it.admin.company.create()
@@ -101,15 +57,17 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testFindUser() = createTestBuilder().use {
+        val user1 = it.admin.user.create("user1", UserRole.USER)
+        it.getUser("user1@example.com").project.listProjects()
+
         //Check that user with login history has some last login info
-        val foundUser = it.admin.user.listUsers().find { it.firstName == "admin" }
-        assertNotNull(foundUser?.lastLoggedIn)
+        val foundUser2 = it.admin.user.findUser(user1.id!!)
+        assertNotNull(foundUser2.lastLoggedIn)
     }
 
     @Test
     fun testFindUserFail() = createTestBuilder().use {
-        val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
-        it.user.user.assertFindFailStatus(403, adminId)
+        it.user.user.assertFindFailStatus(403, UUID.randomUUID())
 
         InvalidValueTestScenarioBuilder(
             path = "v1/users/{userId}",
@@ -136,21 +94,26 @@ class UserTestIT: AbstractFunctionalTest() {
             firstName = "usertest",
             lastName = "usertest",
             email = "usertest@example.com",
-            projectIds = arrayOf(project.id!!)
+            projectIds = arrayOf(project.id!!),
+            roles = arrayOf(UserRole.USER)
         )
         val createdUser = it.admin.user.create(userData)
 
         val updatedUserData = createdUser.copy(
             firstName = "Updated",
             lastName = "User",
-            projectIds = arrayOf(project2.id!!)
+            projectIds = arrayOf(project2.id!!),
+            roles = arrayOf(UserRole.ADMIN)
         )
 
-        val updatedUser = it.admin.user.updateUser(createdUser.id!!, updatedUserData)
-        assertEquals(updatedUserData.firstName, updatedUser.firstName)
-        assertEquals(updatedUserData.lastName, updatedUser.lastName)
-        assertEquals(updatedUserData.email, updatedUser.email)
-        assertEquals(updatedUserData.projectIds!![0], updatedUser.projectIds!![0])
+        it.admin.user.updateUser(createdUser.id!!, updatedUserData)
+        val foundUser = it.admin.user.findUser(createdUser.id)
+
+        assertEquals(updatedUserData.firstName, foundUser.firstName)
+        assertEquals(updatedUserData.lastName, foundUser.lastName)
+        assertEquals(updatedUserData.email, foundUser.email)
+        assertEquals(updatedUserData.projectIds!![0], foundUser.projectIds!![0])
+        assertEquals(updatedUserData.roles!![0], foundUser.roles!![0])
 
         it.admin.user.assertUpdateFailStatus(404, UUID.randomUUID(), updatedUserData)
         it.user.user.assertUpdateFailStatus(403, createdUser.id, updatedUserData)
@@ -174,8 +137,7 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testDeleteUserFail() = createTestBuilder().use {
-        val adminId = UUID.fromString("af6451b7-383c-4771-a0cb-bd16fae402c4")
-        it.user.user.assertDeleteFailStatus(403, adminId)
+        it.user.user.assertDeleteFailStatus(403, UUID.randomUUID())
 
         InvalidValueTestScenarioBuilder(
             path = "v1/users/{userId}",

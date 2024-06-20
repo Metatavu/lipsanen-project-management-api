@@ -52,7 +52,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         connectionRole: TaskConnectionRole?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = if (taskId != null) {
@@ -75,13 +75,10 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         taskConnection: TaskConnection
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
         if (errorResponse != null) return@async errorResponse
-        if (!projectController.isInPlanningStage(project!!)) {
-            return@async createBadRequest(INVALID_PROJECT_STATE)
-        }
 
-        val sourceTask = taskController.find(project, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
         val targetTask = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
@@ -102,7 +99,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         connectionId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
         if (errorResponse != null) return@async errorResponse
 
         val taskConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
@@ -120,7 +117,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         taskConnection: TaskConnection
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
         if (errorResponse != null) return@async errorResponse
         if (!projectController.isInPlanningStage(project!!)) {
             return@async createBadRequest(INVALID_PROJECT_STATE)
@@ -156,7 +153,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         connectionId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, userId)
+        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
         if (errorResponse != null) return@async errorResponse
         if (!projectController.isInPlanningStage(project!!)) {
             return@async createBadRequest(INVALID_PROJECT_STATE)
@@ -179,6 +176,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
      */
     suspend fun getProjectOrError(
         projectId: UUID,
+        isAdmin: Boolean,
         userId: UUID
     ): Pair<ProjectEntity?, Response?> {
         val project = projectController.findProject(projectId) ?: return null to createNotFound(
@@ -188,7 +186,7 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             )
         )
 
-        if (!projectController.hasAccessToProject(project, userId)) {
+        if (!isAdmin && !projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return project to null

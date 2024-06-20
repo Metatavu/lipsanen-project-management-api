@@ -108,12 +108,11 @@ class NotificationsController {
             comment = comment
         )
 
-        //todo remember about keycloak id difference
         val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }
-        val adminEntities = adminKeycloakIds.map { usersController.findUserByKeycloakId(it) }.filterNotNull()
+        val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUserByKeycloakId(it) }
 
         val notificationReceivers = (adminEntities + receivers).distinctBy { it.id }
-
+        println("sending notification $type to admins: ${adminEntities.size} and intended receivers ${receivers.size}")
         notificationReceivers.forEach { receiver ->
             notificationEventsController.create(
                 notification = notification,

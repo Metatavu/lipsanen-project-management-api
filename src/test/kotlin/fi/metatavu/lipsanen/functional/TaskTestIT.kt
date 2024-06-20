@@ -34,10 +34,9 @@ class TaskTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
 
-        val testUser1 = tb.admin.user.create("test0")
-        val testUser2 = tb.admin.user.create("test1")
-        println("testUser1: $testUser1")
-        println("testUser2: $testUser2")
+        val testUser1 = tb.admin.user.create("test0", UserRole.USER)
+        val testUser2 = tb.admin.user.create("test1", UserRole.USER)
+
         val taskData = Task(
             name = "Task",
             status = TaskStatus.NOT_STARTED,    //always created as not started
@@ -45,7 +44,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             endDate = "2022-01-31",
             milestoneId = milestone.id!!,
             assigneeIds = arrayOf(testUser1.id!!, testUser2.id!!),
-           //todo  userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
@@ -251,9 +249,9 @@ class TaskTestIT : AbstractFunctionalTest() {
     @Test
     fun testTaskUpdate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        val testUser1 = tb.admin.user.create("test0").id!!
-        val testUser2 = tb.admin.user.create("test1").id!!
-        val testUser3 = tb.admin.user.create("test2").id!!
+        val testUser1 = tb.admin.user.create("test0", UserRole.USER).id!!
+        val testUser2 = tb.admin.user.create("test1", UserRole.USER).id!!
+        val testUser3 = tb.admin.user.create("test2", UserRole.USER).id!!
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!, Milestone(
                 name = "Milestone",

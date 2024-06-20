@@ -1,12 +1,11 @@
 package fi.metatavu.lipsanen.users
 
-import fi.metatavu.keycloak.adminclient.models.EventRepresentation
-import fi.metatavu.keycloak.adminclient.models.GroupRepresentation
-import fi.metatavu.keycloak.adminclient.models.RoleRepresentation
-import fi.metatavu.keycloak.adminclient.models.UserRepresentation
+import fi.metatavu.keycloak.adminclient.models.*
 import fi.metatavu.lipsanen.api.model.User
+import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
-import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -36,6 +35,9 @@ class UserController {
 
     @Inject
     lateinit var userRepository: UserRepository
+
+    @Inject
+    lateinit var userToProjectRepository: UserToProjectRepository
 
     @Inject
     lateinit var logger: Logger
@@ -80,54 +82,27 @@ class UserController {
      * @param max max results
      * @return users
      */
-    suspend fun listUsers(companyId: UUID?, first: Int?, max: Int?): Pair<Array<UserFullRepresentation>, Int> {
-        var users = keycloakAdminClient.getUsersApi().realmUsersGet(
-            realm = keycloakAdminClient.getRealm(),
-            first = first ?: 0,
-            max = max?.plus(1)  ?: 10,  // +1 to account for possible admin user that has to be removed
-            q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
-        )
-        //todo company id to the user entity
-
-        var usersCount = if(companyId == null ) {
-            keycloakAdminClient.getUsersApi().realmUsersCountGet(
-                realm = keycloakAdminClient.getRealm()
-            )
-        } else {
-            keycloakAdminClient.getUsersApi().realmUsersGet(
-                realm = keycloakAdminClient.getRealm(),
-                q = "$COMPANY_PROP_NAME:$companyId"
-            ).size
-        }
-
-        // Removing admin user from the list
-        if (users.find { it.username == keycloakAdminUser } != null) {
-            users = users.filter { it.username != keycloakAdminUser }.toTypedArray()
-            usersCount -= 1
-        } else {
-            if (max != null && users.size > max) {
-                users = users.slice(0 until if (max >= users.size) users.size-1 else max).toTypedArray()
-            }
-        }
-
-        val userFullRepresentations = users.map {
-            var userEntity = userRepository.findByKeycloakId(UUID.fromString(it.id))
-            if (userEntity == null && environment.isPresent && environment.get() == "test"){
-                userEntity = userRepository.create(
-                    id = UUID.randomUUID(),
-                    keycloakId = UUID.fromString(it.id)
-                )
+    suspend fun listUsers(company: CompanyEntity?, first: Int?, max: Int?): Pair<List<UserFullRepresentation>, Long> {
+        //todo remove admin
+        val (userEntities, entitiesCount) = userRepository.list(company, first, max)
+        var totalCount = entitiesCount
+        val userReprensentations = userEntities.map {
+            val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.keycloakId.toString()))
+            if (userRepresentation?.username == keycloakAdminUser) {
+                totalCount -= 1
             }
 
-            if (userEntity == null) {
+            if (userRepresentation == null) {
                 return@map null
             }
+
             UserFullRepresentation(
-                userEntity = userEntity,
-                userRepresentation = it
+                userEntity = it,
+                userRepresentation = userRepresentation
             )
-        }.filterNotNull().toTypedArray()
-        return userFullRepresentations to usersCount
+        }.filterNotNull()
+
+        return userReprensentations to totalCount
     }
 
     /**
@@ -136,13 +111,8 @@ class UserController {
      * @param companyId company id
      * @return array of users
      */
-    suspend fun listUsers(companyId: UUID?): Array<UserRepresentation> {
-        val users = keycloakAdminClient.getUsersApi().realmUsersGet(
-            realm = keycloakAdminClient.getRealm(),
-            q = companyId?.let { "$COMPANY_PROP_NAME:$it" }
-        )
-
-        return users
+    suspend fun listUsers(companyEntity: CompanyEntity): Pair<List<UserEntity>, Long> {
+        return userRepository.list(companyEntity, null, null)
     }
 
     /**
@@ -163,72 +133,97 @@ class UserController {
      * @param groupIds user group ids to assign to
      * @return created user
      */
-    suspend fun createUser(user: User, groupIds: List<UUID>?): UserFullRepresentation? {
-        val keycloakUser: UserRepresentation?
-        var userEntity: UserEntity? = null
+    suspend fun createUser(user: User, company: CompanyEntity?, projects: List<ProjectEntity>?): UserFullRepresentation? {
+        var keycloakUser: UserRepresentation?
+        val userEntity: UserEntity?
         try {
-            keycloakAdminClient.getUsersApi().realmUsersPost(
-                realm = keycloakAdminClient.getRealm(),
-                userRepresentation = UserRepresentation(
-                    firstName = user.firstName,
-                    lastName = user.lastName,
-                    email = user.email,
-                    username = user.email,
-                    enabled = true,
-                    attributes = mapOf(COMPANY_PROP_NAME to arrayOf(user.companyId.toString()))
+            if (environment.isPresent && environment.get() == "test") {
+                keycloakAdminClient.getUsersApi().realmUsersPost(
+                    realm = keycloakAdminClient.getRealm(),
+                    userRepresentation = UserRepresentation(
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        email = user.email,
+                        username = user.email,
+                        enabled = true,
+                        credentials = arrayOf(
+                            CredentialRepresentation(
+                                type = "password",
+                                temporary = false,
+                                value = "test"
+                            )
+                        )
+                    )
                 )
-            )
+            } else {
+                keycloakAdminClient.getUsersApi().realmUsersPost(
+                    realm = keycloakAdminClient.getRealm(),
+                    userRepresentation = UserRepresentation(
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        email = user.email,
+                        username = user.email,
+                        enabled = true,
+                    )
+                )
+            }
 
             keycloakUser = keycloakAdminClient.getUsersApi().realmUsersGet(
                 realm = keycloakAdminClient.getRealm(),
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignUserToProjectGroups(keycloakUser, emptyArray(), groupIds)
-
-            // Assign user to USER role
-            val userRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
-                roleName = UserRole.USER.NAME,
-                realm = keycloakAdminClient.getRealm()
-            )
-            keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmPost(
-                id = keycloakUser.id.toString(),
-                realm = keycloakAdminClient.getRealm(),
-                roleRepresentation = arrayOf(userRole)
-            )
+            // Assign user to selected roles
+            assignRoles(keycloakUser, user.roles)
 
             userEntity = userRepository.create(
                 id = UUID.randomUUID(),
-                keycloakId = UUID.fromString(keycloakUser.id)
+                keycloakId = UUID.fromString(keycloakUser.id),
+                coompany = company
             )
+            assignUserToProjects(userEntity, projects ?: emptyList())
         } catch (e: Exception) {
             logger.error("Failed to create user:", e)
             return null
         }
 
-        try {
-            keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
-                realm = keycloakAdminClient.getRealm(),
-                id = keycloakUser.id!!,
-                requestBody = arrayOf("UPDATE_PASSWORD"),
-                lifespan = null
-            )
-        } catch (e: Exception) {
-            logger.error("Failed sending email to user", e)
-            // Delete the user if the email sending fails
-            deleteUser(userEntity)
+        if (environment.isEmpty || (environment.isPresent && environment.get() != "test")) {
+            try {
+                keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
+                    realm = keycloakAdminClient.getRealm(),
+                    id = keycloakUser!!.id!!,
+                    requestBody = arrayOf("UPDATE_PASSWORD"),
+                    lifespan = null
+                )
+            } catch (e: Exception) {
+                logger.error("Failed sending email to user", e)
+                // Delete the user if the email sending fails
+                deleteUser(userEntity)
+            }
         }
 
         return UserFullRepresentation(
-            userEntity = userEntity!!,
-            userRepresentation = keycloakUser
+            userEntity = userEntity,
+            userRepresentation = findKeycloakUser(userEntity.keycloakId)!!
         )
     }
 
+    /**
+     * Finds a user by id
+     *
+     * @param userId user id
+     * @return found user or null if not found
+     */
     suspend fun findUser(userId: UUID): UserEntity? {
         return userRepository.findByIdSuspending(userId)
     }
 
+    /**
+     * Finds a user by keycloak id
+     *
+     * @param keycloakId user id
+     * @return found user or null if not found
+     */
     suspend fun findUserByKeycloakId(keycloakId: UUID): UserEntity? {
         return userRepository.findByKeycloakId(keycloakId)
     }
@@ -264,18 +259,15 @@ class UserController {
     suspend fun updateUser(
         existingUser: UserEntity,
         updateData: User,
-        updateGroups: List<UUID>?
+        company: CompanyEntity?,
+        projects: List<ProjectEntity>?
     ): UserFullRepresentation? {
         println("updating user ${existingUser.id} with keycloak id ${existingUser.keycloakId}")
         val currentKeycloakRepresentation = findKeycloakUser(existingUser.keycloakId) ?: return null
         val updatedRepresentation = currentKeycloakRepresentation.copy(
             firstName = updateData.firstName,
             lastName = updateData.lastName,
-            attributes = if (updateData.companyId != null) {
-                mapOf(COMPANY_PROP_NAME to arrayOf(updateData.companyId.toString()))
-            } else {
-                emptyMap()
-            }
+            realmRoles = updateData.roles?.map { translateRole(it) }?.toTypedArray(),
         )
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdPut(
@@ -284,12 +276,15 @@ class UserController {
                 userRepresentation = updatedRepresentation
             )
 
-            assignUserToProjectGroups(currentKeycloakRepresentation, currentKeycloakRepresentation.groups, updateGroups)
+            existingUser.company = company
+            userRepository.persistSuspending(existingUser)
+
+            // Assign user to selected roles
+            assignRoles(currentKeycloakRepresentation, updateData.roles)
+
+            assignUserToProjects(existingUser, projects ?: emptyList())
             UserFullRepresentation(
-                userRepresentation = keycloakAdminClient.getUserApi().realmUsersIdGet(
-                    realm = keycloakAdminClient.getRealm(),
-                    id = existingUser.keycloakId.toString()
-                ),
+                userRepresentation = findKeycloakUser(existingUser.keycloakId)!!,
                 userEntity = existingUser
             )
         } catch (e: Exception) {
@@ -298,6 +293,42 @@ class UserController {
         }
     }
 
+    suspend fun assignRoles(userRepresentation: UserRepresentation, roles: List<fi.metatavu.lipsanen.api.model.UserRole>?) {
+        if (roles == null) {
+            //nothing is being updated if roles are null
+            return
+        }
+        val userRoles = roles.map {
+            keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
+                roleName = translateRole(it),
+                realm = keycloakAdminClient.getRealm()
+            )
+        }
+        val assignedRoles = keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsGet(
+            id = userRepresentation.id.toString(),
+            realm = keycloakAdminClient.getRealm(),
+        ).realmMappings
+
+        println("rest objec roles ${userRoles.joinToString { it.name +" "}}")
+        val rolesToUnassign = assignedRoles?.filter { role -> userRoles.find { it.name == role.name } == null }
+        val rolesToAssign = userRoles.filter { role -> assignedRoles?.find { it.name == role.name } == null }
+        println("unassigning from roles ${rolesToUnassign?.joinToString { it.name +" "}}")
+        println("assigning to roles ${rolesToAssign.joinToString { it.name +" "}}")
+
+        //todo if roles is null all good if emty list then update
+        keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmDelete(
+            id = userRepresentation.id.toString(),
+            realm = keycloakAdminClient.getRealm(),
+            roleRepresentation = rolesToUnassign?.toTypedArray()
+        )
+
+
+        keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmPost(
+            id = userRepresentation.id.toString(),
+            realm = keycloakAdminClient.getRealm(),
+            roleRepresentation = rolesToAssign.toTypedArray()
+        )
+    }
     /**
      * Deletes a user
      *
@@ -309,6 +340,9 @@ class UserController {
                 realm = keycloakAdminClient.getRealm(),
                 id = userEntity.keycloakId.toString()
             )
+            userToProjectRepository.list(userEntity).forEach {
+                userToProjectRepository.deleteSuspending(it)
+            }
             userRepository.deleteSuspending(userEntity)
         } catch (e: Exception) {
             logger.error("Failed to delete user", e)
@@ -358,34 +392,32 @@ class UserController {
      * @param currentGroups current groups
      * @param updateGroups new groups
      */
-    suspend fun assignUserToProjectGroups(
-        existingUser: UserRepresentation,
-        currentGroups: Array<String>?,
-        updateGroups: List<UUID>?
+    suspend fun assignUserToProjects(
+        user: UserEntity,
+        newProjects: List<ProjectEntity>
     ) {
-        println("Assigning user ${existingUser.id} to groups ${updateGroups?.joinToString()}")
-        // if group is present in current but not in update then unassign
-        currentGroups?.forEach { currentGroupId ->
-            if (updateGroups?.find { it.toString() == currentGroupId } == null) {
-                keycloakAdminClient.getUserApi().realmUsersIdGroupsGroupIdDelete(
-                    realm = keycloakAdminClient.getRealm(),
-                    id = existingUser.id!!,
-                    groupId = currentGroupId
-                )
+        val currentProject = userToProjectRepository.list(user)
+
+        currentProject.forEach { project ->
+            if (newProjects.find { it.id == project.project.id } == null) {
+                println("unassigning user ${user.id} from project ${project.project.id}")
+                userToProjectRepository.deleteSuspending(project)
+            }
+        }
+        newProjects.forEach { project ->
+            if (currentProject.find { it.project.id == project.id } == null) {
+                println("assigning user ${user.id} to project ${project.id}")
+                userToProjectRepository.create(UUID.randomUUID(), user, project)
             }
         }
 
-        // if group is present in update but not in current then assign
-        updateGroups?.forEach { groupId ->
-            if (currentGroups?.find { it == groupId.toString() } == null) {
-                keycloakAdminClient.getUserApi().realmUsersIdGroupsGroupIdPut(
-                    realm = keycloakAdminClient.getRealm(),
-                    id = existingUser.id!!,
-                    groupId = groupId.toString()
-                )
-            }
+    }
+
+    private fun translateRole(userRole: fi.metatavu.lipsanen.api.model.UserRole): String {
+        return when (userRole) {
+            fi.metatavu.lipsanen.api.model.UserRole.ADMIN -> "admin"
+            fi.metatavu.lipsanen.api.model.UserRole.USER -> "user"
         }
-        println("User ${existingUser.id} assigned to groups ${updateGroups?.joinToString()}")
     }
 
     companion object {

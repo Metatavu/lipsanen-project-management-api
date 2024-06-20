@@ -59,7 +59,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
     override fun createTask(projectId: UUID, milestoneId: UUID, task: Task): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)

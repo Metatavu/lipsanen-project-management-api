@@ -7,6 +7,8 @@ import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import fi.metatavu.lipsanen.projects.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.themes.ProjectThemeController
 import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -35,57 +37,28 @@ class ProjectController {
     lateinit var milestoneController: MilestoneController
 
     @Inject
+    lateinit var userToProjectRepository: UserToProjectRepository
+
+    @Inject
     lateinit var logger: Logger
 
     /**
-     * Creates a new project group and joins a user to it
-     *
-     * @param projectName project name
-     * @param userId creator id
-     * @return created group or null if failed
-     */
-    suspend fun createProjectGroupJoin(projectName: String, userId: UUID): GroupRepresentation? {
-        return try {
-            keycloakAdminClient.getGroupsApi().realmGroupsPost(
-                realm = keycloakAdminClient.getRealm(),
-                groupRepresentation = GroupRepresentation(
-                    name = projectName
-                )
-            )
-
-            val createdGroup = keycloakAdminClient.getGroupsApi().realmGroupsGet(
-                realm = keycloakAdminClient.getRealm(),
-                search = projectName,
-                briefRepresentation = true
-            ).firstOrNull()
-
-            keycloakAdminClient.getUserApi().realmUsersIdGroupsGroupIdPut(
-                realm = keycloakAdminClient.getRealm(),
-                id = userId.toString(),
-                groupId = createdGroup?.id.toString()
-            )
-            createdGroup
-        } catch (e: Exception) {
-            logger.error("Failed to create group $projectName", e)
-            null
-        }
-    }
-
-    /**
-     * Creates a new project
+     * Creates a new project and assigns its creator to it
      *
      * @param project project
-     * @param userId user id
+     * @param creatorId user id
      * @return created project
      */
-    suspend fun createProject(project: Project, userId: UUID): ProjectEntity? {
-        val createdGroup = createProjectGroupJoin(project.name, userId) ?: return null
-        return projectRepository.create(
+    suspend fun createProject(project: Project, creatorId: UUID): ProjectEntity? {
+        val projectEntity = projectRepository.create(
+            id = UUID.randomUUID(),
             name = project.name,
             tocomanId = project.tocomanId,
-            keycloakGroupId = createdGroup.id!!,
-            creatorId = userId
+            creatorId = creatorId
         )
+
+      //  userToProjectRepository.create(UUID.randomUUID(), initialUser, projectEntity)
+        return projectEntity
     }
 
     /**
@@ -93,17 +66,20 @@ class ProjectController {
      *
      * @param name project name
      * @param tocomanId tocoman id
-     * @param userId user id
+     * @param creatorId user id
      * @return created project
      */
-    suspend fun createProject(name: String, tocomanId: Int, userId: UUID): ProjectEntity? {
-        val createdGroup = createProjectGroupJoin(name, userId) ?: return null
-        return projectRepository.create(
+    suspend fun createProject(name: String, tocomanId: Int, creatorId: UUID,): ProjectEntity {
+        val projectEntity = projectRepository.create(
+            id = UUID.randomUUID(),
             name = name,
-            tocomanId = tocomanId,
-            creatorId = userId,
-            keycloakGroupId = createdGroup.id!!
+            tocomanId = tocomanId,//todo is this unique
+            creatorId = creatorId,
         )
+
+        println("Created project with id: ${projectEntity.id}")
+     //   userToProjectRepository.create(UUID.randomUUID(), initialUser, projectEntity)
+        return projectEntity
     }
 
     /**
@@ -141,8 +117,8 @@ class ProjectController {
      *
      * @return list of projects
      */
-    suspend fun listProjects(keycloakGroupIds: List<UUID>?, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
-        return projectRepository.list(keycloakGroupIds, first, max)
+    suspend fun listProjects(first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+        return projectRepository.applyFirstMaxToQuery(projectRepository.findAll(), first, max)
     }
 
     /**
@@ -154,20 +130,6 @@ class ProjectController {
      * @return updated project
      */
     suspend fun updateProject(existingProject: ProjectEntity, project: Project, userId: UUID): ProjectEntity? {
-        if (existingProject.name != project.name) {
-            try {
-                keycloakAdminClient.getGroupApi().realmGroupsIdPut(
-                    realm = keycloakAdminClient.getRealm(),
-                    id = existingProject.keycloakGroupId.toString(),
-                    groupRepresentation = GroupRepresentation(
-                        name = project.name
-                    )
-                )
-            } catch (e: Exception) {
-                logger.error("Failed to update group ${project.name}", e)
-                return null
-            }
-        }
         existingProject.name = project.name
         existingProject.status = project.status
         existingProject.tocomanId = project.tocomanId
@@ -194,15 +156,9 @@ class ProjectController {
      *
      * @param projectEntity project entity
      */
-    suspend fun deleteProject(projectEntity: ProjectEntity): Int? {
-        try {
-            keycloakAdminClient.getGroupApi().realmGroupsIdDelete(
-                realm = keycloakAdminClient.getRealm(),
-                id = projectEntity.keycloakGroupId.toString()
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to delete group ${projectEntity.keycloakGroupId}", e)
-            return 1
+    suspend fun deleteProject(projectEntity: ProjectEntity) {
+        userToProjectRepository.list(projectEntity).forEach {
+            userToProjectRepository.deleteSuspending(it)
         }
         projectThemeController.list(projectEntity).first.forEach {
             projectThemeController.delete(it)
@@ -211,7 +167,6 @@ class ProjectController {
             milestoneController.delete(it)
         }
         projectRepository.deleteSuspending(projectEntity)
-        return null
     }
 
     /**
@@ -222,8 +177,10 @@ class ProjectController {
      * @return true if user has access to the project; false otherwise
      */
     suspend fun hasAccessToProject(project: ProjectEntity, keycloakUserId: UUID): Boolean {
-        println("ProjectController.hasAccessToProject()")
-        return userController.listUserGroups(keycloakUserId).any { it.id == project.keycloakGroupId.toString() }
+        val userEntity = userController.findUserByKeycloakId(keycloakUserId) ?: return false
+        val projects = userToProjectRepository.list(userEntity, project)
+        println("User has access to project: ${projects != null}")
+        return projects != null
     }
 
     /**
@@ -234,5 +191,14 @@ class ProjectController {
      */
     suspend fun isInPlanningStage(project: ProjectEntity): Boolean {
         return project.status == ProjectStatus.PLANNING || project.status == ProjectStatus.INITIATION || project.status == ProjectStatus.DESIGN
+    }
+
+    suspend fun listProjectsForUser(user: UserEntity, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+        val (connections, count) = userToProjectRepository.applyFirstMaxToQuery(
+            userToProjectRepository.find("user", user),
+            first,
+            max
+        )
+        return connections.map { it.project } to count
     }
 }

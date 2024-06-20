@@ -78,7 +78,6 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             first = first,
             max = max
         )
-        //todo checks for deleting users
 
         createOk(notificationEventTranslator.translate(notificationEvents), count)
     }.asUni()

@@ -122,13 +122,10 @@ class TaskController {
             val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
             if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) { //todo clear diff between keycloak and normal id
                 logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
-                val keycloakUser = userController.findKeycloakUser(user.keycloakId)
-                println("keycloakUser: ${keycloakUser?.firstName}")
-                if (keycloakUser != null) {
-                    userController.assignUserToProjectGroups(
-                        keycloakUser,
-                        emptyArray(),
-                        listOf(milestone.project.keycloakGroupId)
+                if (user != null) {
+                    userController.assignUserToProjects(
+                        user = user,
+                        newProjects = listOf(milestone.project)
                     )
                 }
             }
@@ -281,11 +278,7 @@ class TaskController {
             if (assignedUserIds.none { it == newAssigneeId }) {
                 val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
                 if (!projectController.hasAccessToProject(existingTask.milestone.project, user.keycloakId)) {
-                    logger.info("Assigning user $newAssigneeId to project ${existingTask.milestone.project.keycloakGroupId} because of the task assignment")
-                    val keycloakUser = userController.findKeycloakUser(user.keycloakId)
-                    if (keycloakUser != null) {
-                        userController.assignUserToProjectGroups(keycloakUser, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
-                    }
+                    userController.assignUserToProjects(user, listOf(existingTask.milestone.project))
                 }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
                 notifyTaskAssignments(existingTask, listOf(user), userId)

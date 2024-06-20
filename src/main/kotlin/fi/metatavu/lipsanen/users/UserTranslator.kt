@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractTranslator
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.time.Instant
@@ -24,22 +25,47 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
     @Inject
     lateinit var projectController: ProjectController
 
+    @Inject
+    lateinit var userToProjectRepository: UserToProjectRepository
+
+    //todo return roles back
     override suspend fun translate(entity: UserFullRepresentation): User {
         println("UserTranslator.translate()")
         val userRepresentation = entity.userRepresentation
-        val userGroups = userController.listUserGroups(UUID.fromString(userRepresentation.id))
-        val projects = projectController.listProjects(keycloakGroupIds = userGroups.map { UUID.fromString(it.id) }, null, null)
+        val projects = userToProjectRepository.list(entity.userEntity)
         val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
-        val company = userRepresentation.attributes?.get("companyId")?.firstOrNull()
         return User(
             id = entity.userEntity.id,
             email = userRepresentation.email ?: "",
             firstName = userRepresentation.firstName ?: "",
             lastName = userRepresentation.lastName ?: "",
-            companyId = if (company != null && company != "null") UUID.fromString(company) else null,
+            companyId = entity.userEntity.company?.id,
             lastLoggedIn = if (lastEvent?.time == null) null else OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastEvent.time), ZoneOffset.UTC),
-            projectIds = projects.first.map { it.id },
+            projectIds = projects.map { it.project.id },
+            roles = emptyList()
         )
+    }
+
+    /**
+     * Translates UserRepresentation to User based on the includeRoles parameter
+     *
+     * @param entity UserRepresentation
+     * @param includeRoles include roles
+     * @return translated User
+     */
+    suspend fun translate(entity: UserFullRepresentation, includeRoles: Boolean?): User {
+        return if (includeRoles == true) {
+            val roles = userController.getUserRealmRoles(entity.userEntity!!.keycloakId).mapNotNull {
+                when (it.name) {
+                    "admin" -> UserRole.ADMIN
+                    "user" -> UserRole.USER
+                    else -> null
+                }
+            }
+            translate(entity).copy(roles = roles)
+        } else {
+            translate(entity)
+        }
     }
 }
 data class UserFullRepresentation(

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.annotation.PostConstruct
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -24,6 +26,12 @@ class TocomanController {
     lateinit var projectController: ProjectController
 
     @Inject
+    lateinit var userController: UserController
+
+    @Inject
+    lateinit var userToProjectRepository: UserToProjectRepository
+
+    @Inject
     lateinit var logger: org.jboss.logging.Logger
 
     @PostConstruct
@@ -41,6 +49,7 @@ class TocomanController {
      */
     suspend fun importProjects(file: File, userId: UUID): ProjectEntity? {
         return try {
+            val user = userController.findUserByKeycloakId(userId) ?: throw Exception("User not found")
             val projects = xmlMapper.readValue(
                 file.readBytes(),
                 object: com.fasterxml.jackson.core.type.TypeReference<Projects>() {}
@@ -51,11 +60,11 @@ class TocomanController {
                     return null
                 }
                 val existingProject = projectController.findProjectByTocomanId(it.id)
-                if (existingProject == null) {
+                val newProject = if (existingProject == null) {
                     projectController.createProject(
                         name = it.projName!!,
                         tocomanId = it.id,
-                        userId = userId
+                        creatorId = userId
                     )
                 } else {
                     projectController.updateProject(
@@ -64,6 +73,12 @@ class TocomanController {
                         userId = userId
                     )
                 }
+                userToProjectRepository.create(
+                    id = UUID.randomUUID(),
+                    user = user,
+                    project = newProject
+                )
+                newProject
             }
         } catch (e: Exception) {
             logger.error("Error creating project: ${e.message}")

@@ -19,8 +19,6 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
 
     val admin = createTestBuilderAuthentication(username = "admin", password = "test")
     val user = createTestBuilderAuthentication(username = "user", password = "test")
-    val user1 = createTestBuilderAuthentication(username = "user1", password = "test")
-    val user2 = createTestBuilderAuthentication(username = "user2", password = "test")
 
     override fun createTestBuilderAuthentication(
         abstractTestBuilder: AbstractTestBuilder<ApiClient, AccessTokenProvider>,
@@ -29,7 +27,7 @@ class TestBuilder(private val config: Map<String, String>): AbstractAccessTokenT
         return TestBuilderAuthentication(this, authProvider)
     }
 
-    fun getUser(username: String, password: String): TestBuilderAuthentication {
+    fun getUser(username: String, password: String = "test"): TestBuilderAuthentication {
         return createTestBuilderAuthentication(username, password)
     }
     /**

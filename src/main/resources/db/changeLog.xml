@@ -372,5 +372,24 @@
         <dropColumn tableName="taskcommentuser" columnName="userid"/>
     </changeSet>
 
+    <changeSet id="usertoproject" author="katja danilova">
+        <createTable tableName="usertoproject">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_USERPROJECT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_USERPROJECT_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+        </createTable>
+        <addColumn tableName="user">
+            <column name="company_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_USER_COMPANY_ID" referencedColumnNames="id" referencedTableName="company"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
 
 </databaseChangeLog>
