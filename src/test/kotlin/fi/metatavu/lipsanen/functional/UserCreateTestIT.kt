@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 /**
- * Tests for user creation
+ * Tests for user creation, uses different test profile to enable proper user registration with sending out the
+ * registration email
  */
 @QuarkusTest
 @TestProfile(NonTestEnvProfile::class)
