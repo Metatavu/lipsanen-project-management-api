@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
+import fi.metatavu.lipsanen.positions.JobPositionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -43,6 +44,9 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
+    lateinit var jobPositionController: JobPositionController
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
@@ -67,7 +71,11 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             projectController.findProject(it) ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
         }
         val company = user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
-        val createdUser = userController.createUser(user, company, projects) ?: return@async createInternalServerError("Failed to create user")
+        val jobPosition = if (user.jobPositionId != null) {
+            jobPositionController.findJobPosition(user.jobPositionId) ?: return@async createNotFound(createNotFoundMessage(JOB_POSITION, user.jobPositionId))
+        } else null
+
+        val createdUser = userController.createUser(user, company, jobPosition, projects) ?: return@async createInternalServerError("Failed to create user")
         createOk(userTranslator.translate(createdUser))
     }.asUni()
 
@@ -90,11 +98,18 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             projectController.findProject(it) ?: return@async createNotFound(createNotFoundMessage(PROJECT, it))
         }
         val company = user.companyId?.let { companyController.find(it) ?: return@async createNotFound(createNotFoundMessage(COMPANY, it)) }
+        val jobPosition = if (user.jobPositionId != existingUser.jobPosition?.id) {
+            if (user.jobPositionId != null) {
+                jobPositionController.findJobPosition(user.jobPositionId) ?: return@async createNotFound(createNotFoundMessage(JOB_POSITION, user.jobPositionId))
+            } else null
+        } else existingUser.jobPosition
+
         val updatedUser = userController.updateUser(
             existingUser = existingUser,
             updateData = user,
             projects = projects,
-            company = company
+            company = company,
+            jobPosition = jobPosition
         ) ?: return@async createInternalServerError("Failed to update user")
         createOk(userTranslator.translate(updatedUser))
     }.asUni()

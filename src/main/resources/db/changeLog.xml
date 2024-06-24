@@ -353,4 +353,33 @@
     <changeSet id="remove_keycloak_references" author="katja danilova">
         <dropColumn tableName="project" columnName="keycloakgroupid"/>
     </changeSet>
+
+    <changeSet id="job positions" author="katja danilova">
+        <createTable tableName="job_position">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(191)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="color" type="varchar(191)"/>
+            <column name="iconname" type="varchar(191)"/>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+
+        <addColumn tableName="user">
+            <column name="jobPosition_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_USER_JOB_POSITION_ID" referencedColumnNames="id" referencedTableName="job_position"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="task">
+            <column name="jobPosition_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_TASK_JOB_POSITION_ID" referencedColumnNames="id" referencedTableName="job_position"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
