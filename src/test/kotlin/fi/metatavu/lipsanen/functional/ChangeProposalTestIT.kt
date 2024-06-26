@@ -21,7 +21,7 @@ import java.time.LocalDate
 import java.util.*
 
 /**
- * Native tests for ChangeProposals API
+ * Tests for ChangeProposals API
  */
 @QuarkusTest
 @TestProfile(DefaultTestProfile::class)
@@ -409,15 +409,6 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         val proposal =
             tb.admin.changeProposal.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)!!
 
-        //access rights
-        /*tb.user2.changeProposal.assertUpdateFail(
-            403,
-            projectId = project.id,
-            milestoneId = milestone.id,
-            changeProposalId = proposal.id!!,
-            proposal
-        )
-*/
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}/milestones/{milestoneId}/changeProposals/{changeProposalId}",
             method = Method.PUT,
