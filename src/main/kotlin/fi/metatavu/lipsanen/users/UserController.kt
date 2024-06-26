@@ -106,7 +106,7 @@ class UserController {
     }
 
     /**
-     * Lists users
+     * Lists users from local db
      *
      * @param companyEntity company entity
      * @param jobPosition job position
@@ -129,6 +129,7 @@ class UserController {
     /**
      * Creates a new user with unconfirmed password and email and sends the
      * email with reset password action to the user
+     * If test mode then no need to update the password, default password is used, no email is sent.
      *
      * @param user user
      * @param company company

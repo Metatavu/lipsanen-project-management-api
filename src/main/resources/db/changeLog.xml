@@ -250,6 +250,18 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="readiness_type_modification" author="josh dallos">
+        <dropColumn tableName="task" columnName="estimatedduration"/>
+        <dropColumn tableName="task" columnName="estimatedreadiness"/>
+        <addColumn tableName="task">
+            <column name="estimatedduration" type="float"/>
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+        <addColumn tableName="milestone">
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+    </changeSet>
+
     <changeSet id="comments" author="katja danilova">
         <createTable tableName="taskcomment">
             <column name="id" type="binary(16)">
@@ -287,19 +299,7 @@
         </addColumn>
     </changeSet>
 
-    <changeSet id="readiness_type_modification" author="josh dallos">
-        <dropColumn tableName="task" columnName="estimatedduration"/>
-        <dropColumn tableName="task" columnName="estimatedreadiness"/>
-        <addColumn tableName="task">
-            <column name="estimatedduration" type="float"/>
-            <column name="estimatedreadiness" type="integer"/>
-        </addColumn>
-        <addColumn tableName="milestone">
-            <column name="estimatedreadiness" type="integer"/>
-        </addColumn>
-    </changeSet>
-
-    <changeSet id="user entity" author="katja danilova">
+    <changeSet id="user minimal entity, replace keycloak is references with the new table" author="katja danilova">
         <createTable tableName="user">
             <column name="id" type="binary(16)">
                 <constraints primaryKey="true" nullable="false"/>
@@ -331,7 +331,7 @@
         <dropColumn tableName="taskcommentuser" columnName="userid"/>
     </changeSet>
 
-    <changeSet id="usertoproject" author="katja danilova">
+    <changeSet id="user to project, company connection" author="katja danilova">
         <createTable tableName="usertoproject">
             <column name="id" type="binary(16)">
                 <constraints primaryKey="true" nullable="false"/>
@@ -343,15 +343,13 @@
                 <constraints nullable="false" foreignKeyName="FK_USERPROJECT_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
             </column>
         </createTable>
+        <dropColumn tableName="project" columnName="keycloakgroupid"/>
+
         <addColumn tableName="user">
             <column name="company_id" type="binary(16)">
                 <constraints nullable="true" foreignKeyName="FK_USER_COMPANY_ID" referencedColumnNames="id" referencedTableName="company"/>
             </column>
         </addColumn>
-    </changeSet>
-
-    <changeSet id="remove_keycloak_references" author="katja danilova">
-        <dropColumn tableName="project" columnName="keycloakgroupid"/>
     </changeSet>
 
     <changeSet id="job positions" author="katja danilova">

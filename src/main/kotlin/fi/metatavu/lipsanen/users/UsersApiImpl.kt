@@ -50,7 +50,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    @WithTransaction
     override fun listUsers(companyId: UUID?, first: Int?, max: Int?,  includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@async createNotFound(createNotFoundMessage(COMPANY, companyId))
