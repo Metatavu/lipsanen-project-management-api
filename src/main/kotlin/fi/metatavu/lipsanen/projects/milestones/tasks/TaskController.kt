@@ -118,7 +118,7 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             jobPosition = jobPosition,
-            userRole = task.userRole ?: UserRole.USER,
+            userRole = task.userRole,
             status = TaskStatus.NOT_STARTED,
             estimatedDuration = task.estimatedDuration,
             estimatedReadiness = task.estimatedReadiness,
