@@ -59,9 +59,6 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
                 createNotFoundMessage(PROJECT, projectId)
             )
 
-            if (!projectController.hasAccessToProject(project, userId)) {
-                return@async createForbidden(NO_PROJECT_RIGHTS)
-            }
             if (!isAdmin() && !projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)
             }
@@ -85,7 +82,7 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
                 createNotFoundMessage(PROJECT, projectId)
             )
-            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) { //if it is just a user without access to project
+            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
                 return@async createForbidden(NO_PROJECT_RIGHTS)
             }
             val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
@@ -103,9 +100,6 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             val project = projectController.findProject(projectId) ?: return@async createNotFound(
                 createNotFoundMessage(PROJECT, projectId)
             )
-            if (!projectController.hasAccessToProject(project, userId)) {
-                return@async createForbidden(NO_PROJECT_RIGHTS)
-            }
 
             val isProjectPlanningStage = projectController.isInPlanningStage(project)
             if (!isAdmin() && !isProjectPlanningStage) {
@@ -144,9 +138,6 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
                 createNotFoundMessage(MILESTONE, milestoneId)
             )
-            if (!projectController.hasAccessToProject(project, userId)) {
-                return@async createForbidden(NO_PROJECT_RIGHTS)
-            }
 
             if (!isAdmin() && !projectController.isInPlanningStage(project)) {
                 return@async createBadRequest(WRONG_PROJECT_STAGE)

@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractTranslator
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.time.Instant
@@ -16,7 +17,7 @@ import java.util.*
  * Translates UserRepresentation to User
  */
 @ApplicationScoped
-class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
+class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
 
     @Inject
     lateinit var userController: UserController
@@ -24,19 +25,21 @@ class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
     @Inject
     lateinit var projectController: ProjectController
 
-    override suspend fun translate(entity: UserRepresentation): User {
-        val userGroups = userController.listUserGroups(UUID.fromString(entity.id))
-        val projects = projectController.listProjects(keycloakGroupIds = userGroups.map { UUID.fromString(it.id) }, null, null)
-        val lastEvent = userController.getLastLogin(UUID.fromString(entity.id))
-        val company = entity.attributes?.get("companyId")?.firstOrNull()
+    @Inject
+    lateinit var userToProjectRepository: UserToProjectRepository
+
+    override suspend fun translate(entity: UserFullRepresentation): User {
+        val userRepresentation = entity.userRepresentation
+        val projects = userToProjectRepository.list(entity.userEntity)
+        val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
         return User(
-            id = UUID.fromString(entity.id),
-            email = entity.email ?: "",
-            firstName = entity.firstName ?: "",
-            lastName = entity.lastName ?: "",
-            companyId = if (company != null && company != "null") UUID.fromString(company) else null,
+            id = entity.userEntity.id,
+            email = userRepresentation.email ?: "",
+            firstName = userRepresentation.firstName ?: "",
+            lastName = userRepresentation.lastName ?: "",
+            companyId = entity.userEntity.company?.id,
             lastLoggedIn = if (lastEvent?.time == null) null else OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastEvent.time), ZoneOffset.UTC),
-            projectIds = projects.first.map { it.id },
+            projectIds = projects.map { it.project.id },
             roles = emptyList()
         )
     }
@@ -48,9 +51,9 @@ class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
      * @param includeRoles include roles
      * @return translated User
      */
-    suspend fun translate(entity: UserRepresentation, includeRoles: Boolean?): User {
+    suspend fun translate(entity: UserFullRepresentation, includeRoles: Boolean?): User {
         return if (includeRoles == true) {
-            val roles = userController.getUserRealmRoles(UUID.fromString(entity.id)).mapNotNull {
+            val roles = userController.getUserRealmRoles(entity.userEntity.keycloakId).mapNotNull {
                 when (it.name) {
                     "admin" -> UserRole.ADMIN
                     "user" -> UserRole.USER
@@ -63,3 +66,14 @@ class UserTranslator : AbstractTranslator<UserRepresentation, User>() {
         }
     }
 }
+
+/**
+ * User full representation
+ *
+ * @param userEntity user entity
+ * @param userRepresentation user representation
+ */
+data class UserFullRepresentation(
+    val userEntity: UserEntity,
+    val userRepresentation: UserRepresentation
+)

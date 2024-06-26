@@ -2,10 +2,13 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.comments
 
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.api.model.TaskComment
+import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
@@ -30,6 +33,9 @@ class TaskCommentController {
 
     @Inject
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var userController: UserController
 
     /**
      * Lists task comments
@@ -58,6 +64,7 @@ class TaskCommentController {
      * @param taskComment task comment
      * @param userId user id
      * @return created task comment
+     * @throws UserNotFoundException if user is not found
      */
     suspend fun createTaskComment(task: TaskEntity, taskComment: TaskComment, userId: UUID): TaskCommentEntity {
         val createdComment = taskCommentRepository.create(
@@ -66,10 +73,13 @@ class TaskCommentController {
             comment = taskComment.comment,
             creatorId = userId,
         )
+        val notificationReceivers = mutableListOf<UserEntity>()
         taskComment.referencedUsers.forEach { refUser ->
-            commentUserRepository.create(UUID.randomUUID(), createdComment, refUser)
+            val user = userController.findUser(refUser) ?: throw UserNotFoundException(refUser)
+            notificationReceivers.add(user)
+            commentUserRepository.create(UUID.randomUUID(), createdComment, user)
         }
-        notifyTaskComments(task, createdComment, taskComment.referencedUsers, userId)
+        notifyTaskComments(task, createdComment, notificationReceivers, userId)
         return createdComment
     }
 
@@ -90,6 +100,7 @@ class TaskCommentController {
      * @param taskComment task comment
      * @param userId user id
      * @return updated task comment
+     * @throws UserNotFoundException if user is not found
      */
     suspend fun updateTaskComment(
         existingEntity: TaskCommentEntity,
@@ -101,12 +112,16 @@ class TaskCommentController {
 
         val currentReferencedUsers = commentUserRepository.list(existingEntity)
         val newReferencedUsers = taskComment.referencedUsers
-        if (currentReferencedUsers.map { it.userId }.toSet() != newReferencedUsers.toSet()) {
+        if (currentReferencedUsers.map { it.user.id }.toSet() != newReferencedUsers.toSet()) {
             currentReferencedUsers.forEach { commentUserRepository.deleteSuspending(it) }
+
+            val notificationReceivers = mutableListOf<UserEntity>()
             newReferencedUsers.forEach { refUser ->
-                commentUserRepository.create(UUID.randomUUID(), existingEntity, refUser)
+                val user = userController.findUser(refUser) ?: throw UserNotFoundException(refUser)
+                notificationReceivers.add(user)
+                commentUserRepository.create(UUID.randomUUID(), existingEntity, user)
             }
-            notifyTaskComments(existingEntity.task, existingEntity, taskComment.referencedUsers, userId)
+            notifyTaskComments(existingEntity.task, existingEntity, notificationReceivers, userId)
         }
 
         return taskCommentRepository.persistSuspending(existingEntity)
@@ -130,15 +145,16 @@ class TaskCommentController {
      * @param mentionedUsers mentioned users
      * @param creatorId creator id
      */
-    private suspend fun notifyTaskComments(task: TaskEntity, comment: TaskCommentEntity, mentionedUsers: List<UUID>, creatorId: UUID) {
-        val taskAssignees = taskAssigneeRepository.listByTask(task).map { it.assigneeId }
+    private suspend fun notifyTaskComments(task: TaskEntity, comment: TaskCommentEntity, mentionedUsers: List<UserEntity>, creatorId: UUID) {
+        val taskAssignees = taskAssigneeRepository.listByTask(task).map { it.user }
+        val commentCreator = userController.findUserByKeycloakId(creatorId)
 
         notificationsController.createAndNotify(
             message = "New comment has been added to task ${task.name}",
             type = NotificationType.COMMENT_LEFT,
             taskEntity = task,
             comment = comment,
-            receiverIds = mentionedUsers.plus(taskAssignees).distinct().minus(creatorId),
+            receivers = mentionedUsers.plus(taskAssignees).minus(commentCreator).filterNotNull().distinctBy { it.id },
             creatorId = creatorId
         )
     }

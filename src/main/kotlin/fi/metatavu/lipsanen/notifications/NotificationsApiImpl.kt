@@ -38,7 +38,7 @@ class NotificationsApiImpl : NotificationsApi, AbstractApi() {
     @WithTransaction
     override fun deleteNotification(notificationId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         if (environment.isPresent && environment.get() == "test") {
-            return@async createForbidden("Deleting notifications is not allowed in test environment")
+            return@async createForbidden("Deleting notifications is not allowed out of test environment")
         }
         val notification = notificationsController.find(notificationId) ?: return@async createNotFound("Notification not found")
         notificationsController.delete(notification)

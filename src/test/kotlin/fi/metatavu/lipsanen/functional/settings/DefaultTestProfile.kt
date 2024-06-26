@@ -15,3 +15,13 @@ class DefaultTestProfile: QuarkusTestProfile {
         )
     }
 }
+
+class NonTestEnvProfile: QuarkusTestProfile {
+
+    override fun getConfigOverrides(): Map<String, String> {
+        return mapOf(
+            "cron.notifications.cleanup" to "0 0 0 * * ?",
+            "notifications.cleanup.delay.days" to "15"
+        )
+    }
+}

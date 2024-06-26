@@ -30,5 +30,4 @@ class TaskCommentRepository : AbstractRepository<TaskCommentEntity, UUID>() {
         return persistSuspending(taskComment)
     }
 
-
 }

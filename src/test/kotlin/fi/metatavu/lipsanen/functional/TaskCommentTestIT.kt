@@ -10,6 +10,7 @@ import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.TaskComment
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -40,8 +41,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
         tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone2.id, taskId = task1.id!!)
 
-        val taskComments =
-            tb.admin.taskComment.listTaskComments(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
+        val taskComments = tb.admin.taskComment.listTaskComments(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
         assert(taskComments.size == 2)
         val task1Comments = tb.admin.taskComment.listTaskComments(
             projectId = project.id,
@@ -92,12 +92,13 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
     fun testCreateTaskComment() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = ApiTestSettings.userId)
+        val user = tb.admin.user.create("test1", UserRole.USER)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = user.id!!)
 
         val taskCommentData = TaskComment(
             taskId = task.id!!,
             comment = "comment",
-            referencedUsers = arrayOf(ApiTestSettings.userId)
+            referencedUsers = arrayOf(user.id)
         )
 
         val createdComment = tb.admin.taskComment.create(
@@ -116,7 +117,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
     fun testCreateTaskCommentFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, assigneeId = ApiTestSettings.userId)
+        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
         val taskComment = TaskComment(
             taskId = task.id!!,
             comment = "comment",
@@ -191,8 +192,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment =
-            tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
 
         val foundComment = tb.admin.taskComment.findTaskComment(
             projectId = project.id,
@@ -287,8 +287,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment =
-            tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertUpdateFail(
@@ -364,8 +363,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment =
-            tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
 
         tb.admin.taskComment.deleteTaskComment(
             projectId = project.id,
@@ -387,8 +385,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment =
-            tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertDeleteFail(

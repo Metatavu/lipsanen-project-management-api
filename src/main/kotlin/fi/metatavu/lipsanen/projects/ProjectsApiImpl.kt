@@ -22,6 +22,9 @@ import kotlinx.coroutines.async
 import java.io.File
 import java.util.*
 
+/**
+ * Projects API implementation
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
@@ -42,13 +45,12 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
     override fun listProjects(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val keycloakGroupIds = if (isAdmin()) {
-            null
+        val (projects, count) = if (isAdmin()) {
+             projectController.listProjects(first, max)
         } else {
-            userController.listUserGroups(userId).map { UUID.fromString(it.id) }
+            val user = userController.findUserByKeycloakId(userId) ?: return@async createInternalServerError("Failed to find a user")
+            projectController.listProjectsForUser(user, first, max)
         }
-
-        val (projects, count) = projectController.listProjects(keycloakGroupIds, first, max)
         return@async createOk(projects.map { projectTranslator.translate(it) }, count)
     }.asUni()
 
@@ -87,9 +89,6 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
                     projectId
                 )
             )
-            if (!projectController.hasAccessToProject(existingProject, userId)) {
-                return@async createForbidden(NO_PROJECT_RIGHTS)
-            }
             val updated = projectController.updateProject(existingProject, project, userId) ?: return@async createInternalServerError(
                 "Failed to update a project"
             )
@@ -99,20 +98,13 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun deleteProject(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
         val existingProject = projectController.findProject(projectId) ?: return@async createNotFound(
             createNotFoundMessage(
                 PROJECT,
                 projectId
             )
         )
-        if (!projectController.hasAccessToProject(existingProject, userId)) {
-            return@async createForbidden(NO_PROJECT_RIGHTS)
-        }
-        val error = projectController.deleteProject(existingProject)
-        if (error != null) {
-            return@async createInternalServerError("Failed to delete a project")
-        }
+        projectController.deleteProject(existingProject)
         return@async createNoContent()
     }.asUni()
 

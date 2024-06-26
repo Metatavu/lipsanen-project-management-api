@@ -8,6 +8,7 @@ import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -32,6 +33,9 @@ class ChangeProposalController {
 
     @Inject
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var userController: UserController
 
     /**
      * Creates a new proposal
@@ -204,7 +208,8 @@ class ChangeProposalController {
             message = "Change proposal status changed to $newStatus",
             type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
             taskEntity = proposal.task,
-            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            receivers = taskAssigneeRepository.listByTask(proposal.task).map { it.user }
+                .plus(userController.findUser(proposal.creatorId)).filterNotNull().distinctBy { it.id },
             creatorId = userId
         )
     }
@@ -223,7 +228,8 @@ class ChangeProposalController {
             message = "Change proposal created",
             type = NotificationType.CHANGE_PROPOSAL_CREATED,
             taskEntity = proposal.task,
-            receiverIds = listOf(proposal.creatorId) + taskAssigneeRepository.listByTask(proposal.task).map { it.assigneeId },
+            receivers = taskAssigneeRepository.listByTask(proposal.task).map { it.user }
+                .plus(userController.findUser(proposal.creatorId)).filterNotNull().distinctBy { it.id },
             creatorId = userId
         )
     }

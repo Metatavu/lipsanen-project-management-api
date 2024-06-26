@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.test.client.apis.UsersApi
 import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.User
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.fail
 import java.util.*
@@ -21,7 +22,6 @@ class UserTestBuilderResource (
 ) : ApiTestBuilderResource<User, UsersApi>(testBuilder, apiClient) {
 
     val user1Id = UUID.fromString("f4c1e6a1-705a-471a-825d-1982b5112ebd")
-    val user2Id = UUID.fromString("ef89e98e-6aa3-4511-9b80-ff98bd87fe37")
 
     override fun clean(p0: User?) {
         p0?.id?.let { api.deleteUser(it) }
@@ -42,6 +42,15 @@ class UserTestBuilderResource (
         return addClosable(api.createUser(user))
     }
 
+    fun create(username: String, role: UserRole): User {
+        return addClosable(api.createUser(User(
+            email = "$username@example.com",
+            firstName = username,
+            lastName = username,
+            roles = arrayOf(role)
+        )))
+    }
+
     /**
      * Finds a user
      *
@@ -49,8 +58,8 @@ class UserTestBuilderResource (
      * @param includeRoles
      * @return found user
      */
-    fun findUser(userId: UUID, includeRoles: Boolean? = null): User {
-        return api.findUser(userId, includeRoles)
+    fun findUser(userId: UUID): User {
+        return api.findUser(userId, includeRoles = true)
     }
 
     /**
@@ -64,10 +73,9 @@ class UserTestBuilderResource (
     fun listUsers(
         companyId: UUID? = null,
         first: Int? = null,
-        max: Int? = null,
-        includeRoles: Boolean? = null
+        max: Int? = null
     ): Array<User> {
-        return api.listUsers(companyId = companyId, first = first, max = max, includeRoles = includeRoles)
+        return api.listUsers(companyId = companyId, first = first, max = max)
     }
 
     /**

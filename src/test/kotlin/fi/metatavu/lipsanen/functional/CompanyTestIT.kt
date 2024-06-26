@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
 import fi.metatavu.lipsanen.test.client.models.Company
+import fi.metatavu.lipsanen.test.client.models.UserRole
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -101,10 +102,11 @@ class CompanyTestIT : AbstractFunctionalTest() {
         val company = it.admin.company.create(Company("Company 1"))
 
         //cannot delete company which has users
-        val user = it.admin.user.listUsers()[0]
-        it.admin.user.updateUser(user.id!!, user.copy(companyId = company.id))
+        val createdUser = it.admin.user.create("test", UserRole.USER)
+        it.admin.user.updateUser(userId = createdUser.id!!, user = createdUser.copy(companyId = company.id))
+
         it.admin.company.assertDeleteFail(409, company.id!!)
-        it.admin.user.updateUser(user.id, user.copy(companyId = null))
+        it.admin.user.updateUser(userId = createdUser.id, user = createdUser .copy(companyId = null))
 
         //access rights
         it.user.company.assertDeleteFail(403, company.id)

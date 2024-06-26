@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsC
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.quarkus.scheduler.Scheduled
 import io.smallrye.mutiny.coroutines.asUni
@@ -21,6 +22,9 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+/**
+ * Controller for notifications
+ */
 @ApplicationScoped
 class NotificationsController {
 
@@ -81,13 +85,14 @@ class NotificationsController {
     }
 
     /**
-     *Creates a new notification and sends the notification events to the needed receivers (e.g. admins + custom receivers)
+     *Creates a new notification and sends the notification events to the needed receivers
+     * (e.g. admins + custom receivers)
      *
      * @param message notification message
      * @param type notification type
      * @param taskEntity task
      * @param comment task comment
-     * @param receiverIds receiver ids
+     * @param receivers receivers
      * @param creatorId creator id
      * @return created notification
      */
@@ -95,8 +100,8 @@ class NotificationsController {
         message: String,
         type: NotificationType,
         taskEntity: TaskEntity,
+        receivers: List<UserEntity> = emptyList(),
         comment: TaskCommentEntity? = null,
-        receiverIds: List<UUID> = emptyList(),
         creatorId: UUID,
     ): NotificationEntity {
         val notification = notificationRepository.create(
@@ -107,12 +112,14 @@ class NotificationsController {
             comment = comment
         )
 
-        val notificationReceivers = (usersController.getAdmins().map { UUID.fromString(it.id) } + receiverIds).distinct()
+        val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }
+        val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUserByKeycloakId(it) }
 
-        notificationReceivers.forEach { receiverId ->
+        val notificationReceivers = (adminEntities + receivers).distinctBy { it.id }
+        notificationReceivers.forEach { receiver ->
             notificationEventsController.create(
                 notification = notification,
-                receiverId = receiverId,
+                receiver = receiver,
                 creatorId = creatorId
             )
         }

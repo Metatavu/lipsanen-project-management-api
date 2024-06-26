@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.notifications.notificationevents
 
 import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.persistence.Metadata
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.persistence.*
 import java.util.*
 
@@ -18,8 +19,8 @@ class NotificationEventEntity : Metadata() {
     @ManyToOne
     lateinit var notification: NotificationEntity
 
-    @Column(nullable = false)
-    lateinit var receiverId: UUID
+    @ManyToOne
+    lateinit var receiver: UserEntity
 
     @Column(nullable = false)
     var readStatus: Boolean? = null

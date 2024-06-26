@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 
 import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
+import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
@@ -10,6 +11,7 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentContro
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
+import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
@@ -100,6 +102,7 @@ class TaskController {
      * @param task task
      * @param userId user id
      * @return created task
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
         val taskEntity = taskEntityRepository.create(
@@ -109,25 +112,29 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             status = TaskStatus.NOT_STARTED,
-            userRole = task.userRole ?: UserRole.USER,
             estimatedDuration = task.estimatedDuration,
             estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
             lastModifierId = userId
         )
 
-        task.assigneeIds?.forEach { assigneeId ->
-            if (!projectController.hasAccessToProject(milestone.project, assigneeId)) {
+        val assignees = task.assigneeIds?.map { assigneeId ->
+            val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
+            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
                 logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
-                userController.assignUserToProjectGroups(userController.findUser(assigneeId)!!, emptyArray(), listOf(milestone.project.keycloakGroupId))
+                userController.assignUserToProjects(
+                    user = user,
+                    newProjects = listOf(milestone.project)
+                )
             }
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
-                assigneeId = assigneeId
+                user = user
             )
-        }
-        notifyTaskAssignments(taskEntity, task.assigneeIds ?: emptyList(), userId)
+            user
+        } ?: emptyList()
+        notifyTaskAssignments(taskEntity, assignees, userId)
 
         task.attachmentUrls?.forEach { attachmentUrl ->
             taskAttachmentRepository.create(
@@ -183,6 +190,7 @@ class TaskController {
      * @param userId user id
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -199,9 +207,10 @@ class TaskController {
         }
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
+        Panache.flush()
         updateAttachments(existingTask, newTask)
         if (existingTask.status != newTask.status) {
-            notifyTaskStatusChange(existingTask, newTask.assigneeIds ?: emptyList(), userId)
+            notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
 
         val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
@@ -211,7 +220,6 @@ class TaskController {
         updatedTask.estimatedDuration = newTask.estimatedDuration
         updatedTask.estimatedReadiness = newTask.estimatedReadiness
         updatedTask.lastModifierId = userId
-
 
         return taskEntityRepository.persistSuspending(updatedTask)
     }
@@ -246,27 +254,30 @@ class TaskController {
      * @param existingTask existing task
      * @param newAssigneeIds new assignee ids
      * @param userId user id
+     * @throws UserNotFoundException if assignee is not found
      */
     suspend fun updateAssignees(
         existingTask: TaskEntity,
         newAssigneeIds: List<UUID>?,
         userId: UUID
     ) {
-        val existingAssignees = taskAssigneeRepository.listByTask(existingTask)
+        val asssignedUsers = taskAssigneeRepository.listByTask(existingTask)
+        val assignedUserIds = asssignedUsers.map { it.user.id }
         val newAssignees = newAssigneeIds ?: emptyList()
-        existingAssignees.forEach { existingAssignee ->
-            if (existingAssignee.assigneeId !in newAssignees) {
+
+        asssignedUsers.forEach { existingAssignee ->
+            if (existingAssignee.user.id !in newAssignees) {
                 taskAssigneeRepository.deleteSuspending(existingAssignee)
             }
         }
         newAssignees.forEach { newAssigneeId ->
-            if (existingAssignees.none { it.assigneeId == newAssigneeId }) {
-                if (!projectController.hasAccessToProject(existingTask.milestone.project, newAssigneeId)) {
-                    logger.info("Assigning user $newAssigneeId to project ${existingTask.milestone.project.keycloakGroupId} because of the task assignment")
-                    userController.assignUserToProjectGroups(userController.findUser(newAssigneeId)!!, emptyArray(), listOf(existingTask.milestone.project.keycloakGroupId))
+            if (assignedUserIds.none { it == newAssigneeId }) {
+                val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
+                if (!projectController.hasAccessToProject(existingTask.milestone.project, user.keycloakId)) {
+                    userController.assignUserToProjects(user, listOf(existingTask.milestone.project))
                 }
-                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, newAssigneeId)
-                notifyTaskAssignments(existingTask, newAssignees, userId)
+                taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
+                notifyTaskAssignments(existingTask, listOf(user), userId)
             }
         }
     }
@@ -302,33 +313,6 @@ class TaskController {
         val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalMode)
         updatedTask.lastModifierId = userId
         return taskEntityRepository.persistSuspending(updatedTask)
-    }
-
-    /**
-     * Deletes a task and related entities
-     *
-     * @param foundTask task to delete
-     */
-    suspend fun delete(foundTask: TaskEntity) {
-        notificationsController.list(task = foundTask).forEach {
-            notificationsController.delete(it)
-        }
-        taskConnectionController.list(foundTask).forEach {
-            taskConnectionController.delete(it)
-        }
-        proposalController.list(foundTask).forEach {
-            proposalController.delete(it)
-        }
-        taskAssigneeRepository.listByTask(foundTask).forEach {
-            taskAssigneeRepository.deleteSuspending(it)
-        }
-        taskAttachmentRepository.listByTask(foundTask).forEach {
-            taskAttachmentRepository.deleteSuspending(it)
-        }
-        taskCommentController.listTaskComments(foundTask).first.forEach {
-            taskCommentController.deleteTaskComment(it)
-        }
-        taskEntityRepository.deleteSuspending(foundTask)
     }
 
     /**
@@ -380,31 +364,60 @@ class TaskController {
      * @param receivers task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskAssignments(task: TaskEntity, receivers: List<UUID>, userId: UUID) {
-        notificationsController.createAndNotify(
-            message = "User has been assigned to task ${task.name}",
-            type = NotificationType.TASK_ASSIGNED,
-            taskEntity = task,
-            receiverIds = receivers,
-            creatorId = userId
-        )
+    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
+        taskAssigneeRepository.listByTask(task).forEach {
+            notificationsController.createAndNotify(
+                message = "User has been assigned to task ${task.name}",
+                type = NotificationType.TASK_ASSIGNED,
+                taskEntity = task,
+                receivers = assignees,
+                creatorId = userId
+            )
+        }
     }
 
     /**
      * Creates notifications of task status updates
      *
      * @param task task
-     * @param receivers task assignees
+     * @param assignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskStatusChange(task: TaskEntity, receivers: List<UUID>, userId: UUID) {
+    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
             message = "Status changed to ${task.status}",
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
-            receiverIds = receivers,
+            receivers = assignees,
             creatorId = userId
         )
+    }
+
+    /**
+     * Deletes a task and related entities
+     *
+     * @param foundTask task to delete
+     */
+    suspend fun delete(foundTask: TaskEntity) {
+        notificationsController.list(task = foundTask).forEach {
+            notificationsController.delete(it)
+        }
+        taskConnectionController.list(foundTask).forEach {
+            taskConnectionController.delete(it)
+        }
+        proposalController.list(foundTask).forEach {
+            proposalController.delete(it)
+        }
+        taskAssigneeRepository.listByTask(foundTask).forEach {
+            taskAssigneeRepository.deleteSuspending(it)
+        }
+        taskAttachmentRepository.listByTask(foundTask).forEach {
+            taskAttachmentRepository.deleteSuspending(it)
+        }
+        taskCommentController.listTaskComments(foundTask).first.forEach {
+            taskCommentController.deleteTaskComment(it)
+        }
+        taskEntityRepository.deleteSuspending(foundTask)
     }
 
     /**
