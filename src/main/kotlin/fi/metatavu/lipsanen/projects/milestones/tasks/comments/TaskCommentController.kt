@@ -9,6 +9,7 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
+import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.util.*
@@ -51,7 +52,7 @@ class TaskCommentController {
         max: Int? = null
     ): Pair<List<TaskCommentEntity>, Long> {
         return taskCommentRepository.applyFirstMaxToQuery(
-            taskCommentRepository.find("task", task),
+            taskCommentRepository.find("task", Sort.descending("createdAt"), task),
             first,
             max
         )
