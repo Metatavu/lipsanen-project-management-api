@@ -6,6 +6,7 @@ import io.smallrye.mutiny.Uni
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
+import org.jboss.logging.Logger
 import java.util.*
 
 /**
@@ -30,6 +31,9 @@ class KeycloakAdminClient : KeycloakClient() {
     @Inject
     lateinit var vertxCore: io.vertx.core.Vertx
 
+    @Inject
+    lateinit var logger: Logger
+
     /**
      * Finds a user by id
      *
@@ -37,7 +41,12 @@ class KeycloakAdminClient : KeycloakClient() {
      * @return found user or null if not found
      */
     suspend fun findUserById(userId: UUID): UserRepresentation? {
-        return getUserApi().realmUsersIdGet(realm = getRealm(), id = userId.toString())
+        return try {
+            getUserApi().realmUsersIdGet(realm = getRealm(), id = userId.toString())
+        } catch (e: Exception) {
+            logger.error("Failed to find user by id", e)
+            null
+        }
     }
 
     /**
