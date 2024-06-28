@@ -75,7 +75,7 @@ class CompaniesApiImpl : CompaniesApi, AbstractApi() {
     override fun deleteCompany(companyId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val foundCompany = companyController.find(companyId) ?: return@async createNotFound(createNotFoundMessage(COMPANY, companyId))
 
-        if (userController.listUserEntities(foundCompany).second > 0) {
+        if (userController.listUsers(foundCompany, null, null).second > 0) {
             return@async createConflict("Company has users")
         }
 
