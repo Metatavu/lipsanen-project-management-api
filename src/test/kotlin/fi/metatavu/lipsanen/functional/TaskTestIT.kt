@@ -34,6 +34,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
 
+        val admin = tb.admin.user.create("admin1", UserRole.ADMIN)
         val testUser1 = tb.admin.user.create("test0", UserRole.USER)
         val testUser2 = tb.admin.user.create("test1", UserRole.USER)
 
@@ -50,7 +51,7 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         )
 
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
+        val task = tb.getUser("admin1@example.com").task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
 
         assertNotNull(task)
         assertNotNull(task.id)
@@ -64,6 +65,9 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
         assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
+
+        val creator = tb.admin.user.findUser(task.metadata!!.creatorId!!)
+        assertEquals(admin.id, creator.id)
     }
 
     @Test
