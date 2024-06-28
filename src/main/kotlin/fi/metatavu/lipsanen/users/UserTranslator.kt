@@ -37,6 +37,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
             email = userRepresentation.email ?: "",
             firstName = userRepresentation.firstName ?: "",
             lastName = userRepresentation.lastName ?: "",
+            jobPositionId = entity.userEntity.jobPosition?.id,
             companyId = entity.userEntity.company?.id,
             lastLoggedIn = if (lastEvent?.time == null) null else OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastEvent.time), ZoneOffset.UTC),
             projectIds = projects.map { it.project.id },

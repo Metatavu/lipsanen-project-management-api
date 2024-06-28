@@ -4,6 +4,7 @@ import fi.metatavu.keycloak.adminclient.models.*
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
+import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.enterprise.context.ApplicationScoped
@@ -76,13 +77,14 @@ class UserController {
 
     /**
      * Lists users (except for admin user) from keycloak and local db
+     * If the test mode then users are created to the local db if they are not found
      *
      * @param first first result
      * @param max max results
      * @return users
      */
     suspend fun listUsers(company: CompanyEntity?, first: Int?, max: Int?): Pair<List<UserFullRepresentation>, Long> {
-        val (userEntities, entitiesCount) = userRepository.list(company, first, max)
+        val (userEntities, entitiesCount) = userRepository.list(companyEntity = company, firstResult =  first, maxResults = max)
         var totalCount = entitiesCount
         val userReprensentations = userEntities.map {
             val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.keycloakId.toString()))
@@ -106,15 +108,16 @@ class UserController {
     /**
      * Lists users from local db
      *
-     * @param companyId company id
+     * @param companyEntity company entity
+     * @param jobPosition job position
      * @return array of users
      */
-    suspend fun listUsers(companyEntity: CompanyEntity): Pair<List<UserEntity>, Long> {
-        return userRepository.list(companyEntity, null, null)
+    suspend fun listUserEntities(companyEntity: CompanyEntity? = null, jobPosition: JobPositionEntity? = null): Pair<List<UserEntity>, Long> {
+        return userRepository.list(companyEntity, jobPosition, null, null)
     }
 
     /**
-     * Lists the admins
+     * Finds the admins
      */
     suspend fun getAdmins(): Array<UserRepresentation> {
         return keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameUsersGet(
@@ -129,10 +132,17 @@ class UserController {
      * If test mode then no need to update the password, default password is used, no email is sent.
      *
      * @param user user
-     * @param groupIds user group ids to assign to
+     * @param company company
+     * @param jobPosition job position
+     * @param projects projects
      * @return created user
      */
-    suspend fun createUser(user: User, company: CompanyEntity?, projects: List<ProjectEntity>?): UserFullRepresentation? {
+    suspend fun createUser(
+        user: User,
+        company: CompanyEntity?,
+        jobPosition: JobPositionEntity?,
+        projects: List<ProjectEntity>?
+    ): UserFullRepresentation? {
         return runCatching {
             val userRepresentation = createUserRepresentation(user)
             keycloakAdminClient.getUsersApi().realmUsersPost(
@@ -150,7 +160,8 @@ class UserController {
             val userEntity = userRepository.create(
                 id = UUID.randomUUID(),
                 keycloakId = UUID.fromString(keycloakUser.id),
-                company = company
+                company = company,
+                jobPosition = jobPosition
             )
             assignUserToProjects(userEntity, projects ?: emptyList())
 
@@ -171,6 +182,16 @@ class UserController {
             logger.error("Failed to create user:", it)
             null
         }
+    }
+
+    /**
+     * Persists user entity
+     *
+     * @param userEntity user entity
+     * @return persisted user entity
+     */
+    suspend fun persistUserEntity(userEntity: UserEntity): UserEntity {
+        return userRepository.persistSuspending(userEntity)
     }
 
     /**
@@ -247,7 +268,8 @@ class UserController {
         existingUser: UserEntity,
         updateData: User,
         company: CompanyEntity?,
-        projects: List<ProjectEntity>?
+        projects: List<ProjectEntity>?,
+        jobPosition: JobPositionEntity?
     ): UserFullRepresentation? {
         val currentKeycloakRepresentation = findKeycloakUser(existingUser.keycloakId) ?: return null
         val updatedRepresentation = currentKeycloakRepresentation.copy(
@@ -263,6 +285,7 @@ class UserController {
             )
 
             existingUser.company = company
+            existingUser.jobPosition = jobPosition
             userRepository.persistSuspending(existingUser)
 
             // Assign user to selected roles

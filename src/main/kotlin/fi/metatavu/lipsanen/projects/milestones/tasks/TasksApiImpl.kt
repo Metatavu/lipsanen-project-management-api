@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.Task
 import fi.metatavu.lipsanen.api.spec.TasksApi
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.exceptions.UserNotFoundException
+import fi.metatavu.lipsanen.positions.JobPositionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionRepository
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
@@ -44,6 +45,9 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     lateinit var userController: UserController
 
     @Inject
+    lateinit var jobPositionController: JobPositionController
+
+    @Inject
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
@@ -77,9 +81,16 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
+            val jobPosition = if (task.jobPositionId != null) {
+                jobPositionController.findJobPosition(task.jobPositionId) ?: return@async createBadRequest(
+                    createNotFoundMessage(JOB_POSITION, task.jobPositionId)
+                )
+            } else null
+
             try {
                 val createdTask = taskController.create(
                     milestone = projectMilestone!!.first,
+                    jobPosition = jobPosition,
                     task = task,
                     userId = userId
                 )
@@ -126,6 +137,14 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
+            val jobPosition = if (foundTask.jobPosition?.id != task.jobPositionId) {
+                if (task.jobPositionId != null) {
+                    jobPositionController.findJobPosition(task.jobPositionId) ?: return@async createBadRequest(
+                        createNotFoundMessage(JOB_POSITION, task.jobPositionId)
+                    )
+                } else null
+            } else foundTask.jobPosition
+
             // Verify that nothing blocks it from updating
             val updateError = taskController.isNotUpdatable(
                 existingTask = foundTask,
@@ -140,6 +159,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                     existingTask = foundTask,
                     newTask = task,
                     milestone = projectMilestone.first,
+                    jobPosition = jobPosition,
                     userId = userId
                 )
                 return@async createOk(taskTranslator.translate(updatedTask))

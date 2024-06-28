@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.persistence.Metadata
+import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import jakarta.persistence.*
 import java.time.LocalDate
@@ -20,6 +21,9 @@ class TaskEntity : Metadata() {
 
     @ManyToOne
     lateinit var milestone: MilestoneEntity
+
+    @ManyToOne
+    var jobPosition: JobPositionEntity? = null
 
     @Column(nullable = false)
     lateinit var name: String

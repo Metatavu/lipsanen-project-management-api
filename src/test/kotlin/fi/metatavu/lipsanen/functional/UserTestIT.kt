@@ -88,6 +88,8 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testUpdateUser() = createTestBuilder().use {
+        val position = it.admin.jobPosition.create("a")
+        val position2 = it.admin.jobPosition.create("b")
         val project = it.admin.project.create()
         val project2 = it.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
         val userData = User(
@@ -95,7 +97,8 @@ class UserTestIT: AbstractFunctionalTest() {
             lastName = "usertest",
             email = "usertest@example.com",
             projectIds = arrayOf(project.id!!),
-            roles = arrayOf(UserRole.USER)
+            roles = arrayOf(UserRole.USER),
+            jobPositionId = position.id
         )
         val createdUser = it.admin.user.create(userData)
 
@@ -103,7 +106,8 @@ class UserTestIT: AbstractFunctionalTest() {
             firstName = "Updated",
             lastName = "User",
             projectIds = arrayOf(project2.id!!),
-            roles = arrayOf(UserRole.ADMIN)
+            roles = arrayOf(UserRole.ADMIN),
+            jobPositionId = position2.id
         )
 
         it.admin.user.updateUser(createdUser.id!!, updatedUserData)
@@ -114,6 +118,7 @@ class UserTestIT: AbstractFunctionalTest() {
         assertEquals(updatedUserData.email, foundUser.email)
         assertEquals(updatedUserData.projectIds!![0], foundUser.projectIds!![0])
         assertEquals(updatedUserData.roles!![0], foundUser.roles!![0])
+        assertEquals(updatedUserData.jobPositionId, foundUser.jobPositionId)
 
         it.admin.user.assertUpdateFailStatus(404, UUID.randomUUID(), updatedUserData)
         it.user.user.assertUpdateFailStatus(403, createdUser.id, updatedUserData)

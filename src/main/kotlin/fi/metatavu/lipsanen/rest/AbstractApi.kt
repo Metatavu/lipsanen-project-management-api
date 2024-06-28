@@ -278,6 +278,7 @@ abstract class AbstractApi {
         const val TASK_CONNECTION = "Task connection"
         const val CHANGE_PROPOSAL = "Change proposal"
         const val TASK_COMMENT = "Task comment"
+        const val JOB_POSITION = "Job position"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
         const val WRONG_PROJECT_STAGE = "Project is not in planning stage"

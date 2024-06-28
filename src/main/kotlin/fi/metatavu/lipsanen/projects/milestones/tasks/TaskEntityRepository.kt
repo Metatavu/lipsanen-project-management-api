@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.projects.milestones.tasks
 import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.persistence.AbstractRepository
+import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
@@ -36,6 +37,8 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         status: TaskStatus,
         estimatedDuration: Float?,
         estimatedReadiness: Int?,
+        userRole: UserRole?,
+        jobPosition: JobPositionEntity?,
         creatorId: UUID,
         lastModifierId: UUID
     ): TaskEntity {
@@ -45,6 +48,8 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         taskEntity.startDate = startDate
         taskEntity.endDate = endDate
         taskEntity.milestone = milestone
+        taskEntity.userRole = userRole
+        taskEntity.jobPosition = jobPosition
         taskEntity.status = status
         taskEntity.estimatedDuration = estimatedDuration
         taskEntity.estimatedReadiness = estimatedReadiness

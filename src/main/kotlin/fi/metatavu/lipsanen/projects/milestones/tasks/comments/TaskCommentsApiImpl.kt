@@ -147,7 +147,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
                 "Referenced user $referencedUserId does not exist"
             )
             if (!projectController.hasAccessToProject(task.milestone.project, user.keycloakId)) {
-                return@async createBadRequest("Referenced user $referencedUserId has no access to the project")
+                return@async createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
             }
         }
 
