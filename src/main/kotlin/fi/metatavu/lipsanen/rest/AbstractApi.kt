@@ -40,6 +40,15 @@ abstract class AbstractApi {
     }
 
     /**
+     * Checks if user is project owner
+     *
+     * @return if user is project owner
+     */
+    protected fun isProjectOwner(): Boolean {
+        return identity.hasRole(UserRole.PROJECT_OWNER.NAME)
+    }
+
+    /**
      * Returns logged user id
      *
      * @return logged user id
@@ -260,6 +269,30 @@ abstract class AbstractApi {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return milestone to project to null
+    }
+
+    /**
+     * Returns project or error response, checks project access rights (does not apply to global admin)
+     *
+     * @param projectId project id
+     * @param userId user id
+     * @return project or error response
+     */
+    open suspend fun getProjectAccessRights(
+        projectId: UUID,
+        userId: UUID
+    ): Pair<ProjectEntity?, Response?> {
+        val project = projectController.findProject(projectId) ?: return null to createNotFound(
+            createNotFoundMessage(
+                PROJECT,
+                projectId
+            )
+        )
+
+        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+            return null to createForbidden(NO_PROJECT_RIGHTS)
+        }
+        return project to null
     }
 
     companion object {

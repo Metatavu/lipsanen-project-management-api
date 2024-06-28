@@ -44,7 +44,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listTaskComments(
         projectId: UUID,
         milestoneId: UUID,
@@ -65,7 +65,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTaskComment(
         projectId: UUID,
         milestoneId: UUID,
@@ -93,7 +93,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         createOk(taskCommentTranslator.translate(createdComment))
     }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -114,7 +114,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun updateTaskComment(
         projectId: UUID,
         milestoneId: UUID,
@@ -140,7 +140,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
             createNotFoundMessage(TASK_COMMENT, commentId)
         )
 
-        if (comment.creatorId != userId) return@async createForbidden("Cannot edit not own comment")
+        if (!isAdmin() && !isProjectOwner() && comment.creatorId != userId) return@async createForbidden("Cannot edit not own comment")
 
         taskComment.referencedUsers.forEach { referencedUserId ->
             val user = userController.findUser(referencedUserId) ?: return@async createBadRequest(
@@ -156,7 +156,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun deleteTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -176,7 +176,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
                 createNotFoundMessage(TASK_COMMENT, commentId)
             )
 
-            if (comment.creatorId != userId) return@async createForbidden("Cannot delete not own comment")
+            if (!isAdmin() && !isProjectOwner() && comment.creatorId != userId) return@async createForbidden("Cannot delete not own comment")
 
             taskCommentController.deleteTaskComment(comment)
             createNoContent()

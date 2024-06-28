@@ -58,6 +58,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
                 when (it.name) {
                     "admin" -> UserRole.ADMIN
                     "user" -> UserRole.USER
+                    "project-owner" -> UserRole.PROJECT_OWNER
                     else -> null
                 }
             }

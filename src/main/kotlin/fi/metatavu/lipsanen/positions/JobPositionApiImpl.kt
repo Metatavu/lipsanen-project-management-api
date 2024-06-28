@@ -36,7 +36,7 @@ class JobPositionApiImpl: JobPositionsApi, AbstractApi() {
     @Inject
     lateinit var jobPositionTranslator: JobPositionTranslator
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listJobPositions(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val (jobPositions, count) = jobPositionController.list(first = first, max = max)
         createOk(jobPositions.map { jobPositionTranslator.translate(it) }, count)
@@ -53,7 +53,7 @@ class JobPositionApiImpl: JobPositionsApi, AbstractApi() {
         createOk(jobPositionTranslator.translate(created))
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findJobPosition(positionId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val found = jobPositionController.findJobPosition(positionId) ?: return@async createNotFound("Job position not found")
         createOk(jobPositionTranslator.translate(found))

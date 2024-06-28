@@ -34,81 +34,61 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listProjectMilestones(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
 
-        val project = projectController.findProject(projectId) ?: return@async createNotFound(
-            createNotFoundMessage(PROJECT, projectId)
-        )
+        val ( project, response ) = getProjectAccessRights(projectId, userId)
+        response?.let { return@async response}
 
-        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
-            return@async createForbidden(NO_PROJECT_RIGHTS)
-        }
-
-        val milestones = milestoneController.list(project)
+        val milestones = milestoneController.list(project!!)
         createOk(milestoneTranslator.translate(milestones))
     }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun createProjectMilestone(projectId: UUID, milestone: Milestone): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(PROJECT, projectId)
-            )
-
-            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
-                return@async createBadRequest(WRONG_PROJECT_STAGE)
-            }
+            val ( project, response ) = getProjectAccessRights(projectId, userId)
+            response?.let { return@async response }
 
             if(milestone.endDate.isBefore(milestone.startDate)) {
                 return@async createBadRequest("End date cannot be before start date")
             }
 
             val createdMilestone = milestoneController.create(
-                project = project,
+                project = project!!,
                 milestone = milestone,
                 userId = userId
             )
             createOk(milestoneTranslator.translate(createdMilestone))
         }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findProjectMilestone(projectId: UUID, milestoneId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(PROJECT, projectId)
-            )
-            if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
-                return@async createForbidden(NO_PROJECT_RIGHTS)
-            }
-            val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(MILESTONE, milestoneId)
-            )
+            val ( projectMilestone, response ) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+            response?.let { return@async response}
 
-            createOk(milestoneTranslator.translate(milestone))
+            createOk(milestoneTranslator.translate(projectMilestone!!.first))
         }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateProjectMilestone(projectId: UUID, milestoneId: UUID, milestone: Milestone): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(PROJECT, projectId)
-            )
+            val ( projectMilestone, response ) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+            response?.let { return@async response}
+            val ( foundMilestone, foundProject ) = projectMilestone!!
 
-            val isProjectPlanningStage = projectController.isInPlanningStage(project)
-            if (!isAdmin() && !isProjectPlanningStage) {
-                return@async createBadRequest(WRONG_PROJECT_STAGE)
+            val isProjectPlanningStage = projectController.isInPlanningStage(foundProject)
+
+            if (!isAdmin() && !isProjectOwner() && isProjectPlanningStage) {
+                return@async createBadRequest(INVALID_PROJECT_STATE)
             }
-
-            val foundMilestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(MILESTONE, milestoneId)
-            )
 
             if (milestone.endDate.isBefore(milestone.startDate)) {
                 return@async createBadRequest("End date cannot be before start date")
@@ -127,23 +107,16 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             createOk(milestoneTranslator.translate(updatedMilestone))
         }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun deleteProjectMilestone(projectId: UUID, milestoneId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val project = projectController.findProject(projectId) ?: return@async createNotFound(
-                createNotFoundMessage(PROJECT, projectId)
-            )
-            val milestone = milestoneController.find(project, milestoneId) ?: return@async createNotFound(
-                createNotFoundMessage(MILESTONE, milestoneId)
-            )
+            val ( projectMilestone, response ) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+            response?.let { return@async response}
+            val ( foundMilestone, _ ) = projectMilestone!!
 
-            if (!isAdmin() && !projectController.isInPlanningStage(project)) {
-                return@async createBadRequest(WRONG_PROJECT_STAGE)
-            }
-
-            milestoneController.delete(milestone)
+            milestoneController.delete(foundMilestone)
             createNoContent()
         }.asUni()
 
