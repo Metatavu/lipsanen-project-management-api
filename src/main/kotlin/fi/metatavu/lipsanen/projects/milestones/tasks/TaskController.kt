@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.notifications.NotificationsController
+import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
@@ -104,13 +105,20 @@ class TaskController {
      * @return created task
      * @throws UserNotFoundException if assignee is not found
      */
-    suspend fun create(milestone: MilestoneEntity, task: Task, userId: UUID): TaskEntity {
+    suspend fun create(
+        milestone: MilestoneEntity,
+        jobPosition: JobPositionEntity?,
+        task: Task,
+        userId: UUID
+    ): TaskEntity {
         val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
             startDate = task.startDate,
             endDate = task.endDate,
             milestone = milestone,
+            jobPosition = jobPosition,
+            userRole = task.userRole,
             status = TaskStatus.NOT_STARTED,
             estimatedDuration = task.estimatedDuration,
             estimatedReadiness = task.estimatedReadiness,
@@ -186,8 +194,10 @@ class TaskController {
      *
      * @param existingTask existing task
      * @param newTask new task
-     * @param milestone milestone
+     * @param milestone milestone (is not updatable but its dadta is needed)
+     * @param jobPosition position
      * @param userId user id
+     *
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      * @throws UserNotFoundException if assignee is not found
@@ -196,6 +206,7 @@ class TaskController {
         existingTask: TaskEntity,
         newTask: Task,
         milestone: MilestoneEntity,
+        jobPosition: JobPositionEntity?,
         userId: UUID
     ): TaskEntity {
         //if the task extends beyond the milestone, the milestone is updated to fit that task
@@ -219,6 +230,7 @@ class TaskController {
         updatedTask.userRole = newTask.userRole ?: UserRole.USER
         updatedTask.estimatedDuration = newTask.estimatedDuration
         updatedTask.estimatedReadiness = newTask.estimatedReadiness
+        updatedTask.jobPosition = jobPosition
         updatedTask.lastModifierId = userId
 
         return taskEntityRepository.persistSuspending(updatedTask)

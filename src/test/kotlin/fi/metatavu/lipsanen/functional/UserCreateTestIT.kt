@@ -25,6 +25,7 @@ class UserCreateTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testCreateUser() = createTestBuilder().use {
+        val jobPosition = it.admin.jobPosition.create("Test")
         val project = it.admin.project.create()
         val createdCompany = it.admin.company.create()
         val userData = User(
@@ -32,7 +33,8 @@ class UserCreateTestIT: AbstractFunctionalTest() {
             lastName = "usertest",
             email = "usertest@example.com",
             projectIds = arrayOf(project.id!!),
-            companyId = createdCompany.id
+            companyId = createdCompany.id,
+            jobPositionId = jobPosition.id
         )
         val createdUser = it.admin.user.create(userData)
         assertEquals(userData.firstName, createdUser.firstName)
@@ -40,10 +42,9 @@ class UserCreateTestIT: AbstractFunctionalTest() {
         assertEquals(userData.email, createdUser.email)
         assertEquals(userData.companyId, createdUser.companyId)
         assertEquals(userData.projectIds!![0], createdUser.projectIds!![0])
+        assertEquals(userData.jobPositionId, createdUser.jobPositionId)
         assertNotNull(createdUser.id)
         assertNull(createdUser.lastLoggedIn)
-
-        val foundUser = it.admin.user.findUser(createdUser.id!!)
 
         val smptTestPort = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-port", Int::class.java)
         val smtpTestHost = ConfigProvider.getConfig().getValue("lipsanen.smtp.http.test-host", String::class.java)
