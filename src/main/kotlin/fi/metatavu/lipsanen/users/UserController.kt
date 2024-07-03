@@ -107,7 +107,7 @@ class UserController {
     }
 
     /**
-     * Lists users from local db
+     * Lists users
      *
      * @param companyEntity company entity
      * @param jobPosition job position
@@ -130,7 +130,6 @@ class UserController {
     /**
      * Creates a new user with unconfirmed password and email and sends the
      * email with reset password action to the user
-     * If test mode then no need to update the password, default password is used, no email is sent.
      *
      * @param user user
      * @param company company
@@ -309,7 +308,7 @@ class UserController {
      * @param userRepresentation user representation
      * @param roles roles to assign
      */
-    suspend fun assignRoles(userRepresentation: UserRepresentation, roles: List<fi.metatavu.lipsanen.api.model.UserRole>?) {
+    suspend fun assignRoles(userRepresentation: UserRepresentation, roles: List<UserRole>?) {
         if (roles == null) {
             //nothing is being updated if roles are null
             return
@@ -429,7 +428,7 @@ class UserController {
      * @param userRole user role
      * @return translated role
      */
-    private fun translateRole(userRole: fi.metatavu.lipsanen.api.model.UserRole): String {
+    private fun translateRole(userRole: UserRole): String {
         return when (userRole) {
             UserRole.ADMIN -> "admin"
             UserRole.USER -> "user"

@@ -41,7 +41,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listChangeProposals(
         projectId: UUID,
         milestoneId: UUID,
@@ -69,7 +69,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         createOk(changeProposalTranslator.translate(changeProposals), count)
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun createChangeProposal(
         projectId: UUID,
@@ -88,7 +88,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         createOk(changeProposalTranslator.translate(createdProposal))
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
@@ -109,7 +109,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         createOk(changeProposalTranslator.translate(proposal))
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateChangeProposal(
         projectId: UUID,
@@ -146,7 +146,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun deleteChangeProposal(
         projectId: UUID,
@@ -183,7 +183,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         userId: UUID,
         proposal: ChangeProposalEntity
     ): Response? {
-        if (!isAdmin() && proposal.creatorId != userId) {
+        if (!isAdmin() && !isProjectOwner() && proposal.creatorId != userId) {
             return createForbidden(FORBIDDEN)
         }
 

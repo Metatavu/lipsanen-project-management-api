@@ -40,7 +40,7 @@ class CompaniesApiImpl : CompaniesApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listCompanies(first: Int?, max: Int?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val (companies, count) = companyController.list(first = first, max = max)
         createOk(companyTranslator.translate(companies), count)
@@ -64,7 +64,7 @@ class CompaniesApiImpl : CompaniesApi, AbstractApi() {
         createOk(companyTranslator.translate(createdCompany))
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findCompany(companyId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val foundCompany = companyController.find(companyId) ?: return@async createNotFound(createNotFoundMessage(COMPANY, companyId))
         createOk(companyTranslator.translate(foundCompany))

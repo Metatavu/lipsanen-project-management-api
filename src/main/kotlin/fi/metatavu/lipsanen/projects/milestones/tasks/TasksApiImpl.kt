@@ -50,7 +50,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listTasks(projectId: UUID, milestoneId: UUID, first: Int?, max: Int?): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -63,7 +63,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTask(projectId: UUID, milestoneId: UUID, task: Task): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -77,7 +77,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@async createBadRequest(INVALID_TASK_DATES)
             }
 
-            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
+            if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
@@ -100,7 +100,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             }
         }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -116,7 +116,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun updateTask(projectId: UUID, milestoneId: UUID, taskId: UUID, task: Task): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -133,7 +133,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 createNotFoundMessage(TASK, taskId)
             )
 
-            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone.second)) {
+            if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
@@ -172,13 +172,13 @@ class TasksApiImpl : TasksApi, AbstractApi() {
         }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun deleteTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             if (errorResponse != null) return@async errorResponse
-            if (!isAdmin() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
+            if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
                 return@async createBadRequest(INVALID_PROJECT_STATE)
             }
 
