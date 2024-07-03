@@ -50,12 +50,12 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    override fun listUsers(companyId: UUID?, first: Int?, max: Int?,  includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
+    override fun listUsers(companyId: UUID?, keycloakId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@async createNotFound(createNotFoundMessage(COMPANY, companyId))
         } else null
 
-        val ( users, count ) = userController.listUsers(companyFilter, first, max)
+        val ( users, count ) = userController.listUsers(companyFilter, keycloakId, first, max)
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count.toLong())
     }.asUni()
 

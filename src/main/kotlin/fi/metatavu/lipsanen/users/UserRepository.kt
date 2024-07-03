@@ -56,6 +56,7 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
      */
     suspend fun list(
         companyEntity: CompanyEntity? = null,
+        keycloakId: UUID?,
         jobPosition: JobPositionEntity? = null,
         firstResult: Int? = null,
         maxResults: Int? = null
@@ -71,6 +72,11 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
         if (jobPosition != null) {
             addCondition(sb, "jobPosition = :jobPosition")
             parameters.and("jobPosition", jobPosition)
+        }
+
+        if (keycloakId != null) {
+            addCondition(sb, "keycloakId = :keycloakId")
+            parameters.and("keycloakId", keycloakId)
         }
 
         return applyFirstMaxToQuery(
