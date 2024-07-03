@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.*
 import fi.metatavu.lipsanen.api.model.User
+import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import fi.metatavu.lipsanen.positions.JobPositionEntity
@@ -430,8 +431,9 @@ class UserController {
      */
     private fun translateRole(userRole: fi.metatavu.lipsanen.api.model.UserRole): String {
         return when (userRole) {
-            fi.metatavu.lipsanen.api.model.UserRole.ADMIN -> "admin"
-            fi.metatavu.lipsanen.api.model.UserRole.USER -> "user"
+            UserRole.ADMIN -> "admin"
+            UserRole.USER -> "user"
+            UserRole.PROJECT_OWNER -> "project-owner"
         }
     }
 }
