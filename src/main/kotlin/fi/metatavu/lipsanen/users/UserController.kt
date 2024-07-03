@@ -80,12 +80,14 @@ class UserController {
      * Lists users (except for admin user) from keycloak and local db
      * If the test mode then users are created to the local db if they are not found
      *
+     * @param company company
+     * @param keycloakId keycloak user id
      * @param first first result
      * @param max max results
      * @return users
      */
-    suspend fun listUsers(company: CompanyEntity?, first: Int?, max: Int?): Pair<List<UserFullRepresentation>, Long> {
-        val (userEntities, entitiesCount) = userRepository.list(companyEntity = company, firstResult =  first, maxResults = max)
+    suspend fun listUsers(company: CompanyEntity?, keycloakId: UUID?, first: Int?, max: Int?): Pair<List<UserFullRepresentation>, Long> {
+        val (userEntities, entitiesCount) = userRepository.list(companyEntity = company, keycloakId = keycloakId, firstResult =  first, maxResults = max)
         var totalCount = entitiesCount
         val userReprensentations = userEntities.map {
             val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.keycloakId.toString()))
@@ -114,7 +116,7 @@ class UserController {
      * @return array of users
      */
     suspend fun listUserEntities(companyEntity: CompanyEntity? = null, jobPosition: JobPositionEntity? = null): Pair<List<UserEntity>, Long> {
-        return userRepository.list(companyEntity, jobPosition, null, null)
+        return userRepository.list(companyEntity, null, jobPosition, null, null)
     }
 
     /**

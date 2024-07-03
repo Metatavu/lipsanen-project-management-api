@@ -16,15 +16,9 @@ class MetadataTranslator :
     lateinit var userController: UserController
 
     override suspend fun translate(entity: Metadata): fi.metatavu.lipsanen.api.model.Metadata {
-        val creatorId = userController.findUserByKeycloakId(entity.creatorId)?.id
-        val modifierId = if (entity.creatorId == entity.lastModifierId) {
-            creatorId
-        } else {
-            userController.findUserByKeycloakId(entity.lastModifierId)?.id
-        }
         return fi.metatavu.lipsanen.api.model.Metadata(
-            creatorId = creatorId,
-            lastModifierId = modifierId,
+            creatorId = entity.creatorId,
+            lastModifierId = entity.lastModifierId,
             createdAt = entity.createdAt,
             modifiedAt = entity.modifiedAt
         )
