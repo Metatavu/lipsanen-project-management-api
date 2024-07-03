@@ -34,6 +34,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
         val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
         return User(
             id = entity.userEntity.id,
+            keycloakId = UUID.fromString(userRepresentation.id),
             email = userRepresentation.email ?: "",
             firstName = userRepresentation.firstName ?: "",
             lastName = userRepresentation.lastName ?: "",

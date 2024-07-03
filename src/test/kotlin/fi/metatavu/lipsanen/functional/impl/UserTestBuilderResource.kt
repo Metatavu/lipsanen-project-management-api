@@ -66,17 +66,19 @@ class UserTestBuilderResource (
     /**
      * Lists users
      *
+     * @param companyId company id
+     * @param keycloakId keycloak id
      * @param first first
      * @param max max
-     * @param includeRoles
      * @return list of users
      */
     fun listUsers(
         companyId: UUID? = null,
+        keycloakId: UUID? = null,
         first: Int? = null,
         max: Int? = null
     ): Array<User> {
-        return api.listUsers(companyId = companyId, first = first, max = max)
+        return api.listUsers(companyId = companyId, keycloakId = keycloakId, first = first, max = max)
     }
 
     /**
