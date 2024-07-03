@@ -44,7 +44,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listNotificationEvents(
         userId: UUID,
         projectId: UUID?,
@@ -82,7 +82,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         createOk(notificationEventTranslator.translate(notificationEvents), count)
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findNotificationEvent(notificationEventId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {
             val loggedInUserId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
@@ -95,7 +95,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             createOk(notificationEventTranslator.translate(notificationEvent))
         }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateNotificationEvent(
         notificationEventId: UUID,
@@ -116,7 +116,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         createOk(notificationEventTranslator.translate(updatedNotificationEvent))
     }.asUni()
 
-    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun deleteNotificationEvent(notificationEventId: UUID): Uni<Response> =
         CoroutineScope(vertx.dispatcher()).async {

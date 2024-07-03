@@ -40,7 +40,7 @@ class ProjectTestIT : AbstractFunctionalTest() {
         // access rights
         val user1 = tb.admin.user.create("test1", UserRole.USER)
         tb.admin.user.updateUser(
-            user1!!.id!!,
+            user1.id!!,
             user = user1.copy(projectIds = arrayOf(project1.id!!), roles = null)
         )
         val user2 = tb.admin.user.create("test2", UserRole.USER)
@@ -76,6 +76,15 @@ class ProjectTestIT : AbstractFunctionalTest() {
         assertEquals(1, updatedUser1.projectIds!!.size)
         assertNotNull(tb.getUser("test1@example.com").project.findProject(project.id))
         assertEquals(project.status, ProjectStatus.INITIATION)
+
+        // project owner rights
+        val owner = tb.admin.user.create("owner", UserRole.PROJECT_OWNER)
+        tb.getUser(owner.email).project.assertFindFail(403, project.id)
+        tb.admin.user.updateUser(
+            owner.id!!,
+            user = owner.copy(projectIds = arrayOf(foundProject.id), roles = null)
+        )
+        assertNotNull(tb.getUser(owner.email).project.findProject(project.id))
     }
 
     @Test

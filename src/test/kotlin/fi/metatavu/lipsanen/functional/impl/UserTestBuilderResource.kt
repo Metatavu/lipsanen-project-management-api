@@ -42,12 +42,13 @@ class UserTestBuilderResource (
         return addClosable(api.createUser(user))
     }
 
-    fun create(username: String, role: UserRole): User {
+    fun create(username: String, role: UserRole, projectId: UUID? = null): User {
         return addClosable(api.createUser(User(
             email = "$username@example.com",
             firstName = username,
             lastName = username,
-            roles = arrayOf(role)
+            roles = arrayOf(role),
+            projectIds = projectId?.let { arrayOf(it) }
         )))
     }
 

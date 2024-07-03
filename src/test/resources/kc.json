@@ -84,6 +84,14 @@
       "containerId" : "f1136ca4-995b-40da-9d7d-a14a02d0f200",
       "attributes" : { }
     }, {
+      "id" : "2083c466-15dc-425b-8e72-2175e22ce3de",
+      "name" : "project-owner",
+      "description" : "",
+      "composite" : false,
+      "clientRole" : false,
+      "containerId" : "f1136ca4-995b-40da-9d7d-a14a02d0f200",
+      "attributes" : { }
+    }, {
       "id" : "bddf3a69-9946-445c-9e8f-b6270fdb1337",
       "name" : "uma_authorization",
       "description" : "${role_uma_authorization}",
@@ -1259,7 +1267,7 @@
       "subType" : "authenticated",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-full-name-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-property-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper", "oidc-usermodel-attribute-mapper", "saml-role-list-mapper", "oidc-address-mapper" ]
+        "allowed-protocol-mapper-types" : [ "saml-user-attribute-mapper", "oidc-usermodel-property-mapper", "saml-user-property-mapper", "saml-role-list-mapper", "oidc-address-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-usermodel-attribute-mapper", "oidc-full-name-mapper" ]
       }
     }, {
       "id" : "b20d3c85-69c5-429f-b785-abae638d743a",
@@ -1294,7 +1302,7 @@
       "subType" : "anonymous",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "oidc-full-name-mapper", "saml-role-list-mapper", "oidc-usermodel-attribute-mapper", "saml-user-property-mapper", "oidc-address-mapper", "oidc-usermodel-property-mapper" ]
+        "allowed-protocol-mapper-types" : [ "saml-role-list-mapper", "saml-user-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-usermodel-attribute-mapper", "saml-user-property-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-address-mapper", "oidc-full-name-mapper" ]
       }
     }, {
       "id" : "bbda7502-e813-4b35-b05b-969f6ffa1947",
