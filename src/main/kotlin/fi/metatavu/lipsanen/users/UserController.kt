@@ -80,6 +80,8 @@ class UserController {
      * Lists users (except for admin user) from keycloak and local db
      * If the test mode then users are created to the local db if they are not found
      *
+     * @param company company
+     * @param keycloakId keycloak user id
      * @param first first result
      * @param max max results
      * @return users
