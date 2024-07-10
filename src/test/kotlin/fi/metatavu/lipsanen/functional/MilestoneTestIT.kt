@@ -9,10 +9,7 @@ import fi.metatavu.invalid.providers.SimpleInvalidValueProvider
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
-import fi.metatavu.lipsanen.test.client.models.Milestone
-import fi.metatavu.lipsanen.test.client.models.Project
-import fi.metatavu.lipsanen.test.client.models.ProjectStatus
-import fi.metatavu.lipsanen.test.client.models.Task
+import fi.metatavu.lipsanen.test.client.models.*
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -35,6 +32,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
     fun listMilestones() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create(Project("Project 1", status = ProjectStatus.INITIATION))
         val project2 = tb.admin.project.create(Project("Project 2", status = ProjectStatus.INITIATION))
+        val projectOwnerUser = tb.admin.user.create("project-owner", UserRole.PROJECT_OWNER, project1.id)
 
         val milestoneLater = tb.admin.milestone.create(
             project1.id!!,
@@ -54,6 +52,11 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         val milestones2 = tb.admin.milestone.listProjectMilestones(project2.id)
         assertNotNull(milestones2)
         assertEquals(1, milestones2.size)
+
+        // access rights
+        tb.getUser(projectOwnerUser.email).milestone.assertListFail(403, project2.id)
+        val milestones3 = tb.getUser(projectOwnerUser.email).milestone.listProjectMilestones(project1.id)
+        assertEquals(2, milestones3.size)
     }
 
     @Test

@@ -2,13 +2,8 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.connections
 
 import fi.metatavu.lipsanen.api.model.TaskConnection
 import fi.metatavu.lipsanen.api.model.TaskConnectionRole
-import fi.metatavu.lipsanen.api.model.TaskConnectionType
 import fi.metatavu.lipsanen.api.spec.TaskConnectionsApi
-import fi.metatavu.lipsanen.projects.ProjectController
-import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -45,14 +40,14 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
     @Inject
     lateinit var vertx: io.vertx.core.Vertx
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listTaskConnections(
         projectId: UUID,
         taskId: UUID?,
         connectionRole: TaskConnectionRole?
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val task = if (taskId != null) {
@@ -69,13 +64,13 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTaskConnection(
         projectId: UUID,
         taskConnection: TaskConnection
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
@@ -93,13 +88,13 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         createOk(taskConnectionTranslator.translate(createdTaskConnection))
     }.asUni()
 
-    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findTaskConnection(
         projectId: UUID,
         connectionId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@async errorResponse
 
         val taskConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
@@ -110,20 +105,17 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun updateTaskConnection(
         projectId: UUID,
         connectionId: UUID,
         taskConnection: TaskConnection
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@async errorResponse
-        if (!projectController.isInPlanningStage(project!!)) {
-            return@async createBadRequest(INVALID_PROJECT_STATE)
-        }
 
-        val connectionFrom = taskController.find(project, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
         val connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
@@ -147,17 +139,14 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
     }.asUni()
 
     @WithTransaction
-    @RolesAllowed(UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun deleteTaskConnection(
         projectId: UUID,
         connectionId: UUID
     ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
         val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-        val (project, errorResponse) = getProjectOrError(projectId, isAdmin(), userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@async errorResponse
-        if (!projectController.isInPlanningStage(project!!)) {
-            return@async createBadRequest(INVALID_PROJECT_STATE)
-        }
 
         val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)
@@ -166,29 +155,4 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
 
         createNoContent()
     }.asUni()
-
-    /**
-     * Returns project or error response
-     *
-     * @param projectId project id
-     * @param userId user id
-     * @return project or error response
-     */
-    suspend fun getProjectOrError(
-        projectId: UUID,
-        isAdmin: Boolean,
-        userId: UUID
-    ): Pair<ProjectEntity?, Response?> {
-        val project = projectController.findProject(projectId) ?: return null to createNotFound(
-            createNotFoundMessage(
-                PROJECT,
-                projectId
-            )
-        )
-
-        if (!isAdmin && !projectController.hasAccessToProject(project, userId)) {
-            return null to createForbidden(NO_PROJECT_RIGHTS)
-        }
-        return project to null
-    }
 }
