@@ -9,10 +9,12 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnection
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.users.UserController
+import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
 import io.smallrye.mutiny.coroutines.asUni
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import io.vertx.core.Vertx
 import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
@@ -96,6 +98,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 )
                 createOk(taskTranslator.translate(createdTask))
             } catch (e: UserNotFoundException) {
+                Panache.currentTransaction().awaitSuspending().markForRollback()
                 createBadRequest(e.message!!)
             }
         }.asUni()
@@ -164,8 +167,10 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 )
                 return@async createOk(taskTranslator.translate(updatedTask))
             } catch (e: TaskOutsideMilestoneException) {
+                Panache.currentTransaction().awaitSuspending().markForRollback()
                 return@async createBadRequest(e.message!!)
             } catch (e: UserNotFoundException) {
+                Panache.currentTransaction().awaitSuspending().markForRollback()
                 return@async createBadRequest(e.message!!)
             }
 

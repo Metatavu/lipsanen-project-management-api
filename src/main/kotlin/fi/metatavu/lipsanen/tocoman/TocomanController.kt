@@ -6,6 +6,8 @@ import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
+import io.quarkus.hibernate.reactive.panache.Panache
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.annotation.PostConstruct
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -81,6 +83,7 @@ class TocomanController {
                 newProject
             }
         } catch (e: Exception) {
+            Panache.currentTransaction().awaitSuspending().markForRollback()
             logger.error("Error creating project: ${e.message}")
             null
         }
