@@ -380,7 +380,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         val foundTask3 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)
         val foundTask4 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task4.id)
 
-
         assertEquals("2022-01-03", foundTask1.startDate)
         assertEquals("2022-01-04", foundTask1.endDate)
 
@@ -393,6 +392,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals("2022-01-04", foundTask4.startDate)
         assertEquals("2022-01-06", foundTask4.endDate)
 
+        val allTasksBeforeFailedUpdate = tb.admin.task.list(projectId = project.id, milestoneId = milestone.id)
         // test moving to invalid dates (cascade affects the milestone)
         tb.admin.task.assertUpdateFail(
             expectedStatus = 400,
@@ -401,6 +401,13 @@ class TaskTestIT : AbstractFunctionalTest() {
             taskId = task.id,
             task = task.copy(startDate = "2022-01-30", endDate = "2022-01-31")
         )
+
+        val allTasksAfterFailedUpdate = tb.admin.task.list(projectId = project.id, milestoneId = milestone.id)
+        allTasksAfterFailedUpdate.forEach {
+            val taskBefore = allTasksBeforeFailedUpdate.find { b -> b.id == it.id }
+            assertEquals(taskBefore?.startDate, it.startDate)
+            assertEquals(taskBefore?.endDate, it.endDate)
+        }
     }
 
     /*

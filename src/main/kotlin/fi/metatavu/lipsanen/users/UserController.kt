@@ -8,6 +8,8 @@ import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
+import io.quarkus.hibernate.reactive.panache.Panache
+import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
@@ -180,6 +182,7 @@ class UserController {
                 userRepresentation = findKeycloakUser(userEntity.keycloakId)!!
             )
         }.getOrElse {
+            Panache.currentTransaction().awaitSuspending().markForRollback()
             logger.error("Failed to create user:", it)
             null
         }
