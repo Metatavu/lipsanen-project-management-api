@@ -2,22 +2,17 @@ package fi.metatavu.lipsanen.projects.themes
 
 import fi.metatavu.lipsanen.api.model.ProjectTheme
 import fi.metatavu.lipsanen.api.spec.ProjectThemesApi
-import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.coroutines.asUni
 import io.vertx.core.Vertx
-import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import java.util.*
 
 /**
@@ -38,8 +33,8 @@ class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
-    override fun listProjectThemes(projectId: UUID): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val project = projectController.findProject(projectId) ?: return@async createNotFound(
+    override fun listProjectThemes(projectId: UUID): Uni<Response> = withCoroutineScope {
+        val project = projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(
                 PROJECT,
                 projectId
@@ -47,14 +42,14 @@ class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
         )
         val (themes, count) = projectThemeController.list(project)
         createOk(projectThemeTranslator.translate(themes), count)
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun createProjectTheme(projectId: UUID, projectTheme: ProjectTheme): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
-            val project = projectController.findProject(projectId) ?: return@async createNotFound(
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
+            val project = projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(
                     PROJECT,
                     projectId
@@ -63,45 +58,45 @@ class ProjectThemesApiImpl : ProjectThemesApi, AbstractApi() {
 
             val created = projectThemeController.create(project, projectTheme, userId)
             createOk(projectThemeTranslator.translate(created))
-        }.asUni()
+        }
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findProjectTheme(projectId: UUID, themeId: UUID): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
+        withCoroutineScope {
             val (existingTheme, errorResponse) = findTheme(projectId, themeId)
             if (errorResponse != null) {
-                return@async errorResponse
+                return@withCoroutineScope errorResponse
             }
 
             createOk(projectThemeTranslator.translate(existingTheme!!))
-        }.asUni()
+        }
 
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun updateProjectTheme(projectId: UUID, themeId: UUID, projectTheme: ProjectTheme): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val (existingTheme, errorResponse) = findTheme(projectId, themeId)
             if (errorResponse != null) {
-                return@async errorResponse
+                return@withCoroutineScope errorResponse
             }
 
             val updatedTheme = projectThemeController.update(existingTheme!!, projectTheme, userId)
             createOk(projectThemeTranslator.translate(updatedTheme))
-        }.asUni()
+        }
 
     @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun deleteProjectTheme(projectId: UUID, themeId: UUID): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
+        withCoroutineScope {
             val (existingTheme, errorResponse) = findTheme(projectId, themeId)
             if (errorResponse != null) {
-                return@async errorResponse
+                return@withCoroutineScope errorResponse
             }
 
             projectThemeController.delete(existingTheme!!)
             createNoContent()
-        }.asUni()
+        }
 
     /**
      * Finds a theme by project and theme id and returns error response if any

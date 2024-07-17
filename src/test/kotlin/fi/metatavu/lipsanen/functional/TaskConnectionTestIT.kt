@@ -126,11 +126,17 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
         val updatedConnection = tb.admin.taskConnection.updateTaskConnection(
             projectId = project.id,
             taskConnectionId = taskConnection.id!!,
-            taskConnection = taskConnection.copy(type = TaskConnectionType.FINISH_TO_START)
+            taskConnection = TaskConnection(
+                sourceTaskId = createdTask.id!!,
+                targetTaskId = createdTask2.id!!,
+                type = TaskConnectionType.FINISH_TO_START
+            )
         )
 
         assertNotNull(updatedConnection)
         assertEquals(taskConnection.id, updatedConnection.id)
+        assertEquals(createdTask2.id, updatedConnection.targetTaskId)
+        assertEquals(createdTask.id, updatedConnection.sourceTaskId)
         assertEquals(TaskConnectionType.FINISH_TO_START, updatedConnection.type)
     }
 
