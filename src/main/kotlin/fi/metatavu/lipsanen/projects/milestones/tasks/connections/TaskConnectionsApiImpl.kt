@@ -9,15 +9,11 @@ import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.coroutines.asUni
-import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import java.util.*
 
 /**
@@ -45,13 +41,13 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         projectId: UUID,
         taskId: UUID?,
         connectionRole: TaskConnectionRole?
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val task = if (taskId != null) {
-            taskController.find(project!!, taskId) ?: return@async createNotFound(createNotFoundMessage(TASK, taskId))
+            taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(TASK, taskId))
         } else null
 
         val taskConnections = taskConnectionController.list(
@@ -61,48 +57,48 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         )
 
         createOk(taskConnectionTranslator.translate(taskConnections))
-    }.asUni()
+    }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTaskConnection(
         projectId: UUID,
         taskConnection: TaskConnection
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val sourceTask = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
-        val targetTask = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
+        val targetTask = taskController.find(project, taskConnection.targetTaskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskConnection.targetTaskId)
         )
 
         taskConnectionController.verifyTaskConnection(sourceTask, targetTask, taskConnection.type)?.let {
-            return@async createBadRequest(it)
+            return@withCoroutineScope createBadRequest(it)
         }
 
         val createdTaskConnection = taskConnectionController.create(sourceTask, targetTask, taskConnection, userId)
         createOk(taskConnectionTranslator.translate(createdTaskConnection))
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findTaskConnection(
         projectId: UUID,
         connectionId: UUID
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val taskConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
+        val taskConnection = taskConnectionController.findById(connectionId, project!!) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)
         )
 
         createOk(taskConnectionTranslator.translate(taskConnection))
-    }.asUni()
+    }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
@@ -110,23 +106,23 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         projectId: UUID,
         connectionId: UUID,
         taskConnection: TaskConnection
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@async createNotFound(
+        val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskConnection.sourceTaskId)
         )
-        val connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@async createNotFound(
+        val connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskConnection.targetTaskId)
         )
 
         taskConnectionController.verifyTaskConnection(connectionFrom, connectionTo, taskConnection.type)?.let {
-            return@async createBadRequest(it)
+            return@withCoroutineScope createBadRequest(it)
         }
 
-        val foundConnection = taskConnectionController.findById(connectionId, project) ?: return@async createNotFound(
+        val foundConnection = taskConnectionController.findById(connectionId, project) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)
         )
         val updatedConnection = taskConnectionController.update(
@@ -136,23 +132,23 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
             updatedTaskConnection = taskConnection
         )
         createOk(taskConnectionTranslator.translate(updatedConnection))
-    }.asUni()
+    }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun deleteTaskConnection(
         projectId: UUID,
         connectionId: UUID
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@async createNotFound(
+        val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK_CONNECTION, connectionId)
         )
         taskConnectionController.delete(foundConnection)
 
         createNoContent()
-    }.asUni()
+    }
 }

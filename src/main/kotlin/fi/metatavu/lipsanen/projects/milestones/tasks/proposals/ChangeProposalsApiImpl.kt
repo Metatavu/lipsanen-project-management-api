@@ -10,17 +10,13 @@ import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.coroutines.asUni
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import io.vertx.core.Vertx
-import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import java.util.*
 
 /**
@@ -50,14 +46,14 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         taskId: UUID?,
         first: Int?,
         max: Int?
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val taskFilter = if (taskId != null) {
-            taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
+            taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
         } else null
@@ -69,7 +65,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             max = max
         )
         createOk(changeProposalTranslator.translate(changeProposals), count)
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
@@ -77,39 +73,39 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         projectId: UUID,
         milestoneId: UUID,
         changeProposal: ChangeProposal
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
         val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, changeProposal.taskId) ?: return@async createBadRequest(
+        val task = taskController.find(projectMilestone!!.first, changeProposal.taskId) ?: return@withCoroutineScope createBadRequest(
             createNotFoundMessage(TASK, changeProposal.taskId)
         )
         val createdProposal = proposalController.create(task, changeProposal, userId)
         createOk(changeProposalTranslator.translate(createdProposal))
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findChangeProposal(
         projectId: UUID,
         milestoneId: UUID,
         changeProposalId: UUID
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
         val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val proposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
+        val proposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         if (proposal.task.milestone.id != milestoneId) {
-            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+            return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
 
         createOk(changeProposalTranslator.translate(proposal))
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
@@ -118,25 +114,25 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         milestoneId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val foundProposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
+        val foundProposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         if (changeProposal.taskId != foundProposal.task.id) {
-            return@async createBadRequest("Proposal cannot be reassigned to other task")
+            return@withCoroutineScope createBadRequest("Proposal cannot be reassigned to other task")
         }
 
         if (foundProposal.task.milestone.id != milestoneId) {
-            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+            return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
-        hasProposalEditingRights(userId, foundProposal)?.let { return@async it }
+        hasProposalEditingRights(userId, foundProposal)?.let { return@withCoroutineScope it }
 
         if (changeProposal.status != foundProposal.status && !isAdmin()) {
-            return@async createForbidden("Status can be changed only by admin")
+            return@withCoroutineScope createForbidden("Status can be changed only by admin")
         }
         try {
             val updatedProposal = proposalController.update(foundProposal, changeProposal, userId)
@@ -144,10 +140,10 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
         } catch (e: TaskOutsideMilestoneException) {
             Panache.currentTransaction().awaitSuspending().markForRollback()
-            return@async createBadRequest(e.message!!)
+            return@withCoroutineScope createBadRequest(e.message!!)
         }
 
-    }.asUni()
+    }
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
@@ -155,25 +151,25 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         projectId: UUID,
         milestoneId: UUID,
         changeProposalId: UUID
-    ): Uni<Response> = CoroutineScope(vertx.dispatcher()).async {
-        val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+    ): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
         val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-        if (errorResponse != null) return@async errorResponse
+        if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val proposal = proposalController.find(changeProposalId) ?: return@async createNotFound(
+        val proposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
         if (proposal.task.milestone.id != milestoneId) {
-            return@async createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
+            return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
 
-        hasProposalEditingRights(userId, proposal)?.let { return@async it }
+        hasProposalEditingRights(userId, proposal)?.let { return@withCoroutineScope it }
 
         proposalController.delete(proposal)
 
         createNoContent()
-    }.asUni()
+    }
 
     /**
      * Checks if the user has rights to edit the proposal (assuming user already has access to the project)

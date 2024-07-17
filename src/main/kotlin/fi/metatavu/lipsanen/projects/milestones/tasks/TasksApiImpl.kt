@@ -13,17 +13,13 @@ import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.coroutines.asUni
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import io.vertx.core.Vertx
-import io.vertx.kotlin.coroutines.dispatcher
 import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import java.util.*
 
 /**
@@ -54,37 +50,37 @@ class TasksApiImpl : TasksApi, AbstractApi() {
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listTasks(projectId: UUID, milestoneId: UUID, first: Int?, max: Int?): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-            if (errorResponse != null) return@async errorResponse
+            if (errorResponse != null) return@withCoroutineScope errorResponse
 
             val (tasks, count) = taskController.list(milestone = projectMilestone!!.first, first = first, max = max)
             createOk(taskTranslator.translate(tasks), count)
-        }.asUni()
+        }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTask(projectId: UUID, milestoneId: UUID, task: Task): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-            if (errorResponse != null) return@async errorResponse
+            if (errorResponse != null) return@withCoroutineScope errorResponse
             if (task.milestoneId != milestoneId) {
-                return@async createBadRequest("Milestone id in task does not match the milestone id in the path")
+                return@withCoroutineScope createBadRequest("Milestone id in task does not match the milestone id in the path")
             }
 
             if (task.startDate.isAfter(task.endDate)) {
-                return@async createBadRequest(INVALID_TASK_DATES)
+                return@withCoroutineScope createBadRequest(INVALID_TASK_DATES)
             }
 
             if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
-                return@async createBadRequest(INVALID_PROJECT_STATE)
+                return@withCoroutineScope createBadRequest(INVALID_PROJECT_STATE)
             }
 
             val jobPosition = if (task.jobPositionId != null) {
-                jobPositionController.findJobPosition(task.jobPositionId) ?: return@async createBadRequest(
+                jobPositionController.findJobPosition(task.jobPositionId) ?: return@withCoroutineScope createBadRequest(
                     createNotFoundMessage(JOB_POSITION, task.jobPositionId)
                 )
             } else null
@@ -101,48 +97,48 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 Panache.currentTransaction().awaitSuspending().markForRollback()
                 createBadRequest(e.message!!)
             }
-        }.asUni()
+        }
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-            if (errorResponse != null) return@async errorResponse
+            if (errorResponse != null) return@withCoroutineScope errorResponse
 
             val task = taskController.find(
                 milestone = projectMilestone!!.first,
                 taskId = taskId
-            ) ?: return@async createNotFound(createNotFoundMessage(TASK, taskId))
+            ) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(TASK, taskId))
 
             createOk(taskTranslator.translate(task))
-        }.asUni()
+        }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun updateTask(projectId: UUID, milestoneId: UUID, taskId: UUID, task: Task): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-            if (errorResponse != null) return@async errorResponse
+            if (errorResponse != null) return@withCoroutineScope errorResponse
             if (task.milestoneId != milestoneId) {
-                return@async createBadRequest("Milestone id in task does not match the milestone id in the path")
+                return@withCoroutineScope createBadRequest("Milestone id in task does not match the milestone id in the path")
             }
             if (task.startDate.isAfter(task.endDate)) {
-                return@async createBadRequest(INVALID_TASK_DATES)
+                return@withCoroutineScope createBadRequest(INVALID_TASK_DATES)
             }
 
-            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
+            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 
             if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone.second)) {
-                return@async createBadRequest(INVALID_PROJECT_STATE)
+                return@withCoroutineScope createBadRequest(INVALID_PROJECT_STATE)
             }
 
             val jobPosition = if (foundTask.jobPosition?.id != task.jobPositionId) {
                 if (task.jobPositionId != null) {
-                    jobPositionController.findJobPosition(task.jobPositionId) ?: return@async createBadRequest(
+                    jobPositionController.findJobPosition(task.jobPositionId) ?: return@withCoroutineScope createBadRequest(
                         createNotFoundMessage(JOB_POSITION, task.jobPositionId)
                     )
                 } else null
@@ -154,7 +150,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 newStatus = task.status
             )
             if (updateError != null) {
-                return@async createConflict(updateError)
+                return@withCoroutineScope createConflict(updateError)
             }
 
             try {
@@ -165,38 +161,38 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                     jobPosition = jobPosition,
                     userId = userId
                 )
-                return@async createOk(taskTranslator.translate(updatedTask))
+                return@withCoroutineScope createOk(taskTranslator.translate(updatedTask))
             } catch (e: TaskOutsideMilestoneException) {
                 Panache.currentTransaction().awaitSuspending().markForRollback()
-                return@async createBadRequest(e.message!!)
+                return@withCoroutineScope createBadRequest(e.message!!)
             } catch (e: UserNotFoundException) {
                 Panache.currentTransaction().awaitSuspending().markForRollback()
-                return@async createBadRequest(e.message!!)
+                return@withCoroutineScope createBadRequest(e.message!!)
             }
 
-        }.asUni()
+        }
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun deleteTask(projectId: UUID, milestoneId: UUID, taskId: UUID): Uni<Response> =
-        CoroutineScope(vertx.dispatcher()).async {
-            val userId = loggedUserId ?: return@async createUnauthorized(UNAUTHORIZED)
+        withCoroutineScope {
+            val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
-            if (errorResponse != null) return@async errorResponse
+            if (errorResponse != null) return@withCoroutineScope errorResponse
             if (!isAdmin() && !isProjectOwner() && !projectController.isInPlanningStage(projectMilestone!!.second)) {
-                return@async createBadRequest(INVALID_PROJECT_STATE)
+                return@withCoroutineScope createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@async createNotFound(
+            val foundTask = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 
             if (taskConnectionRepository.countByTask(foundTask) > 0) {
-                return@async createBadRequest("Task has connections and cannot be deleted")
+                return@withCoroutineScope createBadRequest("Task has connections and cannot be deleted")
             }
 
             taskController.delete(foundTask)
             createNoContent()
-        }.asUni()
+        }
 
 }
