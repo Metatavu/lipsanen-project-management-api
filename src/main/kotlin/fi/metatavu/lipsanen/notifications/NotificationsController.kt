@@ -6,6 +6,7 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
+import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.quarkus.scheduler.Scheduled
 import io.smallrye.mutiny.coroutines.asUni
@@ -55,7 +56,6 @@ class NotificationsController {
         delay = 15,
         delayUnit = TimeUnit.SECONDS
     )
-    @WithTransaction
     fun clearOldNotifications() = CoroutineScope(vertx.dispatcher()).async {
         logger.info("Clearing old notifications (older than $notificationCleanupDelayDays days)")
         val createdBeforeFilter = OffsetDateTime.now().minusDays(notificationCleanupDelayDays!!.toLong())
