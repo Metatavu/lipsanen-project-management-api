@@ -111,20 +111,28 @@ class TaskConnectionsApiImpl : TaskConnectionsApi, AbstractApi() {
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val connectionFrom = taskController.find(project!!, taskConnection.sourceTaskId) ?: return@withCoroutineScope createNotFound(
-            createNotFoundMessage(TASK, taskConnection.sourceTaskId)
+        val foundConnection = taskConnectionController.findById(connectionId, project!!) ?: return@withCoroutineScope createNotFound(
+            createNotFoundMessage(TASK_CONNECTION, connectionId)
         )
-        val connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@withCoroutineScope createNotFound(
-            createNotFoundMessage(TASK, taskConnection.targetTaskId)
-        )
+
+        var connectionFrom = foundConnection.source
+        if (taskConnection.sourceTaskId != connectionFrom.id) {
+            connectionFrom = taskController.find(project, taskConnection.sourceTaskId) ?: return@withCoroutineScope createNotFound(
+                createNotFoundMessage(TASK, taskConnection.sourceTaskId)
+            )
+        }
+
+        var connectionTo = foundConnection.target
+        if (taskConnection.targetTaskId != connectionTo.id) {
+            connectionTo = taskController.find(project, taskConnection.targetTaskId) ?: return@withCoroutineScope createNotFound(
+                createNotFoundMessage(TASK, taskConnection.targetTaskId)
+            )
+        }
 
         taskConnectionController.verifyTaskConnection(connectionFrom, connectionTo, taskConnection.type)?.let {
             return@withCoroutineScope createBadRequest(it)
         }
 
-        val foundConnection = taskConnectionController.findById(connectionId, project) ?: return@withCoroutineScope createNotFound(
-            createNotFoundMessage(TASK_CONNECTION, connectionId)
-        )
         val updatedConnection = taskConnectionController.update(
             foundConnection = foundConnection,
             sourceTask = connectionFrom,

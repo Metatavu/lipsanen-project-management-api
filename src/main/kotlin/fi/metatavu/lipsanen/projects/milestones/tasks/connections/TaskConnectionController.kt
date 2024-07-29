@@ -106,9 +106,9 @@ class TaskConnectionController {
      * @return found task connection or null if not found
      */
     suspend fun findById(connectionId: UUID, project: ProjectEntity): TaskConnectionEntity? {
+        val connection = taskConnectionRepository.findByIdSuspending(connectionId) ?: return null
         val projectMilestones = milestoneController.list(project).map { it.id }
-        val connection = taskConnectionRepository.findByIdSuspending(connectionId)
-        if (connection == null || (connection.source.milestone.id !in projectMilestones && connection.target.milestone.id !in projectMilestones)) {
+        if (connection.source.milestone.id !in projectMilestones && connection.target.milestone.id !in projectMilestones) {
             return null
         }
         return connection
