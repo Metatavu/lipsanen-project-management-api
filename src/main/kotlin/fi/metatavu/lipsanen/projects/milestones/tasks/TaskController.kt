@@ -13,7 +13,6 @@ import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnection
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
-import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -218,7 +217,6 @@ class TaskController {
         }
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
-        Panache.flush()
         updateAttachments(existingTask, newTask)
         if (existingTask.status != newTask.status) {
             notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
@@ -459,15 +457,14 @@ class TaskController {
         movableTask.startDate = newStartDate
         movableTask.endDate = newEndDate
 
-        taskEntityRepository.persistSuspending(movableTask) //Save the task at this point so that when listing connections it is up-to-date
-        Panache.flush()
+        var movedTask = taskEntityRepository.persistSuspending(movableTask)
 
         val updatableTasks = mutableListOf<TaskEntity>()
         if (moveForward) {
-            updateTaskConnectionsForward(movableTask, updatableTasks)
+            updateTaskConnectionsForward(movedTask, updatableTasks)
         }
         if (moveBackward) {
-            updateTaskConnectionsBackward(movableTask, updatableTasks)
+            updateTaskConnectionsBackward(movedTask, updatableTasks)
         }
 
         // Check if the dependent tasks are still within the milestone
@@ -486,7 +483,7 @@ class TaskController {
             }
         }
 
-        return movableTask
+        return movedTask
     }
 
     /**
