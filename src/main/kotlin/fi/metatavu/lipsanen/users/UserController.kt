@@ -169,6 +169,15 @@ class UserController {
             )
             assignUserToProjects(userEntity, projects ?: emptyList())
 
+            // Update keycloak data with the internal user id
+            keycloakAdminClient.getUserApi().realmUsersIdPut(
+                realm = keycloakAdminClient.getRealm(),
+                id = keycloakUser.id!!,
+                userRepresentation = keycloakUser.copy(
+                    attributes = mapOf("userId" to arrayOf(userEntity.id.toString()))
+                )
+            )
+
             if (environment.orElse(null) != "test") {
                 keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
                     realm = keycloakAdminClient.getRealm(),
