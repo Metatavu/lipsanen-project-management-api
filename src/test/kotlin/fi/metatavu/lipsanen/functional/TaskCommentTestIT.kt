@@ -37,15 +37,14 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val milestone2 = tb.admin.milestone.create(projectId = project.id)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
         val task1 = tb.admin.task.create(projectId = project.id, milestoneId = milestone2.id!!)
-        tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
-        tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
-        tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone2.id, taskId = task1.id!!)
+        tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
+        tb.admin.taskComment.create(projectId = project.id, taskId = task.id)
+        tb.admin.taskComment.create(projectId = project.id, taskId = task1.id!!)
 
-        val taskComments = tb.admin.taskComment.listTaskComments(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
+        val taskComments = tb.admin.taskComment.listTaskComments(projectId = project.id, taskId = task.id)
         assert(taskComments.size == 2)
         val task1Comments = tb.admin.taskComment.listTaskComments(
             projectId = project.id,
-            milestoneId = milestone2.id,
             taskId = task1.id
         )
         assert(task1Comments.size == 1)
@@ -58,7 +57,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}/comments",
+            path = "v1/projects/{projectId}/tasks/{taskId}/comments",
             method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -66,13 +65,6 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
             .path(
                 InvalidValueTestScenarioPath(
                     name = "projectId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404
                 )
@@ -103,7 +95,6 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
 
         val createdComment = tb.admin.taskComment.create(
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskComment = taskCommentData
         )
@@ -125,7 +116,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}/comments",
+            path = "v1/projects/{projectId}/tasks/{taskId}/comments",
             method = Method.POST,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -135,14 +126,6 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                 InvalidValueTestScenarioPath(
                     name = "projectId",
                     default = project.id,
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    default = milestone.id,
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404
                 )
@@ -192,11 +175,10 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         val foundComment = tb.admin.taskComment.findTaskComment(
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!
         )
@@ -208,19 +190,18 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertFindFail(
             403,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}/comments/{commentId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}/comments/{commentId}",
             method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath
@@ -230,15 +211,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                     name = "projectId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
-                    default = project.id!!
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404,
-                    default = milestone.id!!
+                    default = project.id
                 )
             )
             .path(
@@ -246,7 +219,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                     name = "taskId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
-                    default = task.id!!
+                    default = task.id
                 )
             )
             .path(
@@ -254,7 +227,7 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                     name = "commentId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
-                    default = taskComment.id!!
+                    default = taskComment.id
                 )
             )
             .build()
@@ -266,11 +239,10 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         val updatedComment = tb.admin.taskComment.updateTaskComment(
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!,
             taskComment = TaskComment(
@@ -287,20 +259,19 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertUpdateFail(
             403,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!,
             taskComment = taskComment
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}/comments/{commentId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}/comments/{commentId}",
             method = Method.PUT,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -310,14 +281,6 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
                 InvalidValueTestScenarioPath(
                     name = "projectId",
                     default = project.id!!,
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    default = milestone.id!!,
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404
                 )
@@ -363,20 +326,18 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         tb.admin.taskComment.deleteTaskComment(
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!
         )
         tb.admin.taskComment.assertFindFail(
             404,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
-            taskCommentId = taskComment.id!!
+            taskCommentId = taskComment.id
         )
     }
 
@@ -385,19 +346,18 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val taskComment = tb.admin.taskComment.create(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val taskComment = tb.admin.taskComment.create(projectId = project.id, taskId = task.id!!)
 
         //access rights
         tb.user.taskComment.assertDeleteFail(
             403,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             taskCommentId = taskComment.id!!
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}/comments/{commentId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}/comments/{commentId}",
             method = Method.DELETE,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -405,13 +365,6 @@ class TaskCommentTestIT : AbstractFunctionalTest() {
             .path(
                 InvalidValueTestScenarioPath(
                     name = "projectId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404
                 )

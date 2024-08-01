@@ -22,14 +22,12 @@ class ChangeProposalTestBuilderResource(
 ) : ApiTestBuilderResource<ChangeProposal, ChangeProposalsApi>(testBuilder, apiClient) {
 
     private val proposalToTaskId = mutableMapOf<UUID, UUID>()
-    private val proposalToMilestoneId = mutableMapOf<UUID, UUID>()
     private val proposalToProjectId = mutableMapOf<UUID, UUID>()
 
     override fun clean(p0: ChangeProposal?) {
         p0?.let {
             api.deleteChangeProposal(
                 projectId = proposalToProjectId[it.id!!]!!,
-                milestoneId = proposalToMilestoneId[it.id]!!,
                 changeProposalId = it.id
             )
         }
@@ -40,10 +38,10 @@ class ChangeProposalTestBuilderResource(
         return ChangeProposalsApi(ApiTestSettings.apiBasePath)
     }
 
-    fun create(projectId: UUID, milestoneId: UUID, taskId: UUID): ChangeProposal? {
+    fun create(projectId: UUID, taskId: UUID): ChangeProposal? {
         val created = addClosable(
             api.createChangeProposal(
-                projectId, milestoneId,
+                projectId,
                 ChangeProposal(
                     reason = "reason",
                     comment = "comment",
@@ -55,35 +53,31 @@ class ChangeProposalTestBuilderResource(
             )
         )
         proposalToTaskId[created.id!!] = taskId
-        proposalToMilestoneId[created.id] = milestoneId
         proposalToProjectId[created.id] = projectId
         return created
     }
 
-    fun create(projectId: UUID, milestoneId: UUID, changeProposal: ChangeProposal): ChangeProposal? {
-        val created = addClosable(api.createChangeProposal(projectId, milestoneId, changeProposal))
+    fun create(projectId: UUID, changeProposal: ChangeProposal): ChangeProposal? {
+        val created = addClosable(api.createChangeProposal(projectId, changeProposal))
         proposalToTaskId[created.id!!] = changeProposal.taskId
-        proposalToMilestoneId[created.id!!] = milestoneId
-        proposalToProjectId[created.id!!] = projectId
+        proposalToProjectId[created.id] = projectId
         return created
     }
 
     fun findChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID
     ): ChangeProposal {
-        return api.findChangeProposal(projectId, milestoneId, changeProposalId)
+        return api.findChangeProposal(projectId, changeProposalId)
     }
 
     fun assertFindFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID
     ) {
         try {
-            api.findChangeProposal(projectId, milestoneId, changeProposalId)
+            api.findChangeProposal(projectId, changeProposalId)
             fail(String.format("Expected find to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -92,7 +86,7 @@ class ChangeProposalTestBuilderResource(
 
     fun listChangeProposals(
         projectId: UUID,
-        milestoneId: UUID,
+        milestoneId: UUID? = null,
         taskId: UUID? = null,
         first: Int? = null,
         max: Int? = null
@@ -103,11 +97,10 @@ class ChangeProposalTestBuilderResource(
     fun assertListFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID
     ) {
         try {
-            api.listChangeProposals(projectId, milestoneId, taskId)
+            api.listChangeProposals(projectId, taskId)
             fail(String.format("Expected list to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -116,22 +109,20 @@ class ChangeProposalTestBuilderResource(
 
     fun updateChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ): ChangeProposal {
-        return api.updateChangeProposal(projectId, milestoneId, changeProposalId, changeProposal)
+        return api.updateChangeProposal(projectId, changeProposalId, changeProposal)
     }
 
     fun assertUpdateFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ) {
         try {
-            api.updateChangeProposal(projectId, milestoneId, changeProposalId, changeProposal)
+            api.updateChangeProposal(projectId, changeProposalId, changeProposal)
             fail(String.format("Expected update to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -141,21 +132,19 @@ class ChangeProposalTestBuilderResource(
     fun assertDeleteFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID
     ) {
         try {
-            api.deleteChangeProposal(projectId, milestoneId, changeProposalId)
+            api.deleteChangeProposal(projectId, changeProposalId)
             fail(String.format("Expected delete to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
         }
     }
 
-    fun deleteProposal(projectId: UUID, milestoneId: UUID, changeProposalId: UUID) {
+    fun deleteProposal(projectId: UUID, changeProposalId: UUID) {
         api.deleteChangeProposal(
             projectId = projectId,
-            milestoneId = milestoneId,
             changeProposalId = changeProposalId
         )
         removeCloseable { closable: Any ->
@@ -167,9 +156,9 @@ class ChangeProposalTestBuilderResource(
         }
     }
 
-    fun assertCreateFail(i: Int, projectId: UUID, milestoneId: UUID, proposalData: ChangeProposal) {
+    fun assertCreateFail(i: Int, projectId: UUID, proposalData: ChangeProposal) {
         try {
-            api.createChangeProposal(projectId, milestoneId, proposalData)
+            api.createChangeProposal(projectId, proposalData)
             fail(String.format("Expected create to fail with status %d", i))
         } catch (e: ClientException) {
             Assertions.assertEquals(i.toLong(), e.statusCode.toLong())

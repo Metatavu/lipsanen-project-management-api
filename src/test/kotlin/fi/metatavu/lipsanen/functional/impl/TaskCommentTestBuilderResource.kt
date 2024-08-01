@@ -20,17 +20,14 @@ class TaskCommentTestBuilderResource(
     apiClient: ApiClient
 ) : ApiTestBuilderResource<TaskComment, TaskCommentsApi>(testBuilder, apiClient) {
     private val taskCommentToProjectId = mutableMapOf<UUID, UUID>()
-    private val taskCommentToMilestoneId = mutableMapOf<UUID, UUID>()
     override fun clean(p0: TaskComment?) {
         p0?.let {
             api.deleteTaskComment(
                 projectId = taskCommentToProjectId[it.id]!!,
-                milestoneId = taskCommentToMilestoneId[it.id]!!,
-                taskId = it.taskId!!,
+                taskId = it.taskId,
                 commentId = it.id!!
             )
             taskCommentToProjectId.remove(p0.id)
-            taskCommentToMilestoneId.remove(p0.id)
         }
     }
 
@@ -40,12 +37,11 @@ class TaskCommentTestBuilderResource(
     }
 
     fun create(
-        projectId: UUID, milestoneId: UUID, taskId: UUID, taskComment: TaskComment? = null
+        projectId: UUID, taskId: UUID, taskComment: TaskComment? = null
     ): TaskComment {
         val comment = addClosable(
             api.createTaskComment(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 taskId = taskId,
                 taskComment = taskComment
                     ?: TaskComment(
@@ -54,26 +50,25 @@ class TaskCommentTestBuilderResource(
             )
         )
         taskCommentToProjectId[comment.id!!] = projectId
-        taskCommentToMilestoneId[comment.id] = milestoneId
         return comment
     }
 
-    fun findTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, taskCommentId: UUID): TaskComment {
-        return api.findTaskComment(projectId, milestoneId, taskId, taskCommentId)
+    fun findTaskComment(projectId: UUID, taskId: UUID, taskCommentId: UUID): TaskComment {
+        return api.findTaskComment(projectId, taskId, taskCommentId)
     }
 
-    fun listTaskComments(projectId: UUID, milestoneId: UUID, taskId: UUID): Array<TaskComment> {
-        return api.listTaskComments(projectId, milestoneId, taskId)
+    fun listTaskComments(projectId: UUID, taskId: UUID): Array<TaskComment> {
+        return api.listTaskComments(projectId, taskId)
     }
 
     fun updateTaskComment(
-        projectId: UUID, milestoneId: UUID, taskId: UUID, taskCommentId: UUID, taskComment: TaskComment
+        projectId: UUID, taskId: UUID, taskCommentId: UUID, taskComment: TaskComment
     ): TaskComment {
-        return api.updateTaskComment(projectId, milestoneId, taskId, taskCommentId, taskComment)
+        return api.updateTaskComment(projectId, taskId, taskCommentId, taskComment)
     }
 
-    fun deleteTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, taskCommentId: UUID) {
-        api.deleteTaskComment(projectId, milestoneId, taskId, taskCommentId)
+    fun deleteTaskComment(projectId: UUID, taskId: UUID, taskCommentId: UUID) {
+        api.deleteTaskComment(projectId, taskId, taskCommentId)
         removeCloseable { closable: Any ->
             if (closable !is TaskComment) {
                 return@removeCloseable false
@@ -84,10 +79,10 @@ class TaskCommentTestBuilderResource(
     }
 
     fun assertDeleteFail(
-        expectedStatus: Int, projectId: UUID, milestoneId: UUID, taskId: UUID, taskCommentId: UUID
+        expectedStatus: Int, projectId: UUID, taskId: UUID, taskCommentId: UUID
     ) {
         try {
-            api.deleteTaskComment(projectId, milestoneId, taskId, taskCommentId)
+            api.deleteTaskComment(projectId, taskId, taskCommentId)
             fail(String.format("Expected delete to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -97,13 +92,12 @@ class TaskCommentTestBuilderResource(
     fun assertUpdateFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         taskCommentId: UUID,
         taskComment: TaskComment
     ) {
         try {
-            api.updateTaskComment(projectId, milestoneId, taskId, taskCommentId, taskComment)
+            api.updateTaskComment(projectId, taskId, taskCommentId, taskComment)
             fail(String.format("Expected update to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -111,10 +105,10 @@ class TaskCommentTestBuilderResource(
     }
 
     fun assertFindFail(
-        expectedStatus: Int, projectId: UUID, milestoneId: UUID, taskId: UUID, taskCommentId: UUID
+        expectedStatus: Int, projectId: UUID, taskId: UUID, taskCommentId: UUID
     ) {
         try {
-            api.findTaskComment(projectId, milestoneId, taskId, taskCommentId)
+            api.findTaskComment(projectId, taskId, taskCommentId)
             fail(String.format("Expected find to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
