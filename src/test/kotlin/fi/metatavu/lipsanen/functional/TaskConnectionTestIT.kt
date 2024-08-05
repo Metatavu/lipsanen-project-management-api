@@ -47,7 +47,6 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
         tb.admin.task.assertUpdateFail(
             409,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = createdTask2.id,
             task = createdTask2.copy(status = TaskStatus.IN_PROGRESS)
         )
@@ -70,7 +69,7 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
         )
         val taskConnection2 = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
-                sourceTaskId = createdTask2.id!!,
+                sourceTaskId = createdTask2.id,
                 targetTaskId = createdTask3.id!!,
                 TaskConnectionType.START_TO_START
             )
@@ -127,8 +126,8 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
             projectId = project.id,
             taskConnectionId = taskConnection.id!!,
             taskConnection = TaskConnection(
-                sourceTaskId = createdTask.id!!,
-                targetTaskId = createdTask2.id!!,
+                sourceTaskId = createdTask.id,
+                targetTaskId = createdTask2.id,
                 type = TaskConnectionType.FINISH_TO_START
             )
         )

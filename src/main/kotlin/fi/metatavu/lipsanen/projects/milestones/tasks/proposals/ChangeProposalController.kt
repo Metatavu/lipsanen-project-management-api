@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.NotificationsController
+import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
@@ -68,39 +69,45 @@ class ChangeProposalController {
     /**
      * Lists change proposals
      *
-     * @param milestone milestone
+     * @param project project
+     * @param milestoneFilter milestone filter
      * @param taskFilter task filter
      * @param first first result
      * @param max max results
      * @return list of change proposals
      */
     suspend fun listChangeProposals(
-        milestone: MilestoneEntity,
+        project: ProjectEntity,
+        milestoneFilter: MilestoneEntity?,
         taskFilter: TaskEntity?,
         first: Int?,
         max: Int?
     ): Pair<List<ChangeProposalEntity>, Long> {
-        if (taskFilter != null) {
-            return proposalRepository.applyFirstMaxToQuery(
-                query = proposalRepository.find(
-                    "task= :task",
-                    Sort.ascending("createdAt"),
-                    Parameters.with("task", taskFilter)
-                ),
-                firstIndex = first,
-                maxResults = max
-            )
-        } else {
-            return proposalRepository.applyFirstMaxToQuery(
-                query = proposalRepository.find(
-                    "task.milestone= :milestone",
-                    Sort.ascending("createdAt"),
-                    Parameters.with("milestone", milestone)
-                ),
-                firstIndex = first,
-                maxResults = max
-            )
+        val sb = StringBuilder()
+        val parameters = Parameters()
+
+        sb.append("task.milestone.project= :project")
+        parameters.and("project", project)
+
+        if (milestoneFilter != null) {
+            sb.append(" and task.milestone= :milestone")
+            parameters.and("milestone", milestoneFilter)
         }
+
+        if (taskFilter != null) {
+            sb.append(" and task= :task")
+            parameters.and("task", taskFilter)
+        }
+
+        return proposalRepository.applyFirstMaxToQuery(
+            query = proposalRepository.find(
+                sb.toString(),
+                Sort.ascending("createdAt"),
+                parameters
+            ),
+            firstIndex = first,
+            maxResults = max
+        )
     }
 
     /**

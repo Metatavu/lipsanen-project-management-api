@@ -43,16 +43,15 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listTaskComments(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         first: Int?,
         max: Int?
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+        val task = taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskId)
         )
 
@@ -64,16 +63,15 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun createTaskComment(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         taskComment: TaskComment
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         if (taskComment.taskId != taskId) return@withCoroutineScope createBadRequest("Task id in path and body do not match")
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+        val task = taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskId)
         )
 
@@ -90,14 +88,14 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     }
 
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
-    override fun findTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
+    override fun findTaskComment(projectId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
         withCoroutineScope {
             val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+            val (project, errorResponse) = getProjectAccessRights(projectId, userId)
             if (errorResponse != null) return@withCoroutineScope errorResponse
 
-            val task = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+            val task = taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 
@@ -113,7 +111,6 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun updateTaskComment(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         commentId: UUID,
         taskComment: TaskComment
@@ -121,10 +118,10 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         if (taskComment.taskId != taskId) return@withCoroutineScope createBadRequest("Task id in path and body do not match")
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+        val task = taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(TASK, taskId)
         )
 
@@ -153,14 +150,14 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
 
     @WithTransaction
     @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME)
-    override fun deleteTaskComment(projectId: UUID, milestoneId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
+    override fun deleteTaskComment(projectId: UUID, taskId: UUID, commentId: UUID): Uni<Response> =
         withCoroutineScope {
             val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-            val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+            val (project, errorResponse) = getProjectAccessRights(projectId, userId)
             if (errorResponse != null) return@withCoroutineScope errorResponse
 
-            val task = taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+            val task = taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
 

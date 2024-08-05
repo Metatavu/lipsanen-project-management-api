@@ -25,17 +25,16 @@ class TaskTestBuilderResource(
     apiClient: ApiClient
 ) : ApiTestBuilderResource<Task, TasksApi>(testBuilder, apiClient) {
 
-    private val taskToMilestoneProject = mutableMapOf<UUID, Pair<UUID, UUID>>()
+    private val taskToProject = mutableMapOf<UUID, UUID>()
 
     override fun clean(p0: Task?) {
         p0?.let {
             api.deleteTask(
-                projectId = taskToMilestoneProject[it.id]?.second!!,
-                milestoneId = taskToMilestoneProject[it.id]?.first!!,
+                projectId = taskToProject[it.id]!!,
                 taskId = it.id!!
             )
         }
-        taskToMilestoneProject.remove(p0?.id)
+        taskToProject.remove(p0?.id)
     }
 
     override fun getApi(): TasksApi {
@@ -45,17 +44,15 @@ class TaskTestBuilderResource(
 
     fun create(
         projectId: UUID,
-        milestoneId: UUID,
         task: Task
     ): Task {
         val created = addClosable(
             api.createTask(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 task = task
             )
         )
-        taskToMilestoneProject[created.id!!] = Pair(milestoneId, projectId)
+        taskToProject[created.id!!] = projectId
         return created
     }
 
@@ -68,7 +65,6 @@ class TaskTestBuilderResource(
     ): Task {
         return create(
             projectId = projectId,
-            milestoneId = milestoneId,
             task = Task(
                 name = name ?: "Task",
                 startDate = startDate,
@@ -86,7 +82,6 @@ class TaskTestBuilderResource(
     ): Task {
         return create(
             projectId = projectId,
-            milestoneId = milestoneId,
             task = Task(
                 name = "Task",
                 startDate = "2022-01-01",
@@ -100,12 +95,10 @@ class TaskTestBuilderResource(
 
     fun find(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID
     ): Task {
         return api.findTask(
             projectId = projectId,
-            milestoneId = milestoneId,
             taskId = taskId
         )
     }
@@ -122,13 +115,11 @@ class TaskTestBuilderResource(
 
     fun update(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         task: Task
     ): Task {
         return api.updateTask(
             projectId = projectId,
-            milestoneId = milestoneId,
             taskId = taskId,
             task = task
         )
@@ -136,12 +127,10 @@ class TaskTestBuilderResource(
 
     fun delete(
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID
     ) {
         api.deleteTask(
             projectId = projectId,
-            milestoneId = milestoneId,
             taskId = taskId
         )
         removeCloseable { closable: Any ->
@@ -156,13 +145,11 @@ class TaskTestBuilderResource(
     fun assertCreateFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         task: Task
     ) {
         try {
             api.createTask(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 task = task
             )
             fail(String.format("Expected create to fail with status %d", expectedStatus))
@@ -174,13 +161,11 @@ class TaskTestBuilderResource(
     fun assertFindFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID
     ) {
         try {
             api.findTask(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 taskId = taskId
             )
             fail(String.format("Expected find to fail with status %d", expectedStatus))
@@ -208,14 +193,12 @@ class TaskTestBuilderResource(
     fun assertUpdateFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID,
         task: Task
     ) {
         try {
             api.updateTask(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 taskId = taskId,
                 task = task
             )
@@ -228,13 +211,11 @@ class TaskTestBuilderResource(
     fun assertDeleteFail(
         expectedStatus: Int,
         projectId: UUID,
-        milestoneId: UUID,
         taskId: UUID
     ) {
         try {
             api.deleteTask(
                 projectId = projectId,
-                milestoneId = milestoneId,
                 taskId = taskId
             )
             fail(String.format("Expected delete to fail with status %d", expectedStatus))

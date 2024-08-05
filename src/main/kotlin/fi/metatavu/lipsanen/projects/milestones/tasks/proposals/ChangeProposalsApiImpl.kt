@@ -42,24 +42,31 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listChangeProposals(
         projectId: UUID,
-        milestoneId: UUID,
+        milestoneId: UUID?,
         taskId: UUID?,
         first: Int?,
         max: Int?
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val taskFilter = if (taskId != null) {
-            taskController.find(projectMilestone!!.first, taskId) ?: return@withCoroutineScope createNotFound(
+            taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
         } else null
 
+        val milestoneFilter = if (milestoneId != null) {
+            milestoneController.find(project!!, milestoneId) ?: return@withCoroutineScope createNotFound(
+                createNotFoundMessage(MILESTONE, milestoneId)
+            )
+        } else null
+
         val (changeProposals, count) = proposalController.listChangeProposals(
-            milestone = projectMilestone!!.first,
+            project = project!!,
+            milestoneFilter = milestoneFilter,
             taskFilter = taskFilter,
             first = first,
             max = max
@@ -71,15 +78,14 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @WithTransaction
     override fun createChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposal: ChangeProposal
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-        val (projectMilestone, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
-        val task = taskController.find(projectMilestone!!.first, changeProposal.taskId) ?: return@withCoroutineScope createBadRequest(
+        val task = taskController.find(project!!, changeProposal.taskId) ?: return@withCoroutineScope createBadRequest(
             createNotFoundMessage(TASK, changeProposal.taskId)
         )
         val createdProposal = proposalController.create(task, changeProposal, userId)
@@ -89,18 +95,17 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun findChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val proposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
-        if (proposal.task.milestone.id != milestoneId) {
+        if (proposal.task.milestone.project.id != projectId) {
             return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
 
@@ -111,12 +116,11 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @WithTransaction
     override fun updateChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID,
         changeProposal: ChangeProposal
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
-        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val foundProposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
@@ -126,7 +130,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             return@withCoroutineScope createBadRequest("Proposal cannot be reassigned to other task")
         }
 
-        if (foundProposal.task.milestone.id != milestoneId) {
+        if (foundProposal.task.milestone.project.id != projectId) {
             return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
         hasProposalEditingRights(userId, foundProposal)?.let { return@withCoroutineScope it }
@@ -149,18 +153,17 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     @WithTransaction
     override fun deleteChangeProposal(
         projectId: UUID,
-        milestoneId: UUID,
         changeProposalId: UUID
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
-        val (_, errorResponse) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
+        val (_, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse
 
         val proposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
-        if (proposal.task.milestone.id != milestoneId) {
+        if (proposal.task.milestone.project.id != projectId) {
             return@withCoroutineScope createNotFound(createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId))
         }
 
