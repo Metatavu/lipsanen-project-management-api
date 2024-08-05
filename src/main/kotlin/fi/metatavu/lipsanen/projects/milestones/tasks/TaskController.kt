@@ -61,14 +61,26 @@ class TaskController {
     /**
      * Lists tasks
      *
-     * @param milestone milestone
+     * @param projectFilter project filter
+     * @param milestoneFilter milestone
      * @param first first result
      * @param max max results
      * @return list of tasks
      */
-    suspend fun list(milestone: MilestoneEntity, first: Int?, max: Int?): Pair<List<TaskEntity>, Long> {
+    suspend fun list(projectFilter: ProjectEntity, milestoneFilter: MilestoneEntity?, first: Int?, max: Int?): Pair<List<TaskEntity>, Long> {
+        val query = StringBuilder()
+        val parameters = Parameters()
+
+        query.append("milestone.project = :project")
+        parameters.and("project", projectFilter)
+
+        if (milestoneFilter != null) {
+            query.append(" and milestone = :milestone")
+            parameters.and("milestone", milestoneFilter)
+        }
+
         return taskEntityRepository.applyFirstMaxToQuery(
-            query = taskEntityRepository.find("milestone", Sort.ascending("startDate"), milestone),
+            query = taskEntityRepository.find(query.toString(), Sort.ascending("startDate"), parameters),
             firstIndex = first,
             maxResults = max
         )

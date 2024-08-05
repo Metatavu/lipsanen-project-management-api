@@ -37,14 +37,14 @@ class NotificationsCleanupTestIT : AbstractFunctionalTest() {
 
         // create task assigned notifications
         tb.admin.task.create(
-            projectId = project1.id, milestoneId = milestone1.id!!, task =
+            projectId = project1.id, task =
             Task(
                 name = "Task 1",
                 startDate = "2024-01-01",
                 endDate = "2024-01-02",
                 assigneeIds = arrayOf(user.id!!),
                 status = TaskStatus.NOT_STARTED,
-                milestoneId = milestone1.id
+                milestoneId = milestone1.id!!
             )
         )
 

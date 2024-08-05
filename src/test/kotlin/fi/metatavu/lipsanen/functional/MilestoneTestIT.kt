@@ -221,16 +221,16 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         )
 
         tb.admin.task.create(
-            project.id, milestone.id!!, Task(
+            project.id, Task(
                 name = "Task 1",
                 startDate = "2022-01-02",
                 endDate = "2022-01-10",
                 status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
-                milestoneId = milestone.id
+                milestoneId = milestone.id!!
             )
         )
         tb.admin.task.create(
-            project.id, milestone.id!!, Task(
+            project.id, Task(
                 name = "Task 1",
                 startDate = "2022-01-05",
                 endDate = "2022-01-20",

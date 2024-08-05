@@ -1,10 +1,7 @@
 package fi.metatavu.lipsanen.functional
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import fi.metatavu.invalid.InvalidValueTestScenarioBody
-import fi.metatavu.invalid.InvalidValueTestScenarioBuilder
-import fi.metatavu.invalid.InvalidValueTestScenarioPath
-import fi.metatavu.invalid.InvalidValues
+import fi.metatavu.invalid.*
 import fi.metatavu.invalid.providers.SimpleInvalidValueProvider
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
@@ -51,7 +48,7 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         )
 
-        val task = tb.getUser("admin1@example.com").task.create(projectId = project.id, milestoneId = milestone.id, task = taskData)
+        val task = tb.getUser("admin1@example.com").task.create(projectId = project.id, task = taskData)
 
         assertNotNull(task)
         assertNotNull(task.id)
@@ -79,7 +76,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks",
+            path = "v1/projects/{projectId}/tasks",
             method = Method.POST,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -91,14 +88,6 @@ class TaskTestIT : AbstractFunctionalTest() {
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
                     default = project.id
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404,
-                    default = milestone.id
                 )
             )
             .body(
@@ -176,7 +165,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks",
+            path = "v1/projects/{projectId}/tasks",
             method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath
@@ -189,8 +178,8 @@ class TaskTestIT : AbstractFunctionalTest() {
                     default = project.id
                 )
             )
-            .path(
-                InvalidValueTestScenarioPath(
+            .query(
+                InvalidValueTestScenarioQuery(
                     name = "milestoneId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
@@ -206,7 +195,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val foundTask = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!)
+        val foundTask = tb.admin.task.find(projectId = project.id, taskId = task.id!!)
 
         assertNotNull(foundTask)
         assertEquals(task.id, foundTask.id)
@@ -219,7 +208,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}",
             method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath
@@ -230,14 +219,6 @@ class TaskTestIT : AbstractFunctionalTest() {
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
                     default = project.id
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404,
-                    default = milestone.id
                 )
             )
             .path(
@@ -267,7 +248,7 @@ class TaskTestIT : AbstractFunctionalTest() {
                 originalEndDate = "2022-01-31"
             )
         )
-        val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, Task(
+        val task = tb.admin.task.create(projectId = project.id, Task(
             name = "Task",
             startDate = "2022-01-01",
             endDate = "2022-01-31",
@@ -277,7 +258,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
-            milestoneId = milestone.id
+            milestoneId = milestone.id!!
         ))
         val taskUpdateData = task.copy(
             name = "Task2",
@@ -290,7 +271,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             estimatedReadiness = 20,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
         )
-        val updatedTask = tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id!!, taskUpdateData)
+        val updatedTask = tb.admin.task.update(projectId = project.id, taskId = task.id!!, taskUpdateData)
 
         assertNotNull(updatedTask)
         assertEquals(task.id, updatedTask.id)
@@ -373,12 +354,12 @@ class TaskTestIT : AbstractFunctionalTest() {
             )
         )
 
-        tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task.id, task.copy(startDate = "2022-01-03", endDate = "2022-01-04"))
+        tb.admin.task.update(projectId = project.id, taskId = task.id, task.copy(startDate = "2022-01-03", endDate = "2022-01-04"))
 
-        val foundTask1 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
-        val foundTask2 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task2.id)
-        val foundTask3 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)
-        val foundTask4 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task4.id)
+        val foundTask1 = tb.admin.task.find(projectId = project.id, taskId = task.id)
+        val foundTask2 = tb.admin.task.find(projectId = project.id, taskId = task2.id)
+        val foundTask3 = tb.admin.task.find(projectId = project.id, taskId = task3.id)
+        val foundTask4 = tb.admin.task.find(projectId = project.id, taskId = task4.id)
 
         assertEquals("2022-01-03", foundTask1.startDate)
         assertEquals("2022-01-04", foundTask1.endDate)
@@ -397,7 +378,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         tb.admin.task.assertUpdateFail(
             expectedStatus = 400,
             projectId = project.id,
-            milestoneId = milestone.id,
             taskId = task.id,
             task = task.copy(startDate = "2022-01-30", endDate = "2022-01-31")
         )
@@ -467,12 +447,12 @@ class TaskTestIT : AbstractFunctionalTest() {
             )
         )
 
-        tb.admin.task.update(projectId = project.id, milestoneId = milestone.id, taskId = task4.id, task4.copy(startDate = "2022-01-02", endDate = "2022-01-04"))
+        tb.admin.task.update(projectId = project.id, taskId = task4.id, task4.copy(startDate = "2022-01-02", endDate = "2022-01-04"))
 
-        val foundTask1 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task.id)
-        val foundTask2 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task2.id)
-        val foundTask3 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task3.id)
-        val foundTask4 = tb.admin.task.find(projectId = project.id, milestoneId = milestone.id, taskId = task4.id)
+        val foundTask1 = tb.admin.task.find(projectId = project.id, taskId = task.id)
+        val foundTask2 = tb.admin.task.find(projectId = project.id, taskId = task2.id)
+        val foundTask3 = tb.admin.task.find(projectId = project.id, taskId = task3.id)
+        val foundTask4 = tb.admin.task.find(projectId = project.id, taskId = task4.id)
 
 
         assertEquals("2022-01-01", foundTask1.startDate)
@@ -506,14 +486,13 @@ class TaskTestIT : AbstractFunctionalTest() {
         )
 
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val updatedTask =
-            tb.admin.task.update(projectId = project.id, milestoneId = milestone.id!!, taskId = task.id!!, task)
+        val updatedTask = tb.admin.task.update(projectId = project.id, taskId = task.id!!, task)
 
         assertNotNull(updatedTask)
         assertEquals(task.id, updatedTask.id)
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}",
             method = Method.PUT,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -525,14 +504,6 @@ class TaskTestIT : AbstractFunctionalTest() {
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
                     default = project.id
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404,
-                    default = milestone.id
                 )
             )
             .path(
@@ -573,7 +544,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        tb.admin.task.delete(projectId = project.id, milestoneId = milestone.id!!, taskId = task.id!!)
+        tb.admin.task.delete(projectId = project.id, taskId = task.id!!)
     }
 
     @Test
@@ -582,7 +553,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/milestones/{milestoneId}/tasks/{taskId}",
+            path = "v1/projects/{projectId}/tasks/{taskId}",
             method = Method.DELETE,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
@@ -593,14 +564,6 @@ class TaskTestIT : AbstractFunctionalTest() {
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
                     default = project.id
-                )
-            )
-            .path(
-                InvalidValueTestScenarioPath(
-                    name = "milestoneId",
-                    values = InvalidValues.STRING_NOT_NULL,
-                    expectedStatus = 404,
-                    default = milestone.id
                 )
             )
             .path(
