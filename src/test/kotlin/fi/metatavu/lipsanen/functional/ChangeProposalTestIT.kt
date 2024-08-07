@@ -14,8 +14,7 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import io.restassured.http.Method
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.util.*
@@ -279,69 +278,81 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         assertEquals(updateData.endDate, updatedProposal.endDate)
     }
 
+    /**
+     * Starting state:
+     * 3 tasks connected by 1-2, 2-3, 1-3, all finish to start types
+     * Task1 from 01.01 to 01.31
+     * Task2 from 02.01 to 01.29
+     * Task3 from 03.01 to 03.31
+     */
     @Test
-    fun testApplyChangeProposal() = createTestBuilder().use { tb ->
+    fun testApplyPreviewChangeProposal(): Unit = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        val milestone = tb.admin.milestone.create(projectId = project.id!!, startDate = "2024-01-01", endDate = "2024-12-31")
+        val milestone = tb.admin.milestone.create(projectId = project.id!!, startDate = "2022-01-01", endDate = "2024-12-31")
         val task1 = tb.admin.task.create(
+            name = "task 1",
             projectId = project.id,
             milestoneId = milestone.id!!,
             startDate = "2024-01-01",
             endDate = "2024-01-31"
         )
         val task2 = tb.admin.task.create(
+            name = "task 2",
             projectId = project.id,
             milestoneId = milestone.id,
             startDate = "2024-02-01",
             endDate = "2024-02-29"
         )
         val task3 = tb.admin.task.create(
+            name = "task 3",
             projectId = project.id,
             milestoneId = milestone.id,
             startDate = "2024-03-01",
             endDate = "2024-03-31"
         )
-
-        tb.admin.taskConnection.create(
-            projectId = project.id,
-            taskConnection = TaskConnection(task1.id!!, task2.id!!, TaskConnectionType.FINISH_TO_START)
-        )
-        tb.admin.taskConnection.create(
-            projectId = project.id,
-            taskConnection = TaskConnection(task2.id, task3.id!!, TaskConnectionType.FINISH_TO_START)
-        )
-        tb.admin.taskConnection.create(
-            projectId = project.id,
-            taskConnection = TaskConnection(task1.id, task3.id, TaskConnectionType.FINISH_TO_START)
-        )
+        tb.admin.taskConnection.create(projectId = project.id, taskConnection = TaskConnection(task1.id!!, task2.id!!, TaskConnectionType.FINISH_TO_START))
+        tb.admin.taskConnection.create(projectId = project.id, taskConnection = TaskConnection(task2.id, task3.id!!, TaskConnectionType.FINISH_TO_START))
+        tb.admin.taskConnection.create(projectId = project.id, taskConnection = TaskConnection(task1.id, task3.id, TaskConnectionType.FINISH_TO_START))
 
         // create 4 proposals for various tasks
-        tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id)!!
-        val proposal2 = tb.admin.changeProposal.create(
-            projectId = project.id, ChangeProposal(
-                reason = "reason",
-                comment = "comment",
-                status = ChangeProposalStatus.PENDING,
-                taskId = task1.id,
-                startDate = "2024-02-01",
-                endDate = "2024-02-15"
-            )
-        )!!
-        tb.admin.changeProposal.create(projectId = project.id, taskId = task2.id)!!
-        tb.admin.changeProposal.create(projectId = project.id, taskId = task3.id)!!
+        val proposal = tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id, startDate = "2024-02-01", endDate = "2024-02-15")
+        val proposal5Invalid = tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id, startDate = "2024-12-30", endDate = "2024-12-30")
+
+        // proposal preview shows that the propsoal is invalid
+        tb.admin.changeProposal.assertListChangeProposalTasksPreviewFail(400, project.id, proposal5Invalid.id!!)
+
+        val expectedProposalChanges = tb.admin.changeProposal.listChangeProposalTasksPreview(project.id, proposal.id!!)
+        assertNotNull(expectedProposalChanges)
+        assertEquals(3, expectedProposalChanges.size)
+        // check that the task dates are not same as what was offered in the proposal preview
+        var allTasks = tb.admin.task.list(project.id, milestone.id)
+        expectedProposalChanges.forEach { expected ->
+            allTasks.find { it.id == expected.id }?.let { actual ->
+                assertNotEquals(expected.startDate, actual.startDate)
+                assertNotEquals(expected.endDate, actual.endDate)
+            }
+        }
 
         // approve single proposal
         tb.admin.changeProposal.updateChangeProposal(
             projectId = project.id,
-            changeProposalId = proposal2.id!!,
-            changeProposal = proposal2.copy(status = ChangeProposalStatus.APPROVED)
+            changeProposalId = proposal.id,
+            changeProposal = proposal.copy(status = ChangeProposalStatus.APPROVED)
         )
+        //verify that the predictions for it were correct
+        allTasks = tb.admin.task.list(project.id, milestone.id)
+        expectedProposalChanges.forEach { expected ->
+            allTasks.find { it.id == expected.id }?.let { actual ->
+                assertEquals(expected.startDate, actual.startDate)
+                assertEquals(expected.endDate, actual.endDate)
+            }
+        }
 
-        // Check the status of all other proposals
+        // Check that all other proposals got auto-rejected
         val allProposals = tb.admin.changeProposal.listChangeProposals(project.id, milestone.id)
-        assertEquals(4, allProposals.size)
+        assertEquals(2, allProposals.size)
         allProposals.forEach {
-            if (it.id == proposal2.id) {
+            if (it.id == proposal.id) {
                 assertEquals(ChangeProposalStatus.APPROVED, it.status)
             } else {
                 assertEquals(ChangeProposalStatus.REJECTED, it.status)
@@ -350,7 +361,6 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
 
         //check that incorrect proposal (breaking the milestone logic) cannot be applied
         val invalidApproval = tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id)!!
-
         tb.admin.changeProposal.assertUpdateFail(
             expectedStatus = 400,
             projectId = project.id,

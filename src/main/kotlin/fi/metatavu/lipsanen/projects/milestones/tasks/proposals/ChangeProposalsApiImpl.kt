@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.spec.ChangeProposalsApi
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskTranslator
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.Panache
@@ -32,6 +33,9 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
     @Inject
     lateinit var changeProposalTranslator: ChangeProposalTranslator
+
+    @Inject
+    lateinit var taskTranslator: TaskTranslator
 
     @Inject
     lateinit var taskController: TaskController
@@ -172,6 +176,25 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         proposalController.delete(proposal)
 
         createNoContent()
+    }
+
+    @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
+    override fun listChangeProposalTasksPreview(projectId: UUID, changeProposalId: UUID): Uni<Response> = withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
+        val (_, errorResponse) = getProjectAccessRights(projectId, userId)
+        if (errorResponse != null) return@withCoroutineScope errorResponse
+
+        val proposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
+            createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
+        )
+        hasProposalEditingRights(userId, proposal)?.let { return@withCoroutineScope it }
+        try {
+            val tasks = proposalController.listChangeProposalTasksPreview(proposal, userId)
+            createOk(taskTranslator.translate(tasks))
+
+        } catch (e: TaskOutsideMilestoneException) {
+            return@withCoroutineScope createBadRequest(e.message!!)
+        }
     }
 
     /**

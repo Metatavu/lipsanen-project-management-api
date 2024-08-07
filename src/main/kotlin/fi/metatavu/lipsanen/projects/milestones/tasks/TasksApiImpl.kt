@@ -141,13 +141,11 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 return@withCoroutineScope createBadRequest(INVALID_PROJECT_STATE)
             }
 
-            val jobPosition = if (foundTask.jobPosition?.id != task.jobPositionId) {
-                if (task.jobPositionId != null) {
-                    jobPositionController.findJobPosition(task.jobPositionId) ?: return@withCoroutineScope createBadRequest(
-                        createNotFoundMessage(JOB_POSITION, task.jobPositionId)
-                    )
-                } else null
-            } else foundTask.jobPosition
+            val jobPosition = if (task.jobPositionId != null) {
+                jobPositionController.findJobPosition(task.jobPositionId) ?: return@withCoroutineScope createBadRequest(
+                    createNotFoundMessage(JOB_POSITION, task.jobPositionId)
+                )
+            } else null
 
             val milestone = milestoneController.find(project, task.milestoneId) ?: return@withCoroutineScope createBadRequest(
                 createNotFoundMessage(MILESTONE, task.milestoneId)
