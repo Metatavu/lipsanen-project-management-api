@@ -234,16 +234,17 @@ class TaskController {
             notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
 
-        val updatedTask = updateTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
-        updatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
-        updatedTask.name = newTask.name
-        updatedTask.userRole = newTask.userRole ?: UserRole.USER
-        updatedTask.estimatedDuration = newTask.estimatedDuration
-        updatedTask.estimatedReadiness = newTask.estimatedReadiness
-        updatedTask.jobPosition = jobPosition
-        updatedTask.lastModifierId = userId
+        val updatedTasks = getUpdatedTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
+        val mainUpdatedTask = updatedTasks.find { it.id == existingTask.id } ?: existingTask //todo check that this is always found
+        mainUpdatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
+        mainUpdatedTask.name = newTask.name
+        mainUpdatedTask.userRole = newTask.userRole ?: UserRole.USER
+        mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
+        mainUpdatedTask.estimatedReadiness = newTask.estimatedReadiness
+        mainUpdatedTask.jobPosition = jobPosition
+        mainUpdatedTask.lastModifierId = userId
 
-        return taskEntityRepository.persistSuspending(updatedTask)
+        return taskEntityRepository.persistSuspending(mainUpdatedTask)
     }
 
     /**
@@ -316,14 +317,13 @@ class TaskController {
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
-    suspend fun applyTaskProposal(
+    suspend fun getTasksAffectedByChangeProposal(
         existingTask: TaskEntity,
         newStartDate: LocalDate,
         newEndDate: LocalDate,
         milestone: MilestoneEntity,
         userId: UUID,
-        proposalMode: Boolean
-    ): TaskEntity {
+    ): List<TaskEntity> {
         //if the task extends beyond the milestone, the milestone is updated to fit that task
         if (newStartDate < milestone.startDate) {
             milestone.startDate = newStartDate
@@ -331,10 +331,9 @@ class TaskController {
         if (newEndDate > milestone.endDate) {
             milestone.endDate = newEndDate
         }
-
-        val updatedTask = updateTaskDates(existingTask, newStartDate, newEndDate, milestone, proposalMode)
-        updatedTask.lastModifierId = userId
-        return taskEntityRepository.persistSuspending(updatedTask)
+        existingTask.lastModifierId = userId
+        val updatedTasks = getUpdatedTaskDates(existingTask, newStartDate, newEndDate, milestone)
+        return updatedTasks
     }
 
     /**
@@ -449,19 +448,17 @@ class TaskController {
      * @param newStartDate new start date
      * @param newEndDate new end date
      * @param milestone milestone
-     * @param proposalMode if the task update happens in proposal mode - if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
-    private suspend fun updateTaskDates(
+    private suspend fun getUpdatedTaskDates(
         movableTask: TaskEntity,
         newStartDate: LocalDate,
         newEndDate: LocalDate,
         milestone: MilestoneEntity,
-        proposalMode: Boolean = false
-    ): TaskEntity {
+    ): List<TaskEntity> {
         if (movableTask.startDate == newStartDate && movableTask.endDate == newEndDate) {
-            return movableTask
+            return listOf(movableTask)
         }
 
         val moveForward = movableTask.endDate < newEndDate
@@ -469,51 +466,41 @@ class TaskController {
         movableTask.startDate = newStartDate
         movableTask.endDate = newEndDate
 
-        var movedTask = taskEntityRepository.persistSuspending(movableTask)
-
-        val updatableTasks = mutableListOf<TaskEntity>()
+        val updatableTasks = mutableListOf(movableTask)
         if (moveForward) {
-            updateTaskConnectionsForward(movedTask, updatableTasks)
+            updateTaskConnectionsForward(movableTask, updatableTasks)
         }
         if (moveBackward) {
-            updateTaskConnectionsBackward(movedTask, updatableTasks)
+            updateTaskConnectionsBackward(movableTask, updatableTasks)
         }
 
-        // Check if the dependent tasks are still within the milestone
+        // Check if the tasks are still within the milestone (milestone already has modified dates if
+        // the original task moved it)
         updatableTasks.forEach {
             if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
                 throw TaskOutsideMilestoneException(it.id, it.startDate, it.endDate)
             }
         }
-        updatableTasks.forEach { taskEntityRepository.persistSuspending(it) }
-
-        //in proposal model cancel all the proposals that affect the moved tasks
-        if (proposalMode) {
-            proposalController.list(updatableTasks.distinctBy { it.id }).forEach {
-                it.status = ChangeProposalStatus.REJECTED
-                proposalController.persist(it)
-            }
-        }
-
-        return movedTask
+        return updatableTasks
     }
 
     /**
      * Cascade update task connections backward (all parents of movedTask recursively)
      *
-     * @param movedTask task to update
+     * @param movableTask task to update (need to have up-to-date dates)
      * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
      */
-    private suspend fun updateTaskConnectionsBackward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+    private suspend fun updateTaskConnectionsBackward(movableTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
         val tasks = ArrayDeque<TaskEntity>()
-        tasks.add(movedTask)
+        tasks.add(movableTask)
+
         while (tasks.isNotEmpty()) {
             val currentTask = tasks.removeFirst()
             val connections = taskConnectionController.list(currentTask, TaskConnectionRole.TARGET)
             for (connection in connections) {
                 var updated = false
-                val sourceTask = connection.source
-                val targetTask = connection.target
+                val sourceTask = getUpdatedTaskIfAny(connection.source, updatableTasks)
+                val targetTask = getUpdatedTaskIfAny(connection.target, updatableTasks)
                 val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
                 when (connection.type) {
                     TaskConnectionType.FINISH_TO_START -> {
@@ -542,6 +529,7 @@ class TaskController {
                 }
 
                 if (updated) {
+                    updatableTasks.removeIf { it.id == sourceTask.id }
                     updatableTasks.add(sourceTask)
                 }
                 tasks.add(sourceTask)
@@ -553,20 +541,20 @@ class TaskController {
     /**
      * Cascade update task connections forward (all children of movedTask recursively)
      *
-     * @param movedTask task to update
+     * @param movableTask task to update (need to have up-to-date dates)
      * @param updatableTasks list of tasks to update (this list is updated with new tasks to be saved)
      */
-    private suspend fun updateTaskConnectionsForward(movedTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
+    private suspend fun updateTaskConnectionsForward(movableTask: TaskEntity, updatableTasks: MutableList<TaskEntity>) {
         val tasks = ArrayDeque<TaskEntity>()
-        tasks.add(movedTask)
+        tasks.add(movableTask)
 
         while (tasks.isNotEmpty()) {
             val currentTask = tasks.removeFirst()
             val connections = taskConnectionController.list(currentTask, TaskConnectionRole.SOURCE)
             for (connection in connections) {
                 var updated = false
-                val sourceTask = connection.source
-                val targetTask = connection.target
+                val sourceTask = getUpdatedTaskIfAny(connection.source, updatableTasks)
+                val targetTask = getUpdatedTaskIfAny(connection.target, updatableTasks)
                 val taskLength = targetTask.endDate.toEpochDay() - targetTask.startDate.toEpochDay()
                 when (connection.type) {
                     TaskConnectionType.FINISH_TO_START -> {
@@ -596,6 +584,7 @@ class TaskController {
 
 
                 if (updated) {
+                    updatableTasks.removeIf { it.id == targetTask.id }
                     updatableTasks.add(targetTask)
                 }
                 tasks.add(targetTask)
@@ -603,4 +592,16 @@ class TaskController {
         }
     }
 
+    /**
+     * Helper method for getting updated task from the list
+     * It is needed for updateTaskConnectionsForward and updateTaskConnectionsBackwards methods in order to
+     * use the task with up-to-date data if available
+     *
+     * @param entity task that is needed, can be used if it is not in updated task list
+     * @param allUpdatedTasks all tasks with changes which are not yet in db
+     * @return task     *
+     */
+    private fun getUpdatedTaskIfAny(entity: TaskEntity, allUpdatedTasks: List<TaskEntity>): TaskEntity {
+        return allUpdatedTasks.find { it.id == entity.id } ?: entity
+    }
 }

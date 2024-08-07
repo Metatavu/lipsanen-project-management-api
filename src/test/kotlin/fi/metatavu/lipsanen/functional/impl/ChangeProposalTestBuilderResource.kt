@@ -8,6 +8,7 @@ import fi.metatavu.lipsanen.test.client.infrastructure.ApiClient
 import fi.metatavu.lipsanen.test.client.infrastructure.ClientException
 import fi.metatavu.lipsanen.test.client.models.ChangeProposal
 import fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus
+import fi.metatavu.lipsanen.test.client.models.Task
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.fail
 import java.util.*
@@ -64,11 +65,45 @@ class ChangeProposalTestBuilderResource(
         return created
     }
 
+    fun create(projectId: UUID, taskId: UUID, startDate: String, endDate: String): ChangeProposal {
+        val created = addClosable(api.createChangeProposal(projectId, ChangeProposal(
+            taskId = taskId,
+            comment = "comment",
+            status = ChangeProposalStatus.PENDING,
+            startDate = startDate,
+            endDate = endDate,
+            reason = "because thats why"
+        )))
+        proposalToTaskId[created.id!!] = taskId
+        proposalToProjectId[created.id] = projectId
+        return created
+    }
+
     fun findChangeProposal(
         projectId: UUID,
         changeProposalId: UUID
     ): ChangeProposal {
         return api.findChangeProposal(projectId, changeProposalId)
+    }
+
+    fun listChangeProposalTasksPreview(
+        projectId: UUID,
+        changeProposalId: UUID
+    ): Array<Task> {
+        return api.listChangeProposalTasksPreview(projectId, changeProposalId)
+    }
+
+    fun assertListChangeProposalTasksPreviewFail(
+        expectedStatus: Int,
+        projectId: UUID,
+        changeProposalId: UUID
+    ) {
+        try {
+            api.listChangeProposalTasksPreview(projectId, changeProposalId)
+            fail(String.format("Expected list to fail with status %d", expectedStatus))
+        } catch (e: ClientException) {
+            Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
+        }
     }
 
     fun assertFindFail(

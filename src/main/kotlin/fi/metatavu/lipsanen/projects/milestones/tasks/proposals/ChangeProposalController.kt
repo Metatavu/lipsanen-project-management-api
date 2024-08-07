@@ -252,22 +252,23 @@ class ChangeProposalController {
      */
     private suspend fun approveChangeProposal(proposal: ChangeProposalEntity, userId: UUID) {
         // Update the task which will also do cascade updates and checks for milestone update validity
-        taskController.applyTaskProposal(
+        val updateableTasks = taskController.getTasksAffectedByChangeProposal(
             existingTask = proposal.task,
             newStartDate = proposal.startDate ?: proposal.task.startDate,
             newEndDate = proposal.endDate ?: proposal.task.endDate,
             milestone = proposal.task.milestone,
-            proposalMode = true,
             userId = userId
         )
 
         // reject all other proposals that affect the task
-        list(proposal.task).forEach {
+        list(updateableTasks.distinctBy { it.id }).forEach {
             if (it.id != proposal.id) {
                 it.status = ChangeProposalStatus.REJECTED
                 persist(it)
             }
         }
+
+        updateableTasks.forEach { taskController.persist(it) }
     }
 
     /**
@@ -286,5 +287,22 @@ class ChangeProposalController {
      */
     suspend fun persist(changeProposal: ChangeProposalEntity): ChangeProposalEntity {
         return proposalRepository.persistSuspending(changeProposal)
+    }
+
+    /**
+     * Lists task changes that will get applied if change proposal is approved
+     *
+     * @param proposal change proposal
+     * @param userId user id
+     * @return list of updated tasks (not presisted)
+     */
+    suspend fun listChangeProposalTasksPreview(proposal: ChangeProposalEntity, userId: UUID): List<TaskEntity> {
+        return taskController.getTasksAffectedByChangeProposal(
+            existingTask = proposal.task,
+            newStartDate = proposal.startDate ?: proposal.task.startDate,
+            newEndDate = proposal.endDate ?: proposal.task.endDate,
+            milestone = proposal.task.milestone,
+            userId = userId
+        )
     }
 }
