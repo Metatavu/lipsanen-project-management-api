@@ -599,7 +599,7 @@ class TaskController {
      *
      * @param entity task that is needed, can be used if it is not in updated task list
      * @param allUpdatedTasks all tasks with changes which are not yet in db
-     * @return task     *
+     * @return task
      */
     private fun getUpdatedTaskIfAny(entity: TaskEntity, allUpdatedTasks: List<TaskEntity>): TaskEntity {
         return allUpdatedTasks.find { it.id == entity.id } ?: entity
