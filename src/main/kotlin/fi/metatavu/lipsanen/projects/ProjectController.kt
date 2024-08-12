@@ -26,9 +26,6 @@ class ProjectController {
     lateinit var userController: UserController
 
     @Inject
-    lateinit var keycloakAdminClient: KeycloakAdminClient
-
-    @Inject
     lateinit var projectThemeController: ProjectThemeController
 
     @Inject

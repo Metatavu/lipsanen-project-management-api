@@ -31,9 +31,12 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testListUsers() = createTestBuilder().use {
-        it.admin.user.create("user1", UserRole.USER)
-        it.admin.user.create("user2", UserRole.USER)
-        it.admin.user.create("user3", UserRole.USER)
+        val project1 = it.admin.project.create("project1").id
+        val project2 = it.admin.project.create("project2").id
+        val company = it.admin.company.create().id
+        it.admin.user.create("user1", UserRole.USER, project1, company)
+        it.admin.user.create("user2", UserRole.USER, project1)
+        it.admin.user.create("user3", UserRole.USER, project2, company)
         it.admin.user.create("user4", UserRole.USER)
 
         val users = it.admin.user.listUsers(null, null, null)
@@ -45,12 +48,14 @@ class UserTestIT: AbstractFunctionalTest() {
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
         assertEquals(2, pagedUsers2.size)
 
-        // Filter by company
-        val company = it.admin.company.create()
-        it.admin.user.updateUser(users[0].id!!, users[0].copy(companyId = company.id))
-        val companyUsers = it.admin.user.listUsers(companyId = company.id)
-        assertEquals(1, companyUsers.size)
-        it.admin.user.updateUser(users[0].id!!, users[0].copy(companyId = null))
+        val companyUsers = it.admin.user.listUsers(companyId = company)
+        assertEquals(2, companyUsers.size)
+
+        val projecUsers = it.admin.user.listUsers(projectId = project2)
+        assertEquals(1, projecUsers.size)
+
+        val projectCompanyUsers = it.admin.user.listUsers(projectId = project1, companyId = company)
+        assertEquals(1, projectCompanyUsers.size)
 
         it.user.user.assertListFailStatus(403)
     }
