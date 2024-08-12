@@ -71,7 +71,7 @@ class CompaniesApiImpl : CompaniesApi, AbstractApi() {
     override fun deleteCompany(companyId: UUID): Uni<Response> = withCoroutineScope {
         val foundCompany = companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
 
-        if (userController.listUsers(foundCompany, null, null, null).second > 0) {
+        if (userController.listUsers(foundCompany, null, null, null, null).second > 0) {
             return@withCoroutineScope createConflict("Company has users")
         }
 

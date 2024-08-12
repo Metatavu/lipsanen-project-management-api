@@ -3,6 +3,7 @@ package fi.metatavu.lipsanen.users
 import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.positions.JobPositionEntity
+import fi.metatavu.lipsanen.projects.ProjectEntity
 import io.quarkus.panache.common.Parameters
 import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
@@ -50,6 +51,9 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
      * Lists users
      *
      * @param companyEntity company entity
+     * @param keycloakId keycloak id
+     * @param jobPosition job position
+     * @param project project
      * @param firstResult first result
      * @param maxResults max results
      * @return list of users
@@ -58,24 +62,34 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
         companyEntity: CompanyEntity? = null,
         keycloakId: UUID?,
         jobPosition: JobPositionEntity? = null,
+        project: ProjectEntity? = null,
         firstResult: Int? = null,
         maxResults: Int? = null
     ): Pair<List<UserEntity>, Long> {
-        val sb = StringBuilder()
+        val sb = StringBuilder("SELECT u FROM UserEntity u")
         val parameters = Parameters()
 
+        if (project != null) {
+            sb.append(" JOIN UserToProjectEntity utp ON u.id = utp.user.id")
+            sb.append(" WHERE utp.project = :project ")
+            parameters.and("project", project)
+        }
+
         if (companyEntity != null) {
-            addCondition(sb, "company = :company")
+            addWhere(sb)
+            sb.append(" u.company = :company")
             parameters.and("company", companyEntity)
         }
 
         if (jobPosition != null) {
-            addCondition(sb, "jobPosition = :jobPosition")
+            addWhere(sb)
+            sb.append(" u.jobPosition = :jobPosition ")
             parameters.and("jobPosition", jobPosition)
         }
 
         if (keycloakId != null) {
-            addCondition(sb, "keycloakId = :keycloakId")
+            addWhere(sb)
+            sb.append(" u.keycloakId = :keycloakId ")
             parameters.and("keycloakId", keycloakId)
         }
 
@@ -84,5 +98,18 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
             firstResult,
             maxResults
         )
+    }
+
+    /**
+     * Adds where or end condition to HQL query
+     *
+     * @param sb string builder
+     */
+    private fun addWhere(sb: StringBuilder) {
+        if (sb.contains("WHERE")) {
+            sb.append(" AND")
+        } else {
+            sb.append(" WHERE")
+        }
     }
 }

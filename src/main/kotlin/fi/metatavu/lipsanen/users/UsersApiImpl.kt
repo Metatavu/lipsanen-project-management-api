@@ -46,13 +46,16 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    override fun listUsers(companyId: UUID?, keycloakId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+    override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
         } else null
+        val projectFilter = if (projectId != null) {
+            projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
+        } else null
 
-        val ( users, count ) = userController.listUsers(companyFilter, keycloakId, first, max)
-        createOk(users.map { userTranslator.translate(it, includeRoles) }, count.toLong())
+        val ( users, count ) = userController.listUsers(companyFilter, projectFilter, keycloakId, first, max)
+        createOk(users.map { userTranslator.translate(it, includeRoles) }, count)
     }
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
