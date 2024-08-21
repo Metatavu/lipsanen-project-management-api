@@ -34,6 +34,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         val admin = tb.admin.user.create("admin1", UserRole.ADMIN)
         val testUser1 = tb.admin.user.create("test0", UserRole.USER)
         val testUser2 = tb.admin.user.create("test1", UserRole.USER)
+        val testUser3 = tb.admin.user.create("test2", UserRole.USER)
 
         val taskData = Task(
             name = "Task",
@@ -42,6 +43,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             endDate = "2022-01-31",
             milestoneId = milestone.id!!,
             assigneeIds = arrayOf(testUser1.id!!, testUser2.id!!),
+            dependentUserId = testUser3.id!!,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
@@ -58,6 +60,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.endDate, task.endDate)
         assertEquals(taskData.milestoneId, task.milestoneId)
         assertEquals(taskData.assigneeIds!!.toSet(), task.assigneeIds!!.toSet())
+        assertEquals(taskData.dependentUserId, task.dependentUserId)
         assertEquals(taskData.userRole, task.userRole)
         assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
@@ -156,7 +159,7 @@ class TaskTestIT : AbstractFunctionalTest() {
         )
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
 
-        tb.admin.task.create(projectId = project.id!!, milestoneId = milestone.id!!)
+        tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
 
         tb.admin.task.assertListFail(
             expectedStatus = 404,
@@ -236,9 +239,10 @@ class TaskTestIT : AbstractFunctionalTest() {
     @Test
     fun testTaskUpdate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
-        val testUser1 = tb.admin.user.create("test0", UserRole.USER).id!!
-        val testUser2 = tb.admin.user.create("test1", UserRole.USER).id!!
-        val testUser3 = tb.admin.user.create("test2", UserRole.USER).id!!
+        val testUser1Id = tb.admin.user.create("test0", UserRole.USER).id!!
+        val testUser2Id = tb.admin.user.create("test1", UserRole.USER).id!!
+        val testUser3Id = tb.admin.user.create("test2", UserRole.USER).id!!
+        val testUser4Id = tb.admin.user.create("test3", UserRole.USER).id!!
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!, Milestone(
                 name = "Milestone",
@@ -253,7 +257,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             status = TaskStatus.NOT_STARTED,
-            assigneeIds = arrayOf(testUser1, testUser2),
+            assigneeIds = arrayOf(testUser1Id, testUser2Id),
+            dependentUserId = testUser3Id,
             userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
@@ -265,7 +270,8 @@ class TaskTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-03",
             endDate = "2022-02-01",
             status = TaskStatus.IN_PROGRESS,
-            assigneeIds = arrayOf(testUser2, testUser3),
+            assigneeIds = arrayOf(testUser2Id, testUser3Id),
+            dependentUserId = testUser4Id,
             userRole = UserRole.ADMIN,
             estimatedDuration = 2.0f,
             estimatedReadiness = 20,
@@ -281,6 +287,7 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         assertEquals(2, updatedTask.assigneeIds?.size)
         assertEquals(taskUpdateData.assigneeIds!!.toSet(), updatedTask.assigneeIds!!.toSet())
+        assertEquals(taskUpdateData.dependentUserId, updatedTask.dependentUserId)
         assertEquals(taskUpdateData.userRole, updatedTask.userRole)
         assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
         assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
@@ -292,9 +299,12 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(milestone.startDate, foundMilestone.startDate)
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
 
-        // Verify that the user cannot be removed
-        tb.admin.user.assertDeleteFailStatus(409, testUser2)
-        tb.admin.user.assertDeleteFailStatus(409, testUser3)
+        // Verify that the users as assignees in the task cannot be removed
+        tb.admin.user.assertDeleteFailStatus(409, testUser2Id)
+        tb.admin.user.assertDeleteFailStatus(409, testUser3Id)
+
+        // Verify that the user as dependent in the task cannot be removed
+        tb.admin.user.assertDeleteFailStatus(409, testUser4Id)
     }
 
     /*
@@ -313,7 +323,7 @@ class TaskTestIT : AbstractFunctionalTest() {
                         |t4-----|
      */
     @Test
-    fun tsetUpdateTaskConnectionsForward() = createTestBuilder().use { tb ->
+    fun testUpdateTaskConnectionsForward() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!, Milestone(
@@ -327,8 +337,8 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         val task = tb.admin.task.create(name = "task1", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-01", endDate = "2022-01-02")
         val task2 = tb.admin.task.create(name = "task2", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-02", endDate = "2022-01-03")
-        val task3 = tb.admin.task.create(name = "task3", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-03", endDate = "2022-01-05")
-        val task4 = tb.admin.task.create(name = "task4", projectId = project.id, milestoneId = milestone.id!!, startDate = "2022-01-04", endDate = "2022-01-06")
+        val task3 = tb.admin.task.create(name = "task3", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-03", endDate = "2022-01-05")
+        val task4 = tb.admin.task.create(name = "task4", projectId = project.id, milestoneId = milestone.id, startDate = "2022-01-04", endDate = "2022-01-06")
         tb.admin.taskConnection.create(
             projectId = project.id,
             taskConnection = TaskConnection(
@@ -540,7 +550,7 @@ class TaskTestIT : AbstractFunctionalTest() {
     }
 
     @Test
-    fun tsetTaskDelete() = createTestBuilder().use { tb ->
+    fun testTaskDelete() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
@@ -548,7 +558,7 @@ class TaskTestIT : AbstractFunctionalTest() {
     }
 
     @Test
-    fun tsetTaskDeleteFail() = createTestBuilder().use { tb ->
+    fun testTaskDeleteFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
         val task = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)

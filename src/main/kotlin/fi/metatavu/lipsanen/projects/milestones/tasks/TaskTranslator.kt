@@ -35,6 +35,7 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             estimatedReadiness = entity.estimatedReadiness,
             attachmentUrls = taskAttachmentRepository.listByTask(entity).map { it.attachmentUrl },
             assigneeIds = taskAssigneeRepository.listByTask(entity).map { it.user.id },
+            dependentUserId = entity.dependentUser?.id,
             metadata = metadataTranslator.translate(entity)
         )
     }

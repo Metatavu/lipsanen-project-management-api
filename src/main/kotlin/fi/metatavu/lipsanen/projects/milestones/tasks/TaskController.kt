@@ -97,14 +97,24 @@ class TaskController {
     }
 
     /**
-     * Lists tasks
+     * Lists tasks by milestones
      *
-     * @param project project
+     * @param milestones milestones
      * @return list of tasks
      */
     suspend fun list(milestones: List<MilestoneEntity>): List<TaskEntity> {
         return taskEntityRepository.find("milestone in :milestones", Parameters().and("milestones", milestones))
             .list<TaskEntity>().awaitSuspending()
+    }
+
+    /**
+     * Lists tasks by dependent user
+     *
+     * @param dependentUser dependent user
+     * @return list of tasks
+     */
+    suspend fun list(dependentUser: UserEntity): List<TaskEntity> {
+        return taskEntityRepository.find("dependentUser", dependentUser).list<TaskEntity>().awaitSuspending()
     }
 
     /**
@@ -114,7 +124,7 @@ class TaskController {
      * @param task task
      * @param userId user id
      * @return created task
-     * @throws UserNotFoundException if assignee is not found
+     * @throws UserNotFoundException if assignee or dependent user is not found
      */
     suspend fun create(
         milestone: MilestoneEntity,
@@ -122,6 +132,18 @@ class TaskController {
         task: Task,
         userId: UUID
     ): TaskEntity {
+        val dependentUser = if (task.dependentUserId != null) {
+            val user = userController.findUser(task.dependentUserId) ?: throw UserNotFoundException(task.dependentUserId)
+            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
+                logger.info("Assigning user ${user.id} to project ${milestone.project.id} because of the task assignment")
+                userController.assignUserToProjects(
+                    user = user,
+                    newProjects = listOf(milestone.project)
+                )
+            }
+            user
+        } else null
+
         val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
             name = task.name,
@@ -129,6 +151,7 @@ class TaskController {
             endDate = task.endDate,
             milestone = milestone,
             jobPosition = jobPosition,
+            dependentUser = dependentUser,
             userRole = task.userRole,
             status = TaskStatus.NOT_STARTED,
             estimatedDuration = task.estimatedDuration,
@@ -205,13 +228,13 @@ class TaskController {
      *
      * @param existingTask existing task
      * @param newTask new task
-     * @param milestone milestone (is not updatable but its dadta is needed)
+     * @param milestone milestone (cannot be updated but its data is needed)
      * @param jobPosition position
      * @param userId user id
      *
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
-     * @throws UserNotFoundException if assignee is not found
+     * @throws UserNotFoundException if assignee or dependent user is not found
      */
     suspend fun update(
         existingTask: TaskEntity,
@@ -228,6 +251,21 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
+        val dependentUser = if (newTask.dependentUserId != null) {
+            val user = userController.findUser(newTask.dependentUserId)
+                ?: throw UserNotFoundException(newTask.dependentUserId)
+
+            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
+                logger.info("Assigning user ${user.id} to project ${milestone.project.id} because of the task assignment")
+                userController.assignUserToProjects(
+                    user = user,
+                    newProjects = listOf(milestone.project)
+                )
+            }
+
+            user
+        } else null
+
         updateAssignees(existingTask, newTask.assigneeIds, userId)
         updateAttachments(existingTask, newTask)
         if (existingTask.status != newTask.status) {
@@ -242,6 +280,7 @@ class TaskController {
         mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
         mainUpdatedTask.estimatedReadiness = newTask.estimatedReadiness
         mainUpdatedTask.jobPosition = jobPosition
+        mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId
 
         return taskEntityRepository.persistSuspending(mainUpdatedTask)
@@ -284,11 +323,11 @@ class TaskController {
         newAssigneeIds: List<UUID>?,
         userId: UUID
     ) {
-        val asssignedUsers = taskAssigneeRepository.listByTask(existingTask)
-        val assignedUserIds = asssignedUsers.map { it.user.id }
+        val assignedUsers = taskAssigneeRepository.listByTask(existingTask)
+        val assignedUserIds = assignedUsers.map { it.user.id }
         val newAssignees = newAssigneeIds ?: emptyList()
 
-        asssignedUsers.forEach { existingAssignee ->
+        assignedUsers.forEach { existingAssignee ->
             if (existingAssignee.user.id !in newAssignees) {
                 taskAssigneeRepository.deleteSuspending(existingAssignee)
             }
@@ -313,7 +352,6 @@ class TaskController {
      * @param newEndDate new end date
      * @param milestone milestone
      * @param userId user id
-     * @param proposalMode if the task update happens in proposal mode - in this case reject the dependent proposals that affect the tasks affected by the update
      * @return updated task
      * @throws TaskOutsideMilestoneException if the cascade update goes out of the milestone boundaries
      */
@@ -382,7 +420,7 @@ class TaskController {
      * Creates notifications of task assignments
      *
      * @param task task
-     * @param receivers task assignees
+     * @param assignees task assignees
      * @param userId modifier id
      */
     private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {

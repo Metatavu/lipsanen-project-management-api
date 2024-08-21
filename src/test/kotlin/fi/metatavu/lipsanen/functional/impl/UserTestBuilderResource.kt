@@ -66,7 +66,6 @@ class UserTestBuilderResource (
      * Finds a user
      *
      * @param userId user id
-     * @param includeRoles
      * @return found user
      */
     fun findUser(userId: UUID): User {

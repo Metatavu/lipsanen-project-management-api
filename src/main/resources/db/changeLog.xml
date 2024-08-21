@@ -380,4 +380,12 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="dependent user to task" author="Lauri Lukkarinen">
+        <addColumn tableName="task">
+            <column name="dependentUser_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_TASK_DEPENDENT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
