@@ -103,7 +103,7 @@ sourceSets["test"].java {
 val generateApiSpec = tasks.register("generateApiSpec", GenerateTask::class){
     setProperty("generatorName", "kotlin-server")
     setProperty("inputSpec",  "$rootDir/lipsanen-project-management-spec/swagger.yaml")
-    setProperty("outputDir", "${layout.buildDirectory}/generated/api-spec")
+    setProperty("outputDir", "$buildDir/generated/api-spec")
     setProperty("apiPackage", "${project.group}.api.spec")
     setProperty("invokerPackage", "${project.group}.api.invoker")
     setProperty("modelPackage", "${project.group}.api.model")
@@ -124,7 +124,7 @@ val generateApiClient = tasks.register("generateApiClient", GenerateTask::class)
     setProperty("generatorName", "kotlin")
     setProperty("library", "jvm-okhttp3")
     setProperty("inputSpec",  "$rootDir/lipsanen-project-management-spec/swagger.yaml")
-    setProperty("outputDir", "${layout.buildDirectory}/generated/api-client")
+    setProperty("outputDir", "$buildDir/generated/api-client")
     setProperty("packageName", "${project.group}.test.client")
     setProperty("validateSpec", false)
 
@@ -138,7 +138,7 @@ val generateKeycloakClient = tasks.register("generateKeycloakAdminClient",Genera
     setProperty("generatorName", "kotlin")
     setProperty("library", "jvm-vertx")
     setProperty("inputSpec",  "$rootDir/src/main/resources/kc-admin.json")
-    setProperty("outputDir", "${layout.buildDirectory}/generated/keycloak-admin-client")
+    setProperty("outputDir", "$buildDir/generated/keycloak-admin-client")
     setProperty("packageName", "fi.metatavu.keycloak.adminclient")
 
     this.configOptions.put("useCoroutines", "true")
