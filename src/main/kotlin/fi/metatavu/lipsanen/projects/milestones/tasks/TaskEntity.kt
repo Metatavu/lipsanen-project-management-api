@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.persistence.Metadata
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.persistence.*
 import java.time.LocalDate
 import java.util.*
@@ -24,6 +25,9 @@ class TaskEntity : Metadata() {
 
     @ManyToOne
     var jobPosition: JobPositionEntity? = null
+
+    @ManyToOne
+    var dependentUser: UserEntity? = null
 
     @Column(nullable = false)
     lateinit var name: String

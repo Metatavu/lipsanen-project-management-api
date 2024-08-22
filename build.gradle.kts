@@ -150,6 +150,17 @@ val generateKeycloakClient = tasks.register("generateKeycloakAdminClient",Genera
     this.configOptions.put("additionalModelTypeAnnotations", "@io.quarkus.runtime.annotations.RegisterForReflection")
 }
 
+tasks.register("generate") {
+    this.doFirst {
+        file("$rootDir/build/generated").deleteRecursively()
+    }
+    this.finalizedBy(
+        generateApiSpec,
+        generateApiClient,
+        generateKeycloakClient
+    )
+}
+
 tasks.named("compileKotlin") {
     dependsOn(generateApiSpec)
     dependsOn(generateKeycloakClient)

@@ -6,6 +6,7 @@ import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
 import fi.metatavu.lipsanen.positions.JobPositionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
+import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -35,6 +36,9 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @Inject
     lateinit var companyController: CompanyController
+
+    @Inject
+    lateinit var taskController: TaskController
 
     @Inject
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
@@ -117,9 +121,13 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     override fun deleteUser(userId: UUID): Uni<Response> =withCoroutineScope {
         val user = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
-        val assignedToTasks = taskAssigneeRepository.listByAssignee(user).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS}
-        if (assignedToTasks.isNotEmpty()) {
-            return@withCoroutineScope createConflict("User is assigned to tasks that are in progress: ${assignedToTasks.joinToString { it.id.toString() }}")
+        val tasksInProgressWithUserAsAssignee = taskAssigneeRepository.listByAssignee(user = user).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS }
+        if (tasksInProgressWithUserAsAssignee.isNotEmpty()) {
+            return@withCoroutineScope createConflict("User is assigned to tasks that are in progress: ${tasksInProgressWithUserAsAssignee.joinToString { it.id.toString() }}")
+        }
+        val tasksInProgressWithUserAsDependent = taskController.list(dependentUser = user).filter { it.status == TaskStatus.IN_PROGRESS }
+        if (tasksInProgressWithUserAsDependent.isNotEmpty()) {
+            return@withCoroutineScope createConflict("User is dependent in tasks that are in progress: ${tasksInProgressWithUserAsDependent.joinToString { it.id.toString() }}")
         }
         userController.deleteUser(user)
         createNoContent()

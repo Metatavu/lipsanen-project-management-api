@@ -318,7 +318,7 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         val proposal = tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id, startDate = "2024-02-01", endDate = "2024-02-15")
         val proposal5Invalid = tb.admin.changeProposal.create(projectId = project.id, taskId = task1.id, startDate = "2024-12-30", endDate = "2024-12-30")
 
-        // proposal preview shows that the propsoal is invalid
+        // proposal preview shows that the proposal is invalid
         tb.admin.changeProposal.assertListChangeProposalTasksPreviewFail(400, project.id, proposal5Invalid.id!!)
 
         val expectedProposalChanges = tb.admin.changeProposal.listChangeProposalTasksPreview(project.id, proposal.id!!)
