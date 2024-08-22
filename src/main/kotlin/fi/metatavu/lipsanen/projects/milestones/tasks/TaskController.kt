@@ -132,17 +132,7 @@ class TaskController {
         task: Task,
         userId: UUID
     ): TaskEntity {
-        val dependentUser = if (task.dependentUserId != null) {
-            val user = userController.findUser(task.dependentUserId) ?: throw UserNotFoundException(task.dependentUserId)
-            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
-                logger.info("Assigning user ${user.id} to project ${milestone.project.id} because of the task assignment")
-                userController.assignUserToProjects(
-                    user = user,
-                    newProjects = listOf(milestone.project)
-                )
-            }
-            user
-        } else null
+        val dependentUser = task.dependentUserId?.let { getVerifyUserIsInProject(milestone.project, it) }
 
         val taskEntity = taskEntityRepository.create(
             id = UUID.randomUUID(),
@@ -161,14 +151,7 @@ class TaskController {
         )
 
         val assignees = task.assigneeIds?.map { assigneeId ->
-            val user = userController.findUser(assigneeId) ?: throw UserNotFoundException(assigneeId)
-            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
-                logger.info("Assigning user $assigneeId to project ${milestone.project.id} because of the task assignment")
-                userController.assignUserToProjects(
-                    user = user,
-                    newProjects = listOf(milestone.project)
-                )
-            }
+            val user = getVerifyUserIsInProject(milestone.project, assigneeId)
             taskAssigneeRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
@@ -251,20 +234,7 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
-        val dependentUser = if (newTask.dependentUserId != null) {
-            val user = userController.findUser(newTask.dependentUserId)
-                ?: throw UserNotFoundException(newTask.dependentUserId)
-
-            if (!projectController.hasAccessToProject(milestone.project, user.keycloakId)) {
-                logger.info("Assigning user ${user.id} to project ${milestone.project.id} because of the task assignment")
-                userController.assignUserToProjects(
-                    user = user,
-                    newProjects = listOf(milestone.project)
-                )
-            }
-
-            user
-        } else null
+        val dependentUser = newTask.dependentUserId?.let { getVerifyUserIsInProject(milestone.project, it) }
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
         updateAttachments(existingTask, newTask)
@@ -642,4 +612,20 @@ class TaskController {
     private fun getUpdatedTaskIfAny(entity: TaskEntity, allUpdatedTasks: List<TaskEntity>): TaskEntity {
         return allUpdatedTasks.find { it.id == entity.id } ?: entity
     }
+
+    private suspend fun getVerifyUserIsInProject(project: ProjectEntity, userId: UUID): UserEntity {
+        val user = userController.findUser(userId)
+            ?: throw UserNotFoundException(userId)
+
+        if (!projectController.hasAccessToProject(project, user.keycloakId)) {
+            logger.info("Assigning user ${user.id} to project ${project.id} because of the task assignment")
+            userController.assignUserToProjects(
+                user = user,
+                newProjects = listOf(project)
+            )
+        }
+
+        return user
+    }
+
 }
