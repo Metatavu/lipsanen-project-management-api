@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
+import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.api.spec.ChangeProposalsApi
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
@@ -130,6 +131,11 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
         val foundProposal = proposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
             createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
         )
+
+        if (foundProposal.status != ChangeProposalStatus.PENDING) {
+            return@withCoroutineScope createBadRequest("Only pending proposals can be updated")
+        }
+
         if (changeProposal.taskId != foundProposal.task.id) {
             return@withCoroutineScope createBadRequest("Proposal cannot be reassigned to other task")
         }
