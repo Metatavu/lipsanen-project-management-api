@@ -49,7 +49,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
@@ -81,7 +81,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         createOk(userTranslator.translate(createdUser))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
         val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
