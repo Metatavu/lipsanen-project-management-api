@@ -348,7 +348,7 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
             }
         }
 
-        // Check that all other proposals got auto-rejected
+        // Check that all other proposals got auto-rejected and cannot be updated
         val allProposals = tb.admin.changeProposal.listChangeProposals(project.id, milestone.id)
         assertEquals(2, allProposals.size)
         allProposals.forEach {
@@ -357,6 +357,7 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
             } else {
                 assertEquals(ChangeProposalStatus.REJECTED, it.status)
             }
+            tb.admin.changeProposal.assertUpdateFail(400, project.id, it.id!!, it)
         }
 
         //check that incorrect proposal (breaking the milestone logic) cannot be applied
