@@ -34,6 +34,8 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
 
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
+        val testUser1 = tb.admin.user.create("test1", UserRole.USER).id!!
+
         val adminUser = tb.admin.user.create("admin0", UserRole.ADMIN)
         val task1 = tb.admin.task.create(
             projectId = project1.id, task =
@@ -41,7 +43,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
                 name = "Task 1",
                 startDate = "2024-01-01",
                 endDate = "2024-01-02",
-                assigneeIds = arrayOf(testUser),
+                assigneeIds = arrayOf(testUser, testUser1),
                 status = TaskStatus.NOT_STARTED,
                 milestoneId = milestone1.id!!
             )
