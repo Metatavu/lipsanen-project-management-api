@@ -120,7 +120,7 @@ class ChangeProposalTestBuilderResource(
     }
 
     fun listChangeProposals(
-        projectId: UUID,
+        projectId: UUID? = null,
         milestoneId: UUID? = null,
         taskId: UUID? = null,
         first: Int? = null,

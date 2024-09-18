@@ -46,13 +46,29 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER.NAME, UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     override fun listChangeProposals(
-        projectId: UUID,
+        projectId: UUID?,
         milestoneId: UUID?,
         taskId: UUID?,
         first: Int?,
         max: Int?
     ): Uni<Response> = withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
+
+        if (projectId == null && (milestoneId != null || taskId != null)) {
+            return@withCoroutineScope createBadRequest("Project id cannot be used with milestone or task id")
+        }
+
+        if (projectId == null) {
+            val (changeProposals, count) = proposalController.listChangeProposals(
+                project = null,
+                milestoneFilter = null,
+                taskFilter = null,
+                first = first,
+                max = max
+            )
+
+            return@withCoroutineScope createOk(changeProposalTranslator.translate(changeProposals), count)
+        }
 
         val (project, errorResponse) = getProjectAccessRights(projectId, userId)
         if (errorResponse != null) return@withCoroutineScope errorResponse

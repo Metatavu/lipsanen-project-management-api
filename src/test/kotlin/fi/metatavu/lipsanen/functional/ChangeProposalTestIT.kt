@@ -76,6 +76,9 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         )
         assertEquals(0, paging2.size)
 
+        val allProposals = tb.admin.changeProposal.listChangeProposals()
+        assertEquals(3, allProposals.size)
+
         tb.user.changeProposal.assertListFail(
             403,
             projectId = project.id,
