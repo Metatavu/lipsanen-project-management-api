@@ -1,10 +1,7 @@
 package fi.metatavu.lipsanen.functional
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import fi.metatavu.invalid.InvalidValueTestScenarioBody
-import fi.metatavu.invalid.InvalidValueTestScenarioBuilder
-import fi.metatavu.invalid.InvalidValueTestScenarioPath
-import fi.metatavu.invalid.InvalidValues
+import fi.metatavu.invalid.*
 import fi.metatavu.invalid.providers.SimpleInvalidValueProvider
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
@@ -111,13 +108,13 @@ class ChangeProposalTestIT : AbstractFunctionalTest() {
         )
 
         InvalidValueTestScenarioBuilder(
-            path = "v1/projects/{projectId}/changeProposals",
+            path = "v1/changeProposals",
             method = Method.GET,
             token = tb.admin.accessTokenProvider.accessToken,
             basePath = ApiTestSettings.apiBasePath,
         )
-            .path(
-                InvalidValueTestScenarioPath(
+            .query(
+                InvalidValueTestScenarioQuery(
                     name = "projectId",
                     values = InvalidValues.STRING_NOT_NULL,
                     expectedStatus = 404,
