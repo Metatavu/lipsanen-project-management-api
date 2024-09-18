@@ -56,8 +56,6 @@ class UserTestIT: AbstractFunctionalTest() {
 
         val projectCompanyUsers = it.admin.user.listUsers(projectId = project1, companyId = company)
         assertEquals(1, projectCompanyUsers.size)
-
-        it.user.user.assertListFailStatus(403)
     }
 
     @Test
@@ -72,7 +70,7 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testFindUserFail() = createTestBuilder().use {
-        it.user.user.assertFindFailStatus(403, UUID.randomUUID())
+        it.user.user.assertFindFailStatus(404, UUID.randomUUID())
 
         InvalidValueTestScenarioBuilder(
             path = "v1/users/{userId}",

@@ -394,15 +394,13 @@ class TaskController {
      * @param userId modifier id
      */
     private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
-        taskAssigneeRepository.listByTask(task).forEach {
-            notificationsController.createAndNotify(
-                message = "User has been assigned to task ${task.name}",
-                type = NotificationType.TASK_ASSIGNED,
-                taskEntity = task,
-                receivers = assignees,
-                creatorId = userId
-            )
-        }
+        notificationsController.createAndNotify(
+            message = "User has been assigned to task ${task.name}",
+            type = NotificationType.TASK_ASSIGNED,
+            taskEntity = task,
+            receivers = assignees,
+            creatorId = userId
+        )
     }
 
     /**
