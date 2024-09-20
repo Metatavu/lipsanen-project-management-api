@@ -77,36 +77,18 @@ class ChangeProposalController {
      * @return list of change proposals
      */
     suspend fun listChangeProposals(
-        project: ProjectEntity,
+        project: ProjectEntity?,
         milestoneFilter: MilestoneEntity?,
         taskFilter: TaskEntity?,
         first: Int?,
         max: Int?
     ): Pair<List<ChangeProposalEntity>, Long> {
-        val sb = StringBuilder()
-        val parameters = Parameters()
-
-        sb.append("task.milestone.project= :project")
-        parameters.and("project", project)
-
-        if (milestoneFilter != null) {
-            sb.append(" and task.milestone= :milestone")
-            parameters.and("milestone", milestoneFilter)
-        }
-
-        if (taskFilter != null) {
-            sb.append(" and task= :task")
-            parameters.and("task", taskFilter)
-        }
-
-        return proposalRepository.applyFirstMaxToQuery(
-            query = proposalRepository.find(
-                sb.toString(),
-                Sort.ascending("createdAt"),
-                parameters
-            ),
-            firstIndex = first,
-            maxResults = max
+        return proposalRepository.list(
+            project = project,
+            milestoneFilter = milestoneFilter,
+            taskFilter = taskFilter,
+            first = first,
+            max = max
         )
     }
 

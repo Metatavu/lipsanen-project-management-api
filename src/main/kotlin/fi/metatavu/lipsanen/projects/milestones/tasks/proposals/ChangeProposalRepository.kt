@@ -2,7 +2,11 @@ package fi.metatavu.lipsanen.projects.milestones.tasks.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.persistence.AbstractRepository
+import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import io.quarkus.panache.common.Parameters
+import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.LocalDate
 import java.util.*
@@ -49,5 +53,51 @@ class ChangeProposalRepository : AbstractRepository<ChangeProposalEntity, UUID>(
         proposal.creatorId = creatorId
         proposal.lastModifierId = lastModifierId
         return persistSuspending(proposal)
+    }
+
+    /**
+     * Lists proposals
+     *
+     * @param project project
+     * @param milestoneFilter milestone filter
+     * @param taskFilter task filter
+     * @param first first
+     * @param max max
+     * @return pair of list of proposals and count
+     */
+    suspend fun list(
+        project: ProjectEntity?,
+        milestoneFilter: MilestoneEntity?,
+        taskFilter: TaskEntity?,
+        first: Int?,
+        max: Int?
+    ): Pair<List<ChangeProposalEntity>, Long> {
+        val sb = StringBuilder()
+        val parameters = Parameters()
+
+        if(project != null) {
+            addCondition(sb, "task.milestone.project= :project")
+            parameters.and("project", project)
+        }
+
+        if (milestoneFilter != null) {
+            addCondition(sb, " task.milestone= :milestone")
+            parameters.and("milestone", milestoneFilter)
+        }
+
+        if (taskFilter != null) {
+            addCondition(sb, "task= :task")
+            parameters.and("task", taskFilter)
+        }
+
+        return applyFirstMaxToQuery(
+            query = find(
+                sb.toString(),
+                Sort.ascending("createdAt"),
+                parameters
+            ),
+            firstIndex = first,
+            maxResults = max
+        )
     }
 }
