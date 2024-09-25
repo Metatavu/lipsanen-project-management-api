@@ -180,6 +180,46 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             .test()
     }
 
+    /**
+     * Tests that when creating tasks after or before the milestone, the milestone's start and end dates are extended
+     */
+    @Test
+    fun extendMilestoneToTasks() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create(Project("Project 1", status = ProjectStatus.INITIATION))
+        val milestone = tb.admin.milestone.create(project.id!!,
+            Milestone(
+                name = "Milestone",
+                startDate = "2022-01-01",
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
+            )
+        )
+
+        val earlierAndLaterTask = Task(
+            name = "Task 1",
+            startDate = "2021-12-01",
+            endDate = "2022-02-01",
+            status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
+            milestoneId = milestone.id!!
+        )
+
+        val earlierTask = tb.admin.task.create(project.id, earlierAndLaterTask)
+        val updatedMilestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id)
+        assertEquals(earlierTask.startDate, updatedMilestone.startDate)
+        assertEquals(earlierTask.endDate, updatedMilestone.endDate)
+
+        // Tests moving
+        val updatedTask = tb.admin.task.update(project.id, earlierTask.id!!, earlierTask.copy(
+            startDate = "2021-11-01",
+            endDate = "2022-03-01"
+        ))
+        val updatedMilestone2 = tb.admin.milestone.findProjectMilestone(project.id, milestone.id)
+        assertEquals(updatedTask.startDate, updatedMilestone2.startDate)
+        assertEquals(updatedTask.endDate, updatedMilestone2.endDate)
+    }
+
+
     @Test
     fun updateMilestone() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create(Project("Project 1", status = ProjectStatus.INITIATION))

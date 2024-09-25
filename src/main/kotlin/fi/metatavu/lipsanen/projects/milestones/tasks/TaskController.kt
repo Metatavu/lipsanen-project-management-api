@@ -8,6 +8,7 @@ import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.projects.milestones.MilestoneRepository
 import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.projects.milestones.tasks.connections.TaskConnectionController
 import fi.metatavu.lipsanen.projects.milestones.tasks.proposals.ChangeProposalController
@@ -57,6 +58,9 @@ class TaskController {
 
     @Inject
     lateinit var logger: Logger
+
+    @Inject
+    lateinit var milestoneRepository: MilestoneRepository
 
     /**
      * Lists tasks
@@ -169,6 +173,7 @@ class TaskController {
             )
         }
 
+        extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
         return taskEntity
     }
 
@@ -253,6 +258,7 @@ class TaskController {
         mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId
 
+        extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
         return taskEntityRepository.persistSuspending(mainUpdatedTask)
     }
 
@@ -384,6 +390,23 @@ class TaskController {
 
         }
         return null
+    }
+
+    /**
+     * Extends the milestone if needed to fit the task in
+     *
+     * @param taskStartDate task start date
+     * @param taskEndDate task end date
+     * @param milestone milestone
+     */
+    private suspend fun extendMilestoneToTask(taskStartDate: LocalDate, taskEndDate: LocalDate, milestone: MilestoneEntity) {
+        if (taskStartDate < milestone.startDate) {
+            milestone.startDate = taskStartDate
+        }
+        if (taskEndDate > milestone.endDate) {
+            milestone.endDate = taskEndDate
+        }
+        milestoneRepository.persistSuspending(milestone)
     }
 
     /**
