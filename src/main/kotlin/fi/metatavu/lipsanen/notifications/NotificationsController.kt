@@ -2,8 +2,8 @@ package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
+import fi.metatavu.lipsanen.tasks.TaskEntity
+import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction

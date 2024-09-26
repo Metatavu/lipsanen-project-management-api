@@ -1,10 +1,10 @@
 package fi.metatavu.lipsanen.rest
 
 import fi.metatavu.lipsanen.api.model.Error
+import fi.metatavu.lipsanen.milestones.MilestoneController
+import fi.metatavu.lipsanen.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
-import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import io.quarkus.security.identity.SecurityIdentity
 import io.smallrye.mutiny.Uni
 import io.smallrye.mutiny.coroutines.asUni
@@ -295,13 +295,27 @@ abstract class AbstractApi {
             )
         )
 
+        return getProjectAccessRights(project, userId)
+	}
+
+    /**
+     * Returns project or error response, checks project access rights (does not apply to global admin)
+     *
+     * @param project project
+     * @param userId user id
+     * @return project or error response
+     */
+    open suspend fun getProjectAccessRights(
+        project: ProjectEntity,
+        userId: UUID
+    ): Pair<ProjectEntity?, Response?> {
         if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return project to null
-	}
+    }
 
-	/**
+    /**
 	 * Executes a block with coroutine scope
 	 *
 	 * @param requestTimeOut request timeout in milliseconds. Default is 10000

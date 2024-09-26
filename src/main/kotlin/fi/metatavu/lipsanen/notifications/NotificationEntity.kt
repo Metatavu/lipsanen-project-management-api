@@ -2,8 +2,8 @@ package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.persistence.Metadata
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
+import fi.metatavu.lipsanen.tasks.TaskEntity
+import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import jakarta.persistence.*
 import java.util.*
 

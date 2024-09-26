@@ -37,8 +37,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val testUser1 = tb.admin.user.create("test1", UserRole.USER).id!!
 
         val adminUser = tb.admin.user.create("admin0", UserRole.ADMIN)
-        val task1 = tb.admin.task.create(
-            projectId = project1.id, task =
+        val task1 = tb.admin.task.create(task =
             Task(
                 name = "Task 1",
                 startDate = "2024-01-01",
@@ -88,8 +87,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
 
-        val task1 = tb.admin.task.create(
-            projectId = project1.id, task =
+        val task1 = tb.admin.task.create( task =
             Task(
                 name = "Task 1",
                 startDate = "2024-01-01",
@@ -100,7 +98,6 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             )
         )
         tb.admin.task.update(
-            projectId = project1.id,
             taskId = task1.id!!,
             task = task1.copy(status = TaskStatus.IN_PROGRESS)
         )
@@ -129,7 +126,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
 
-        val task1 = tb.admin.task.create(projectId = project1.id, task = Task(
+        val task1 = tb.admin.task.create(task = Task(
             name = "Task 1",
             startDate = "2024-01-01",
             endDate = "2024-01-02",
@@ -138,11 +135,9 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             milestoneId = milestone1.id!!
         ))
         val changeProposal = tb.admin.changeProposal.create(
-            projectId = project1.id,
             taskId = task1.id!!
         )!!
         tb.admin.changeProposal.updateChangeProposal(
-            projectId = project1.id,
             changeProposalId = changeProposal.id!!,
             changeProposal = changeProposal.copy(status = fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus.REJECTED)
         )
@@ -179,8 +174,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
         val testUser1 = tb.admin.user.create("test0", UserRole.USER).id!!
 
-        tb.admin.task.create(
-            projectId = project1.id, task = Task(
+        tb.admin.task.create( task = Task(
                 name = "Task 1",
                 startDate = "2024-01-01",
                 endDate = "2024-01-02",
@@ -258,8 +252,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
 
         //user gets automatically assigned to the project
-        val task = tb.admin.task.create(
-            projectId = project1.id, task = Task(
+        val task = tb.admin.task.create(task = Task(
                 name = "Task 1",
                 startDate = "2024-01-01",
                 endDate = "2024-01-02",
@@ -271,7 +264,6 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
 
         // user 1 leaves a comment mentioning user 2
         tb.getUser("user1@example.com").taskComment.create(
-            projectId = project1.id,
             taskId = task.id!!,
             taskComment = fi.metatavu.lipsanen.test.client.models.TaskComment(
                 comment = "Comment",

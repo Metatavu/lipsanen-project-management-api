@@ -221,7 +221,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         )
 
         tb.admin.task.create(
-            project.id, Task(
+            Task(
                 name = "Task 1",
                 startDate = "2022-01-02",
                 endDate = "2022-01-10",
@@ -230,7 +230,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             )
         )
         tb.admin.task.create(
-            project.id, Task(
+            Task(
                 name = "Task 1",
                 startDate = "2022-01-05",
                 endDate = "2022-01-20",

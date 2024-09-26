@@ -27,8 +27,8 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionCreate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
+        val createdTask = tb.admin.task.create(milestoneId = milestone.id!!)
+        val createdTask2 = tb.admin.task.create(milestoneId = milestone.id)
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id,
             taskConnection = TaskConnection(
@@ -46,7 +46,6 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
         // check connection checks
         tb.admin.task.assertUpdateFail(
             409,
-            projectId = project.id,
             taskId = createdTask2.id,
             task = createdTask2.copy(status = TaskStatus.IN_PROGRESS)
         )
@@ -56,9 +55,9 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionList() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
-        val createdTask3 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
+        val createdTask = tb.admin.task.create(milestoneId = milestone.id!!)
+        val createdTask2 = tb.admin.task.create(milestoneId = milestone.id)
+        val createdTask3 = tb.admin.task.create(milestoneId = milestone.id)
 
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
@@ -93,8 +92,8 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionFind() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
+        val createdTask = tb.admin.task.create(milestoneId = milestone.id!!)
+        val createdTask2 = tb.admin.task.create(milestoneId = milestone.id)
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
                 sourceTaskId = createdTask.id!!,
@@ -112,8 +111,8 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionUpdate() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!, startDate = "2021-01-01", endDate = "2021-01-02")
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id, startDate = "2021-01-02", endDate = "2021-01-03")
+        val createdTask = tb.admin.task.create(milestoneId = milestone.id!!, startDate = "2021-01-01", endDate = "2021-01-02")
+        val createdTask2 = tb.admin.task.create(milestoneId = milestone.id, startDate = "2021-01-02", endDate = "2021-01-03")
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
                 sourceTaskId = createdTask.id!!,
@@ -143,8 +142,8 @@ class TaskConnectionTestIT : AbstractFunctionalTest() {
     fun testConnectionDelete() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(projectId = project.id!!)
-        val createdTask = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id!!)
-        val createdTask2 = tb.admin.task.create(projectId = project.id, milestoneId = milestone.id)
+        val createdTask = tb.admin.task.create(milestoneId = milestone.id!!)
+        val createdTask2 = tb.admin.task.create(milestoneId = milestone.id)
         val taskConnection = tb.admin.taskConnection.create(
             projectId = project.id, taskConnection = TaskConnection(
                 sourceTaskId = createdTask.id!!,

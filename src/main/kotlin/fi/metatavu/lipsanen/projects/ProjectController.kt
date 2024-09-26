@@ -2,8 +2,7 @@ package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.lipsanen.api.model.Project
 import fi.metatavu.lipsanen.api.model.ProjectStatus
-import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
+import fi.metatavu.lipsanen.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.themes.ProjectThemeController
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity

@@ -98,7 +98,7 @@ class TocomanController {
     fun exportProject(existingProject: ProjectEntity): OutputStream? {
         val mainProject = Projects()
         val project = Project()
-        project.id = 0                      //todo should be filled as the mex in the current database?
+        project.id = 0                      //todo should be filled as the max in the current database?
         project.projName = existingProject.name
         mainProject.project = project
         val byteArrayOutputStream = ByteArrayOutputStream()
