@@ -49,12 +49,23 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
         } else null
+
         val projectFilter = if (projectId != null) {
-            projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
-        } else null
+            val project = projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
+            getProjectAccessRights(projectId, userId).second?.let { return@withCoroutineScope it }
+            listOf(project)
+        } else {
+            if (isAdmin() || isUserManagementAdmin() || isProjectOwner()) {
+                null
+            } else {
+                val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+                userController.listUserProjects(user).map { it.project }
+            }
+        }
 
         val jobPosition = if (jobPositionId != null) {
             jobPositionController.findJobPosition(jobPositionId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(JOB_POSITION, jobPositionId))
@@ -84,8 +95,18 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     }
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
-    override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+    override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = withCoroutineScope {
+        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
+
+        if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
+            val userProjects = userController.listUserProjects(foundUser).map { it.project.id }
+            val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
+            if (userId != logggedInUserId && !isInSameProject) {
+                return@withCoroutineScope createNotFound("Unauthorized")
+            }
+        }
+
         val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
         createOk(userTranslator.translate(
             UserFullRepresentation(

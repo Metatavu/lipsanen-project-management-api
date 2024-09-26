@@ -93,7 +93,7 @@ class UserController {
      */
     suspend fun listUsers(
         company: CompanyEntity?,
-        projectFilter: ProjectEntity?,
+        projectFilter: List<ProjectEntity>?,
         jobPosition: JobPositionEntity?,
         keycloakId: UUID?,
         first: Int?,
@@ -198,7 +198,7 @@ class UserController {
             if (environment.orElse(null) != "test") {
                 keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
                     realm = keycloakAdminClient.getRealm(),
-                    id = keycloakUser.id!!,
+                    id = keycloakUser.id,
                     requestBody = arrayOf("UPDATE_PASSWORD"),
                     lifespan = null
                 )
@@ -340,11 +340,13 @@ class UserController {
      * @param roles roles to assign
      */
     suspend fun assignRoles(userRepresentation: UserRepresentation, roles: List<UserRole>?) {
-        if (roles == null) {
-            //nothing is being updated if roles are null
-            return
+        var assignableRoles = if (roles.isNullOrEmpty()) {
+            listOf(UserRole.USER)
+        } else {
+            roles
         }
-        val userRoles = roles.map {
+
+        val userRoles = assignableRoles.map {
             keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
                 roleName = translateRole(it),
                 realm = keycloakAdminClient.getRealm()
