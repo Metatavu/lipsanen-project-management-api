@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.*
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.milestones.MilestoneEntity
+import fi.metatavu.lipsanen.milestones.MilestoneRepository
 import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectController
@@ -58,6 +59,9 @@ class TaskController {
 
     @Inject
     lateinit var logger: Logger
+
+    @Inject
+    lateinit var milestoneRepository: MilestoneRepository
 
     /**
      * Lists tasks
@@ -175,6 +179,7 @@ class TaskController {
             )
         }
 
+        extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
         return taskEntity
     }
 
@@ -259,6 +264,7 @@ class TaskController {
         mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId
 
+        extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
         return taskEntityRepository.persistSuspending(mainUpdatedTask)
     }
 
@@ -393,6 +399,23 @@ class TaskController {
     }
 
     /**
+     * Extends the milestone if needed to fit the task in
+     *
+     * @param taskStartDate task start date
+     * @param taskEndDate task end date
+     * @param milestone milestone
+     */
+    private suspend fun extendMilestoneToTask(taskStartDate: LocalDate, taskEndDate: LocalDate, milestone: MilestoneEntity) {
+        if (taskStartDate < milestone.startDate) {
+            milestone.startDate = taskStartDate
+        }
+        if (taskEndDate > milestone.endDate) {
+            milestone.endDate = taskEndDate
+        }
+        milestoneRepository.persistSuspending(milestone)
+    }
+
+    /**
      * Creates notifications of task assignments
      *
      * @param task task
@@ -488,9 +511,7 @@ class TaskController {
 
         // Check if the tasks are still within the milestone (milestone already has modified dates if
         // the original task moved it)
-        println("Milestone start: ${milestone.startDate}, end: ${milestone.endDate}")
         updatableTasks.forEach {
-            println("task ${it.name} start: ${it.startDate}, end: ${it.endDate}")
             if (it.startDate < milestone.startDate || it.endDate > milestone.endDate) {
                 throw TaskOutsideMilestoneException(it.id, it.startDate, it.endDate)
             }
