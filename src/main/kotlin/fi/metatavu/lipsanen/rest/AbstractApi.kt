@@ -309,10 +309,10 @@ abstract class AbstractApi {
         project: ProjectEntity,
         userId: UUID
     ): Pair<ProjectEntity?, Response?> {
-        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
+        if (isAdmin() || projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
-        return project to null
+        return null to createForbidden(NO_PROJECT_RIGHTS)
     }
 
     /**

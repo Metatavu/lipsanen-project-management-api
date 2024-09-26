@@ -1,4 +1,4 @@
-package fi.metatavu.lipsanen.tasks.proposals
+package fi.metatavu.lipsanen.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
@@ -69,7 +69,7 @@ class ChangeProposalController {
     /**
      * Lists change proposals
      *
-     * @param project project
+     * @param projectFilter project
      * @param milestoneFilter milestone filter
      * @param taskFilter task filter
      * @param first first result
@@ -77,14 +77,14 @@ class ChangeProposalController {
      * @return list of change proposals
      */
     suspend fun listChangeProposals(
-        project: ProjectEntity?,
+        projectFilter: List<ProjectEntity>?,
         milestoneFilter: MilestoneEntity?,
         taskFilter: TaskEntity?,
         first: Int?,
         max: Int?
     ): Pair<List<ChangeProposalEntity>, Long> {
         return proposalRepository.list(
-            project = project,
+            projectFilter = projectFilter,
             milestoneFilter = milestoneFilter,
             taskFilter = taskFilter,
             first = first,
