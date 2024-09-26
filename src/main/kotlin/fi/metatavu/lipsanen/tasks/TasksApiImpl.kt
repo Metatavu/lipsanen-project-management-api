@@ -58,13 +58,11 @@ class TasksApiImpl : TasksApi, AbstractApi() {
             val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
 
             if (changeProposalId != null) {
-                println("getting change proposal tasks")
                 val proposal = changeProposalController.find(changeProposalId) ?: return@withCoroutineScope createNotFound(
                     createNotFoundMessage(CHANGE_PROPOSAL, changeProposalId)
                 )
                 getProjectAccessRights(proposal.task.milestone.project.id, userId).second?.let { return@withCoroutineScope it }
                 return@withCoroutineScope try {
-                    println("getting affected tasks")
                     val tasks = changeProposalController.listChangeProposalTasksPreview(proposal, userId)
                     createOk(taskTranslator.translate(tasks), tasks.size.toLong())
                 } catch (e: TaskOutsideMilestoneException) {
@@ -89,7 +87,6 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 userController.listUserProjects(userEntity).map { it.project }.toTypedArray()
             }
 
-            println("getting tasks")
             val (tasks, count) = taskController.list(projectFilter = projectFilter, milestoneFilter = milestoneFilter, first = first, max = max)
             createOk(taskTranslator.translate(tasks), count)
         }
