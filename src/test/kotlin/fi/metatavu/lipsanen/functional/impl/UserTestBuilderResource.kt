@@ -49,16 +49,18 @@ class UserTestBuilderResource (
      * @param role role
      * @param projectId project id
      * @param companyId company id
+     * @param jobPositionId job position id
      * @return created user
      */
-    fun create(username: String, role: UserRole, projectId: UUID? = null, companyId: UUID? = null): User {
+    fun create(username: String, role: UserRole, projectId: UUID? = null, companyId: UUID? = null, jobPositionId: UUID? = null): User {
         return addClosable(api.createUser(User(
             email = "$username@example.com",
             firstName = username,
             lastName = username,
             roles = arrayOf(role),
             projectIds = projectId?.let { arrayOf(it) },
-            companyId = companyId
+            companyId = companyId,
+            jobPositionId = jobPositionId
         )))
     }
 
@@ -77,6 +79,7 @@ class UserTestBuilderResource (
      *
      * @param companyId company id
      * @param projectId project id
+     * @param jobPositionId job position id
      * @param keycloakId keycloak id
      * @param first first
      * @param max max
@@ -85,11 +88,12 @@ class UserTestBuilderResource (
     fun listUsers(
         companyId: UUID? = null,
         projectId: UUID? = null,
+        jobPositionId: UUID? = null,
         keycloakId: UUID? = null,
         first: Int? = null,
         max: Int? = null
     ): Array<User> {
-        return api.listUsers(companyId = companyId, projectId = projectId, keycloakId = keycloakId, first = first, max = max)
+        return api.listUsers(companyId = companyId, projectId = projectId, jobPositionId = jobPositionId, keycloakId = keycloakId, first = first, max = max)
     }
 
     /**

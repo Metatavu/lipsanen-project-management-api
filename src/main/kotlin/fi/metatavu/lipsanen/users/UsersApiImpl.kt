@@ -48,7 +48,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
-    override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+    override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
         } else null
@@ -56,7 +56,11 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
         } else null
 
-        val ( users, count ) = userController.listUsers(companyFilter, projectFilter, keycloakId, first, max)
+        val jobPosition = if (jobPositionId != null) {
+            jobPositionController.findJobPosition(jobPositionId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(JOB_POSITION, jobPositionId))
+        } else null
+
+        val ( users, count ) = userController.listUsers(companyFilter, projectFilter, jobPosition, keycloakId, first, max)
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count)
     }
 
