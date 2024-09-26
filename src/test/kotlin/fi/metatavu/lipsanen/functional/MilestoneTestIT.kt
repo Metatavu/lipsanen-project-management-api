@@ -204,13 +204,13 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             milestoneId = milestone.id!!
         )
 
-        val earlierTask = tb.admin.task.create(project.id, earlierAndLaterTask)
+        val earlierTask = tb.admin.task.create(earlierAndLaterTask)
         val updatedMilestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id)
         assertEquals(earlierTask.startDate, updatedMilestone.startDate)
         assertEquals(earlierTask.endDate, updatedMilestone.endDate)
 
         // Tests moving
-        val updatedTask = tb.admin.task.update(project.id, earlierTask.id!!, earlierTask.copy(
+        val updatedTask = tb.admin.task.update(earlierTask.id!!, earlierTask.copy(
             startDate = "2021-11-01",
             endDate = "2022-03-01"
         ))
@@ -261,7 +261,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         )
 
         tb.admin.task.create(
-            project.id, Task(
+            Task(
                 name = "Task 1",
                 startDate = "2022-01-02",
                 endDate = "2022-01-10",
@@ -270,7 +270,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             )
         )
         tb.admin.task.create(
-            project.id, Task(
+            Task(
                 name = "Task 1",
                 startDate = "2022-01-05",
                 endDate = "2022-01-20",

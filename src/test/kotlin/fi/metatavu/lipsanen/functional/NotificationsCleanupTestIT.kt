@@ -36,8 +36,7 @@ class NotificationsCleanupTestIT : AbstractFunctionalTest() {
         val admin = tb.admin.user.create("admin1", UserRole.ADMIN)
 
         // create task assigned notifications
-        tb.admin.task.create(
-            projectId = project1.id, task =
+        tb.admin.task.create(task =
             Task(
                 name = "Task 1",
                 startDate = "2024-01-01",

@@ -3,8 +3,8 @@ package fi.metatavu.lipsanen.notifications.notificationevents
 import fi.metatavu.lipsanen.api.model.NotificationEvent
 import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
+import fi.metatavu.lipsanen.tasks.TaskEntity
+import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserEntity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject

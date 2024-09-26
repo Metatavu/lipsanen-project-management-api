@@ -19,15 +19,12 @@ class TaskCommentTestBuilderResource(
     private val accessTokenProvider: AccessTokenProvider?,
     apiClient: ApiClient
 ) : ApiTestBuilderResource<TaskComment, TaskCommentsApi>(testBuilder, apiClient) {
-    private val taskCommentToProjectId = mutableMapOf<UUID, UUID>()
     override fun clean(p0: TaskComment?) {
         p0?.let {
             api.deleteTaskComment(
-                projectId = taskCommentToProjectId[it.id]!!,
                 taskId = it.taskId,
                 commentId = it.id!!
             )
-            taskCommentToProjectId.remove(p0.id)
         }
     }
 
@@ -37,11 +34,10 @@ class TaskCommentTestBuilderResource(
     }
 
     fun create(
-        projectId: UUID, taskId: UUID, taskComment: TaskComment? = null
+        taskId: UUID, taskComment: TaskComment? = null
     ): TaskComment {
         val comment = addClosable(
             api.createTaskComment(
-                projectId = projectId,
                 taskId = taskId,
                 taskComment = taskComment
                     ?: TaskComment(
@@ -49,26 +45,25 @@ class TaskCommentTestBuilderResource(
                     )
             )
         )
-        taskCommentToProjectId[comment.id!!] = projectId
         return comment
     }
 
-    fun findTaskComment(projectId: UUID, taskId: UUID, taskCommentId: UUID): TaskComment {
-        return api.findTaskComment(projectId, taskId, taskCommentId)
+    fun findTaskComment(taskId: UUID, taskCommentId: UUID): TaskComment {
+        return api.findTaskComment(taskId, taskCommentId)
     }
 
-    fun listTaskComments(projectId: UUID, taskId: UUID): Array<TaskComment> {
-        return api.listTaskComments(projectId, taskId)
+    fun listTaskComments(taskId: UUID): Array<TaskComment> {
+        return api.listTaskComments(taskId)
     }
 
     fun updateTaskComment(
-        projectId: UUID, taskId: UUID, taskCommentId: UUID, taskComment: TaskComment
+        taskId: UUID, taskCommentId: UUID, taskComment: TaskComment
     ): TaskComment {
-        return api.updateTaskComment(projectId, taskId, taskCommentId, taskComment)
+        return api.updateTaskComment(taskId, taskCommentId, taskComment)
     }
 
-    fun deleteTaskComment(projectId: UUID, taskId: UUID, taskCommentId: UUID) {
-        api.deleteTaskComment(projectId, taskId, taskCommentId)
+    fun deleteTaskComment(taskId: UUID, taskCommentId: UUID) {
+        api.deleteTaskComment(taskId, taskCommentId)
         removeCloseable { closable: Any ->
             if (closable !is TaskComment) {
                 return@removeCloseable false
@@ -79,10 +74,10 @@ class TaskCommentTestBuilderResource(
     }
 
     fun assertDeleteFail(
-        expectedStatus: Int, projectId: UUID, taskId: UUID, taskCommentId: UUID
+        expectedStatus: Int, taskId: UUID, taskCommentId: UUID
     ) {
         try {
-            api.deleteTaskComment(projectId, taskId, taskCommentId)
+            api.deleteTaskComment(taskId, taskCommentId)
             fail(String.format("Expected delete to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -91,13 +86,12 @@ class TaskCommentTestBuilderResource(
 
     fun assertUpdateFail(
         expectedStatus: Int,
-        projectId: UUID,
         taskId: UUID,
         taskCommentId: UUID,
         taskComment: TaskComment
     ) {
         try {
-            api.updateTaskComment(projectId, taskId, taskCommentId, taskComment)
+            api.updateTaskComment(taskId, taskCommentId, taskComment)
             fail(String.format("Expected update to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())
@@ -105,10 +99,10 @@ class TaskCommentTestBuilderResource(
     }
 
     fun assertFindFail(
-        expectedStatus: Int, projectId: UUID, taskId: UUID, taskCommentId: UUID
+        expectedStatus: Int, taskId: UUID, taskCommentId: UUID
     ) {
         try {
-            api.findTaskComment(projectId, taskId, taskCommentId)
+            api.findTaskComment(taskId, taskCommentId)
             fail(String.format("Expected find to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())

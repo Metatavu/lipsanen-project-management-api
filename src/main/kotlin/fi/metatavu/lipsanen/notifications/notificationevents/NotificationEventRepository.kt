@@ -3,9 +3,9 @@ package fi.metatavu.lipsanen.notifications.notificationevents
 import fi.metatavu.lipsanen.notifications.NotificationEntity
 import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskEntity
+import fi.metatavu.lipsanen.tasks.TaskEntity
+import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserEntity
-import fi.metatavu.lipsanen.projects.milestones.tasks.comments.TaskCommentEntity
 import io.quarkus.panache.common.Parameters
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped

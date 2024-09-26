@@ -1,10 +1,10 @@
 package fi.metatavu.lipsanen.rest
 
 import fi.metatavu.lipsanen.api.model.Error
+import fi.metatavu.lipsanen.milestones.MilestoneController
+import fi.metatavu.lipsanen.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
-import fi.metatavu.lipsanen.projects.milestones.MilestoneController
-import fi.metatavu.lipsanen.projects.milestones.MilestoneEntity
 import io.quarkus.security.identity.SecurityIdentity
 import io.smallrye.mutiny.Uni
 import io.smallrye.mutiny.coroutines.asUni
@@ -295,43 +295,57 @@ abstract class AbstractApi {
             )
         )
 
+        return getProjectAccessRights(project, userId)
+     }
+
+    /**
+     * Returns project or error response, checks project access rights (does not apply to global admin)
+     *
+     * @param project project
+     * @param userId user id
+     * @return project or error response
+     */
+    open suspend fun getProjectAccessRights(
+        project: ProjectEntity,
+        userId: UUID
+    ): Pair<ProjectEntity?, Response?> {
         if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
             return null to createForbidden(NO_PROJECT_RIGHTS)
         }
         return project to null
-	}
+    }
 
-	/**
-	 * Executes a block with coroutine scope
-	 *
-	 * @param requestTimeOut request timeout in milliseconds. Default is 10000
-	 * @param block block to execute
-	 * @return Uni
-	 */
-	@OptIn(ExperimentalCoroutinesApi::class)
-	protected fun <T> withCoroutineScope(requestTimeOut: Long = 10000L, block: suspend () -> T): Uni<T> {
-		val context = Vertx.currentContext()
-		val dispatcher = VertxCoroutineDispatcher(context)
+    /**
+     * Executes a block with coroutine scope
+     *
+     * @param requestTimeOut request timeout in milliseconds. Default is 10000
+     * @param block block to execute
+     * @return Uni
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    protected fun <T> withCoroutineScope(requestTimeOut: Long = 10000L, block: suspend () -> T): Uni<T> {
+        val context = Vertx.currentContext()
+	val dispatcher = VertxCoroutineDispatcher(context)
 
-		return CoroutineScope(context = dispatcher)
-			.async {
-				withTimeout(requestTimeOut) {
-					block()
-				}
-			}
-			.asUni()
-	}
-
-	/**
-	 * Custom vertx coroutine dispatcher that keeps the context stable during the execution
-	 */
-	private class VertxCoroutineDispatcher(private val vertxContext: io.vertx.core.Context): CoroutineDispatcher() {
-		override fun dispatch(context: CoroutineContext, block: Runnable) {
-			vertxContext.runOnContext {
-				block.run()
-			}
+	return CoroutineScope(context = dispatcher)
+	    .async {
+		withTimeout(requestTimeOut) {
+			block()
 		}
 	}
+	.asUni()
+}
+
+/**
+ * Custom vertx coroutine dispatcher that keeps the context stable during the execution
+ */
+private class VertxCoroutineDispatcher(private val vertxContext: io.vertx.core.Context): CoroutineDispatcher() {
+	override fun dispatch(context: CoroutineContext, block: Runnable) {
+		vertxContext.runOnContext {
+			block.run()
+		}
+	}
+}
 
     companion object {
         const val NOT_FOUND_MESSAGE = "Not found"

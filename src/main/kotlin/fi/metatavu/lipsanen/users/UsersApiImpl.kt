@@ -5,10 +5,10 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
 import fi.metatavu.lipsanen.positions.JobPositionController
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskAssigneeRepository
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.tasks.TaskAssigneeRepository
+import fi.metatavu.lipsanen.tasks.TaskController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
 import io.smallrye.mutiny.Uni
@@ -17,13 +17,11 @@ import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.util.*
 
 /**
  * Users API implementation
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
 class UsersApiImpl: UsersApi, AbstractApi() {

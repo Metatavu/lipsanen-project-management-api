@@ -2,9 +2,9 @@ package fi.metatavu.lipsanen.notifications.notificationevents
 
 import fi.metatavu.lipsanen.api.model.NotificationEvent
 import fi.metatavu.lipsanen.api.spec.NotificationEventsApi
-import fi.metatavu.lipsanen.projects.milestones.tasks.TaskController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
+import fi.metatavu.lipsanen.tasks.TaskController
 import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
@@ -20,7 +20,6 @@ import java.util.*
 /**
  * Notification events API implementation
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
 class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {

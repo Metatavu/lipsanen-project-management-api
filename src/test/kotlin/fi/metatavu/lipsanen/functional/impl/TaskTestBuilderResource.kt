@@ -25,16 +25,12 @@ class TaskTestBuilderResource(
     apiClient: ApiClient
 ) : ApiTestBuilderResource<Task, TasksApi>(testBuilder, apiClient) {
 
-    private val taskToProject = mutableMapOf<UUID, UUID>()
-
     override fun clean(p0: Task?) {
         p0?.let {
             api.deleteTask(
-                projectId = taskToProject[it.id]!!,
                 taskId = it.id!!
             )
         }
-        taskToProject.remove(p0?.id)
     }
 
     override fun getApi(): TasksApi {
@@ -43,28 +39,23 @@ class TaskTestBuilderResource(
     }
 
     fun create(
-        projectId: UUID,
         task: Task
     ): Task {
         val created = addClosable(
             api.createTask(
-                projectId = projectId,
                 task = task
             )
         )
-        taskToProject[created.id!!] = projectId
         return created
     }
 
     fun create(
-        projectId: UUID,
         milestoneId: UUID,
         startDate: String,
         endDate: String,
         name: String? = null
     ): Task {
         return create(
-            projectId = projectId,
             task = Task(
                 name = name ?: "Task",
                 startDate = startDate,
@@ -76,12 +67,10 @@ class TaskTestBuilderResource(
     }
 
     fun create(
-        projectId: UUID,
         milestoneId: UUID,
         assigneeId: UUID ?= null
     ): Task {
         return create(
-            projectId = projectId,
             task = Task(
                 name = "Task",
                 startDate = "2022-01-01",
@@ -94,43 +83,39 @@ class TaskTestBuilderResource(
     }
 
     fun find(
-        projectId: UUID,
         taskId: UUID
     ): Task {
         return api.findTask(
-            projectId = projectId,
             taskId = taskId
         )
     }
 
     fun list(
-        projectId: UUID,
-        milestoneId: UUID
+        projectId: UUID? = null,
+        changeProposalId: UUID? = null,
+        milestoneId: UUID? = null
     ): Array<Task> {
         return api.listTasks(
             projectId = projectId,
+            changeProposalId = changeProposalId,
             milestoneId = milestoneId
         )
     }
 
     fun update(
-        projectId: UUID,
         taskId: UUID,
         task: Task
     ): Task {
         return api.updateTask(
-            projectId = projectId,
             taskId = taskId,
             task = task
         )
     }
 
     fun delete(
-        projectId: UUID,
         taskId: UUID
     ) {
         api.deleteTask(
-            projectId = projectId,
             taskId = taskId
         )
         removeCloseable { closable: Any ->
@@ -144,12 +129,10 @@ class TaskTestBuilderResource(
 
     fun assertCreateFail(
         expectedStatus: Int,
-        projectId: UUID,
         task: Task
     ) {
         try {
             api.createTask(
-                projectId = projectId,
                 task = task
             )
             fail(String.format("Expected create to fail with status %d", expectedStatus))
@@ -160,12 +143,10 @@ class TaskTestBuilderResource(
 
     fun assertFindFail(
         expectedStatus: Int,
-        projectId: UUID,
         taskId: UUID
     ) {
         try {
             api.findTask(
-                projectId = projectId,
                 taskId = taskId
             )
             fail(String.format("Expected find to fail with status %d", expectedStatus))
@@ -176,13 +157,15 @@ class TaskTestBuilderResource(
 
     fun assertListFail(
         expectedStatus: Int,
-        projectId: UUID,
-        milestoneId: UUID
+        projectId: UUID? = null,
+        milestoneId: UUID? = null,
+        changeProposalId: UUID? = null
     ) {
         try {
             api.listTasks(
                 projectId = projectId,
-                milestoneId = milestoneId
+                milestoneId = milestoneId,
+                changeProposalId = changeProposalId
             )
             fail(String.format("Expected list to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
@@ -192,13 +175,11 @@ class TaskTestBuilderResource(
 
     fun assertUpdateFail(
         expectedStatus: Int,
-        projectId: UUID,
         taskId: UUID,
         task: Task
     ) {
         try {
             api.updateTask(
-                projectId = projectId,
                 taskId = taskId,
                 task = task
             )
@@ -210,12 +191,10 @@ class TaskTestBuilderResource(
 
     fun assertDeleteFail(
         expectedStatus: Int,
-        projectId: UUID,
         taskId: UUID
     ) {
         try {
             api.deleteTask(
-                projectId = projectId,
                 taskId = taskId
             )
             fail(String.format("Expected delete to fail with status %d", expectedStatus))

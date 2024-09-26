@@ -7,6 +7,7 @@ import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectEntity
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.smallrye.mutiny.coroutines.awaitSuspending
@@ -441,6 +442,18 @@ class UserController {
             }
         }
 
+    }
+
+    /**
+     * Lists user projects
+     *
+     * @param user user
+     * @return list of user projects
+     */
+    suspend fun listUserProjects(
+        user: UserEntity,
+    ): List<UserToProjectEntity> {
+        return userToProjectRepository.list(user)
     }
 
     /**
