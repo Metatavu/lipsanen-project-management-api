@@ -85,6 +85,7 @@ class UserController {
      *
      * @param company company
      * @param projectFilter project
+     * @param jobPosition job position
      * @param keycloakId keycloak user id
      * @param first first result
      * @param max max results
@@ -93,11 +94,19 @@ class UserController {
     suspend fun listUsers(
         company: CompanyEntity?,
         projectFilter: ProjectEntity?,
+        jobPosition: JobPositionEntity?,
         keycloakId: UUID?,
         first: Int?,
         max: Int?
     ): Pair<List<UserFullRepresentation>, Long> {
-        val (userEntities, entitiesCount) = userRepository.list(companyEntity = company, project = projectFilter, keycloakId = keycloakId, firstResult =  first, maxResults = max)
+        val (userEntities, entitiesCount) = userRepository.list(
+            companyEntity = company,
+            project = projectFilter,
+            jobPosition = jobPosition,
+            keycloakId = keycloakId,
+            firstResult =  first,
+            maxResults = max
+        )
         var totalCount = entitiesCount
         val userReprensentations = userEntities.map {
             val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.keycloakId.toString()))

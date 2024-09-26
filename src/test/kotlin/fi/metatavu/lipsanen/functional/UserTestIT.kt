@@ -6,10 +6,7 @@ import fi.metatavu.invalid.InvalidValues
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.ApiTestSettings
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
-import fi.metatavu.lipsanen.test.client.models.Project
-import fi.metatavu.lipsanen.test.client.models.ProjectStatus
-import fi.metatavu.lipsanen.test.client.models.User
-import fi.metatavu.lipsanen.test.client.models.UserRole
+import fi.metatavu.lipsanen.test.client.models.*
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -34,7 +31,9 @@ class UserTestIT: AbstractFunctionalTest() {
         val project1 = it.admin.project.create("project1").id
         val project2 = it.admin.project.create("project2").id
         val company = it.admin.company.create().id
-        it.admin.user.create("user1", UserRole.USER, project1, company)
+        val jobPosition1 = it.admin.jobPosition.create(JobPosition("architect"))
+
+        it.admin.user.create("user1", UserRole.USER, project1, company, jobPosition1.id)
         it.admin.user.create("user2", UserRole.USER, project1)
         it.admin.user.create("user3", UserRole.USER, project2, company)
         it.admin.user.create("user4", UserRole.USER)
@@ -56,6 +55,9 @@ class UserTestIT: AbstractFunctionalTest() {
 
         val projectCompanyUsers = it.admin.user.listUsers(projectId = project1, companyId = company)
         assertEquals(1, projectCompanyUsers.size)
+
+        val jobPositionUsers = it.admin.user.listUsers(jobPositionId = jobPosition1.id)
+        assertEquals(1, jobPositionUsers.size)
     }
 
     @Test
