@@ -182,6 +182,7 @@ class TaskController {
         }
 
         extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
+        updateMilestoneReadiness(milestone)
         return taskEntity
     }
 
@@ -261,13 +262,17 @@ class TaskController {
         mainUpdatedTask.name = newTask.name
         mainUpdatedTask.userRole = newTask.userRole ?: UserRole.USER
         mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
-        mainUpdatedTask.estimatedReadiness = newTask.estimatedReadiness
+        mainUpdatedTask.estimatedReadiness = if (newTask.status == TaskStatus.DONE) 100 else newTask.estimatedReadiness
         mainUpdatedTask.jobPosition = jobPosition
         mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId
 
         extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
-        return taskEntityRepository.persistSuspending(mainUpdatedTask)
+        val updated = taskEntityRepository.persistSuspending(mainUpdatedTask)
+
+        // Update milestone readiness after task update
+        updateMilestoneReadiness(milestone)
+        return updated
     }
 
     /**
@@ -418,6 +423,22 @@ class TaskController {
     }
 
     /**
+     * Updates milestone readiness after task update
+     *
+     * @param milestone milestone
+     */
+    private suspend fun updateMilestoneReadiness(milestone: MilestoneEntity) {
+        val tasks = list(milestone)
+        val totalReadiness = tasks.sumOf { it.estimatedReadiness ?: 0 }
+        val tasksCount = tasks.size
+        val readiness = if (tasksCount > 0 ) {
+            totalReadiness / tasksCount
+        } else 0
+        milestone.estimatedReadiness = readiness
+        milestoneRepository.persistSuspending(milestone)
+    }
+
+    /**
      * Creates notifications of task assignments
      *
      * @param task task
@@ -476,6 +497,7 @@ class TaskController {
             taskCommentController.deleteTaskComment(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
+        updateMilestoneReadiness(foundTask.milestone)
     }
 
     /**
