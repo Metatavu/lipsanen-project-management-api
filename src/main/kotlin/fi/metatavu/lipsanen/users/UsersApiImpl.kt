@@ -5,7 +5,6 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
 import fi.metatavu.lipsanen.positions.JobPositionController
-import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.tasks.TaskAssigneeRepository
@@ -119,7 +118,8 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
-    override fun updateUser(userId: UUID, user: User): Uni<Response> =withCoroutineScope {
+    override fun updateUser(userId: UUID, user: User): Uni<Response> = withCoroutineScope {
+        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val existingUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
         val projects = user.projectIds?.map {
             projectController.findProject(it) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, it))
@@ -140,8 +140,8 @@ class UsersApiImpl: UsersApi, AbstractApi() {
                 jobPosition = jobPosition
             ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
         } else if (isProjectOwner()) {
-            val projectOwnerUser = userController.findUserByKeycloakId(loggedUserId!!) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
-            if (!canAssignToProjects(projectOwnerUser, existingUser, projects ?: emptyList())) {
+            val projectOwnerUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            if (!canAssignToProjects(projectOwnerUser, existingUser, projects?.map { it.id } ?: emptyList())) {
                 return@withCoroutineScope createForbidden("Forbidden")
             }
             userController.assignUserToProjects(
@@ -183,21 +183,21 @@ class UsersApiImpl: UsersApi, AbstractApi() {
      *
      * @param updatingUser user who is updating the user
      * @param updatableUser user who is being updated
-     * @param newUserProjects new projects that user is being assigned to
+     * @param newUserProjectIds new projects that user is being assigned to
      * @return true if project owner can assign user to projects, false otherwise
      */
-    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatableUser: UserEntity, newUserProjects: List<ProjectEntity>): Boolean {
-        val currentUserProjects = userController.listUserProjects(updatableUser).map { it.project }
-        val projectOwnerProjects = userController.listUserProjects(updatingUser).map { it.project }
+    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatableUser: UserEntity, newUserProjectIds: List<UUID>): Boolean {
+        val currentUserProjectIds = userController.listUserProjects(updatableUser).map { it.project.id }
+        val projectOwnerProjectIds = userController.listUserProjects(updatingUser).map { it.project.id }
 
-        val projectsToAdd = newUserProjects.filter { !currentUserProjects.contains(it) }
-        val projectsToRemove = currentUserProjects.filter { !newUserProjects.contains(it) }
+        val projectsToAddIds = newUserProjectIds.filter { !currentUserProjectIds.contains(it) }
+        val projectsToRemoveIds = currentUserProjectIds.filter { !newUserProjectIds.contains(it) }
 
-        if (projectsToRemove.any { !projectOwnerProjects.contains(it) }) {
+        if (projectsToRemoveIds.any { !projectOwnerProjectIds.contains(it) }) {
             return false
         }
 
-        if (projectsToAdd.any { !projectOwnerProjects.contains(it) }) {
+        if (projectsToAddIds.any { !projectOwnerProjectIds.contains(it) }) {
             return false
         }
 
