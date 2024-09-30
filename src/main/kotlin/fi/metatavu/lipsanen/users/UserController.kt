@@ -176,7 +176,12 @@ class UserController {
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignRoles(keycloakUser, user.roles)
+            val assignableRoles = if (user.roles.isNullOrEmpty()) {
+                listOf(UserRole.USER)
+            } else {
+                user.roles
+            }
+            assignRoles(keycloakUser, assignableRoles)
 
             val userEntity = userRepository.create(
                 id = UUID.randomUUID(),
@@ -340,13 +345,11 @@ class UserController {
      * @param roles roles to assign
      */
     suspend fun assignRoles(userRepresentation: UserRepresentation, roles: List<UserRole>?) {
-        var assignableRoles = if (roles.isNullOrEmpty()) {
-            listOf(UserRole.USER)
-        } else {
-            roles
+        if (roles == null) {
+            //nothing is being updated if roles are null
+            return
         }
-
-        val userRoles = assignableRoles.map {
+        val userRoles = roles.map {
             keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
                 roleName = translateRole(it),
                 realm = keycloakAdminClient.getRealm()
