@@ -52,7 +52,7 @@ class ProjectController {
      * @param max max
      * @return list of projects
      */
-    suspend fun listProjectsForUser(user: UserEntity, first: Int?, max: Int?): Pair<List<ProjectEntity>, Long> {
+    suspend fun listProjectsForUser(user: UserEntity, first: Int? = null, max: Int? = null): Pair<List<ProjectEntity>, Long> {
         val (connections, count) = userToProjectRepository.applyFirstMaxToQuery(
             userToProjectRepository.find("user", user),
             first,

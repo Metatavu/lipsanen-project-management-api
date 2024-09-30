@@ -1,4 +1,4 @@
-package fi.metatavu.lipsanen.tasks.proposals
+package fi.metatavu.lipsanen.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.persistence.Metadata
