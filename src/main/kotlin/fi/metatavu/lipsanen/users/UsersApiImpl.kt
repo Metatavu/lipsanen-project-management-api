@@ -179,15 +179,15 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     /**
      * Checks if project owner can assign user to projects.
      * It can assign users to the projects that he/she is project owner of.
-     * He cannot un-assing user from the projects that he/she is not project owner of.
+     * He cannot un-assign user from the projects that he/she is not project owner of.
      *
      * @param updatingUser user who is updating the user
-     * @param updatableUser user who is being updated
+     * @param updatedUser user who is being updated
      * @param newUserProjectIds new projects that user is being assigned to
      * @return true if project owner can assign user to projects, false otherwise
      */
-    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatableUser: UserEntity, newUserProjectIds: List<UUID>): Boolean {
-        val currentUserProjectIds = userController.listUserProjects(updatableUser).map { it.project.id }
+    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatedUser: UserEntity, newUserProjectIds: List<UUID>): Boolean {
+        val currentUserProjectIds = userController.listUserProjects(updatedUser).map { it.project.id }
         val projectOwnerProjectIds = userController.listUserProjects(updatingUser).map { it.project.id }
 
         val projectsToAddIds = newUserProjectIds.filter { !currentUserProjectIds.contains(it) }
