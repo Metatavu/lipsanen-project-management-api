@@ -8,7 +8,7 @@ import fi.metatavu.lipsanen.positions.JobPositionController
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.tasks.connections.TaskConnectionRepository
-import fi.metatavu.lipsanen.tasks.proposals.ChangeProposalController
+import fi.metatavu.lipsanen.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithSession
@@ -83,8 +83,12 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 if (errorResponse != null) return@withCoroutineScope errorResponse
                 arrayOf(project!!)
             } else {
-                val userEntity = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
-                userController.listUserProjects(userEntity).map { it.project }.toTypedArray()
+                if (isAdmin()) {
+                    null
+                } else {
+                    val userEntity = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
+                    userController.listUserProjects(userEntity).map { it.project }.toTypedArray()
+                }
             }
 
             val (tasks, count) = taskController.list(projectFilter = projectFilter, milestoneFilter = milestoneFilter, first = first, max = max)

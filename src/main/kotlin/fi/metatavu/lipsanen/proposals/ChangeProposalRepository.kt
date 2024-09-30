@@ -1,4 +1,4 @@
-package fi.metatavu.lipsanen.tasks.proposals
+package fi.metatavu.lipsanen.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
 import fi.metatavu.lipsanen.milestones.MilestoneEntity
@@ -58,7 +58,7 @@ class ChangeProposalRepository : AbstractRepository<ChangeProposalEntity, UUID>(
     /**
      * Lists proposals
      *
-     * @param project project
+     * @param projectFilter project filter
      * @param milestoneFilter milestone filter
      * @param taskFilter task filter
      * @param first first
@@ -66,7 +66,7 @@ class ChangeProposalRepository : AbstractRepository<ChangeProposalEntity, UUID>(
      * @return pair of list of proposals and count
      */
     suspend fun list(
-        project: ProjectEntity?,
+        projectFilter: List<ProjectEntity>?,
         milestoneFilter: MilestoneEntity?,
         taskFilter: TaskEntity?,
         first: Int?,
@@ -75,9 +75,9 @@ class ChangeProposalRepository : AbstractRepository<ChangeProposalEntity, UUID>(
         val sb = StringBuilder()
         val parameters = Parameters()
 
-        if(project != null) {
-            addCondition(sb, "task.milestone.project= :project")
-            parameters.and("project", project)
+        if (projectFilter != null) {
+            addCondition(sb, "task.milestone.project in :projects")
+            parameters.and("projects", projectFilter)
         }
 
         if (milestoneFilter != null) {

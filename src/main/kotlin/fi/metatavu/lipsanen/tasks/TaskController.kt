@@ -11,8 +11,8 @@ import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.tasks.connections.TaskConnectionController
-import fi.metatavu.lipsanen.tasks.proposals.ChangeProposalController
-import fi.metatavu.lipsanen.tasks.proposals.ChangeProposalEntity
+import fi.metatavu.lipsanen.proposals.ChangeProposalController
+import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.panache.common.Parameters
@@ -73,7 +73,7 @@ class TaskController {
      * @return list of tasks
      */
     suspend fun list(
-        projectFilter: Array<ProjectEntity>,
+        projectFilter: Array<ProjectEntity>?,
         milestoneFilter: MilestoneEntity?,
         first: Int?,
         max: Int?
@@ -81,11 +81,13 @@ class TaskController {
         val query = StringBuilder()
         val parameters = Parameters()
 
-        query.append("milestone.project in :projects")
-        parameters.and("projects", projectFilter.toList())
+        if (projectFilter != null) {
+            query.append("milestone.project in :projects")
+            parameters.and("projects", projectFilter.toList())
+        }
 
         if (milestoneFilter != null) {
-            query.append(" and milestone = :milestone")
+            query.append(if (query.isNotEmpty()) " and " else " ").append("milestone = :milestone")
             parameters.and("milestone", milestoneFilter)
         }
 
