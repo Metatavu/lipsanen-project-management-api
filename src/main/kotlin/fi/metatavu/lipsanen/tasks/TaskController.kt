@@ -180,6 +180,7 @@ class TaskController {
         }
 
         extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
+        updateMilestoneReadiness(milestone)
         return taskEntity
     }
 
@@ -265,7 +266,11 @@ class TaskController {
         mainUpdatedTask.lastModifierId = userId
 
         extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
-        return taskEntityRepository.persistSuspending(mainUpdatedTask)
+        val updated = taskEntityRepository.persistSuspending(mainUpdatedTask)
+
+        // Update milestone readiness after task update
+        updateMilestoneReadiness(milestone)
+        return updated
     }
 
     /**
@@ -416,6 +421,22 @@ class TaskController {
     }
 
     /**
+     * Updates milestone readiness after task update
+     *
+     * @param milestone milestone
+     */
+    private suspend fun updateMilestoneReadiness(milestone: MilestoneEntity) {
+        val tasks = list(milestone)
+        val totalReadiness = tasks.sumOf { it.estimatedReadiness ?: 0 }
+        val tasksCount = tasks.size
+        val readiness = if (tasksCount > 0 ) {
+            totalReadiness / tasksCount
+        } else 0
+        milestone.estimatedReadiness = readiness
+        milestoneRepository.persistSuspending(milestone)
+    }
+
+    /**
      * Creates notifications of task assignments
      *
      * @param task task
@@ -474,6 +495,7 @@ class TaskController {
             taskCommentController.deleteTaskComment(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
+        updateMilestoneReadiness(foundTask.milestone)
     }
 
     /**
