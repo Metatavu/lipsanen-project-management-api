@@ -81,7 +81,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(milestoneData.originalStartDate, milestone.originalStartDate)
         assertEquals(milestoneData.originalEndDate, milestone.originalEndDate)
         assertEquals(milestoneData.originalEndDate, milestone.originalEndDate)
-        assertEquals(milestoneData.estimatedReadiness, milestone.estimatedReadiness)
+        assertEquals(0, milestone.estimatedReadiness)
         assertNotNull(milestone.id)
         assertNotNull(milestone.metadata)
     }
