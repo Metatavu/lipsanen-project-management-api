@@ -1,4 +1,4 @@
-package fi.metatavu.lipsanen.tasks.proposals
+package fi.metatavu.lipsanen.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.rest.AbstractTranslator
