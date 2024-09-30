@@ -337,9 +337,15 @@ class MilestoneTestIT : AbstractFunctionalTest() {
     fun deleteMilestoneFail() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val milestone = tb.admin.milestone.create(project.id!!)
+        val task = tb.admin.task.create(milestoneId = milestone.id!!)
 
         // access rights
         tb.user.milestone.assertDeleteFail(403, project.id, milestone.id!!)
+
+        // cannot delete due to tasks present
+        tb.admin.milestone.assertDeleteFail(400, project.id, milestone.id)
+        tb.admin.task.delete(task.id!!)
+        tb.admin.milestone.deleteProjectMilestone(project.id, milestone.id!!)
 
         InvalidValueTestScenarioBuilder(
             path = "v1/projects/{projectId}/milestones/{milestoneId}",
