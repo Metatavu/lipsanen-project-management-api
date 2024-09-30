@@ -1,4 +1,4 @@
-package fi.metatavu.lipsanen.tasks.proposals
+package fi.metatavu.lipsanen.proposals
 
 import fi.metatavu.lipsanen.api.model.ChangeProposal
 import fi.metatavu.lipsanen.api.model.ChangeProposalStatus
@@ -7,7 +7,7 @@ import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.tasks.TaskController
-import fi.metatavu.lipsanen.tasks.TaskTranslator
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.hibernate.reactive.panache.Panache
 import io.quarkus.hibernate.reactive.panache.common.WithSession
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction
@@ -18,13 +18,11 @@ import jakarta.annotation.security.RolesAllowed
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.Response
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.util.*
 
 /**
  * Change proposals API implementation
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @RequestScoped
 @WithSession
 class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
@@ -36,10 +34,10 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
     lateinit var changeProposalTranslator: ChangeProposalTranslator
 
     @Inject
-    lateinit var taskTranslator: TaskTranslator
+    lateinit var taskController: TaskController
 
     @Inject
-    lateinit var taskController: TaskController
+    lateinit var userController: UserController
 
     @Inject
     lateinit var vertx: Vertx
@@ -58,35 +56,33 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             return@withCoroutineScope createBadRequest("Project id cannot be used with milestone or task id")
         }
 
-        if (projectId == null) {
-            val (changeProposals, count) = proposalController.listChangeProposals(
-                project = null,
-                milestoneFilter = null,
-                taskFilter = null,
-                first = first,
-                max = max
-            )
-
-            return@withCoroutineScope createOk(changeProposalTranslator.translate(changeProposals), count)
+        val projectFilter = if (projectId != null) {
+            val (project, errorResponse) = getProjectAccessRights(projectId, userId)
+            if (errorResponse != null) return@withCoroutineScope errorResponse
+            listOf(project!!)
+        } else {
+            if (isAdmin()) {
+                null
+            } else {
+                val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
+                projectController.listProjectsForUser(user).first
+            }
         }
 
-        val (project, errorResponse) = getProjectAccessRights(projectId, userId)
-        if (errorResponse != null) return@withCoroutineScope errorResponse
-
         val taskFilter = if (taskId != null) {
-            taskController.find(project!!, taskId) ?: return@withCoroutineScope createNotFound(
+            taskController.find(taskId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(TASK, taskId)
             )
         } else null
 
         val milestoneFilter = if (milestoneId != null) {
-            milestoneController.find(project!!, milestoneId) ?: return@withCoroutineScope createNotFound(
+            milestoneController.find(milestoneId) ?: return@withCoroutineScope createNotFound(
                 createNotFoundMessage(MILESTONE, milestoneId)
             )
         } else null
 
         val (changeProposals, count) = proposalController.listChangeProposals(
-            project = project!!,
+            projectFilter = projectFilter,
             milestoneFilter = milestoneFilter,
             taskFilter = taskFilter,
             first = first,
