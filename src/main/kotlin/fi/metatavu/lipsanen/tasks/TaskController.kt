@@ -260,7 +260,7 @@ class TaskController {
         mainUpdatedTask.name = newTask.name
         mainUpdatedTask.userRole = newTask.userRole ?: UserRole.USER
         mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
-        mainUpdatedTask.estimatedReadiness = newTask.estimatedReadiness
+        mainUpdatedTask.estimatedReadiness = if (newTask.status == TaskStatus.DONE) 100 else newTask.estimatedReadiness
         mainUpdatedTask.jobPosition = jobPosition
         mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId

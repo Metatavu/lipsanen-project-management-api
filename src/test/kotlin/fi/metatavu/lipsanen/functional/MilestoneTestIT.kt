@@ -278,7 +278,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
         assertEquals(20, milestone.estimatedReadiness)
 
-        val task2 = tb.admin.task.create(
+        var task2 = tb.admin.task.create(
             Task(
                 name = "Task 2",
                 startDate = "2022-01-05",
@@ -299,6 +299,11 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         tb.admin.task.delete(task2.id!!)
         milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
         assertEquals(task1.estimatedReadiness, milestone.estimatedReadiness)
+
+        task2 = tb.admin.task.update(task1.id!!, task1.copy(status = TaskStatus.DONE))
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals(100, task2.estimatedReadiness)
+        assertEquals(task2.estimatedReadiness, milestone.estimatedReadiness)
     }
 
     @Test
