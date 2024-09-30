@@ -67,8 +67,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
             startDate = "2022-01-01",
             endDate = "2022-01-31",
             originalStartDate = "2022-01-02",
-            originalEndDate = "2022-01-30",
-            estimatedReadiness = 10
+            originalEndDate = "2022-01-30"
         )
         val milestone = tb.admin.milestone.create(
             projectId = project.id!!,
@@ -82,7 +81,7 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(milestoneData.originalStartDate, milestone.originalStartDate)
         assertEquals(milestoneData.originalEndDate, milestone.originalEndDate)
         assertEquals(milestoneData.originalEndDate, milestone.originalEndDate)
-        assertEquals(milestoneData.estimatedReadiness, milestone.estimatedReadiness)
+        assertEquals(0, milestone.estimatedReadiness)
         assertNotNull(milestone.id)
         assertNotNull(milestone.metadata)
     }
@@ -245,6 +244,66 @@ class MilestoneTestIT : AbstractFunctionalTest() {
         assertEquals(updateData.endDate, updatedMilestone.endDate)
         assertEquals(updateData.originalStartDate, updatedMilestone.originalStartDate)
         assertEquals(updateData.originalEndDate, updatedMilestone.originalEndDate)
+    }
+
+    /**
+     * Tests that milestone readiness is set and updated based on its tasks
+     */
+    @Test
+    fun updateMilestoneReadiness() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create(Project("Project 1", status = ProjectStatus.INITIATION))
+        var milestone = tb.admin.milestone.create(project.id!!,
+            Milestone(
+                name = "Milestone",
+                startDate = "2022-01-01",
+                endDate = "2022-01-31",
+                originalStartDate = "2022-01-01",
+                originalEndDate = "2022-01-31"
+            )
+        )
+
+        assertEquals(0, milestone.estimatedReadiness)
+
+        var task1 = tb.admin.task.create(
+            Task(
+                name = "Task 1",
+                startDate = "2022-01-02",
+                endDate = "2022-01-10",
+                status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
+                milestoneId = milestone.id!!,
+                estimatedReadiness = 20
+            )
+        )
+
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals(20, milestone.estimatedReadiness)
+
+        var task2 = tb.admin.task.create(
+            Task(
+                name = "Task 2",
+                startDate = "2022-01-05",
+                endDate = "2022-01-20",
+                status = fi.metatavu.lipsanen.test.client.models.TaskStatus.NOT_STARTED,
+                milestoneId = milestone.id!!,
+                estimatedReadiness = 80
+            )
+        )
+
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals((80+20) / 2, milestone.estimatedReadiness)
+
+        task1 = tb.admin.task.update(task1.id!!, task1.copy(estimatedReadiness = 40))
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals((40+80) / 2, milestone.estimatedReadiness)
+
+        tb.admin.task.delete(task2.id!!)
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals(task1.estimatedReadiness, milestone.estimatedReadiness)
+
+        task2 = tb.admin.task.update(task1.id!!, task1.copy(status = TaskStatus.DONE))
+        milestone = tb.admin.milestone.findProjectMilestone(project.id, milestone.id!!)
+        assertEquals(100, task2.estimatedReadiness)
+        assertEquals(task2.estimatedReadiness, milestone.estimatedReadiness)
     }
 
     @Test
