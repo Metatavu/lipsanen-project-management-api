@@ -292,7 +292,7 @@ class UserController {
     }
 
     /**
-     * Updates a user (but not its email)
+     * Updates a user completely (but not its email)
      *
      * @param existingUser existing user
      * @param updateData user

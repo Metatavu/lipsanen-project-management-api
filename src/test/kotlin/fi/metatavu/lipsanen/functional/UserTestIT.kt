@@ -115,7 +115,7 @@ class UserTestIT: AbstractFunctionalTest() {
     }
 
     @Test
-    fun testUpdateUser() = createTestBuilder().use {
+    fun testAdminUpdateUser() = createTestBuilder().use {
         val position = it.admin.jobPosition.create("a")
         val position2 = it.admin.jobPosition.create("b")
         val project = it.admin.project.create()
@@ -153,6 +153,27 @@ class UserTestIT: AbstractFunctionalTest() {
 
         // cannot update with invalid project id
         it.admin.user.assertUpdateFailStatus(404, createdUser.id, updatedUserData.copy(projectIds = arrayOf(UUID.randomUUID())))
+    }
+
+    @Test
+    fun testProjectOwnerUpdateUser() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val project2 = tb.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
+        val project3 = tb.admin.project.create(Project("Project 3", status = ProjectStatus.PLANNING))
+
+        val project2Owner = tb.admin.user.create("projectOwner", UserRole.PROJECT_OWNER, project2.id!!)
+
+        val userProject1 = tb.admin.user.create("userProject1", UserRole.USER, project.id!!)
+
+        // project owner cannot unassign users from projects he has no access to
+        tb.getUser(project2Owner.email).user.assertUpdateFailStatus(403, userProject1.id!!, userProject1.copy(projectIds = arrayOf()))
+        // project owner cannot assign users to projects he has no access to
+        tb.getUser(project2Owner.email).user.assertUpdateFailStatus(403, userProject1.id, userProject1.copy(projectIds = arrayOf(project3.id!!)))
+        // project owner can assign and unassign users to projects he has access to
+        var updatedUser = tb.getUser(project2Owner.email).user.updateUser(userProject1.id, userProject1.copy(projectIds = arrayOf(project.id, project2.id)))
+        assertEquals(2, updatedUser.projectIds!!.size)
+        updatedUser = tb.getUser(project2Owner.email).user.updateUser(userProject1.id, userProject1.copy(projectIds = arrayOf(project.id)))
+        assertEquals(1, updatedUser.projectIds!!.size)
     }
 
     @Test

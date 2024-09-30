@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.spec.UsersApi
 import fi.metatavu.lipsanen.companies.CompanyController
 import fi.metatavu.lipsanen.positions.JobPositionController
+import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.rest.AbstractApi
 import fi.metatavu.lipsanen.rest.UserRole
 import fi.metatavu.lipsanen.tasks.TaskAssigneeRepository
@@ -116,7 +117,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         ), includeRoles))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateUser(userId: UUID, user: User): Uni<Response> =withCoroutineScope {
         val existingUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
@@ -130,13 +131,31 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             } else null
         } else existingUser.jobPosition
 
-        val updatedUser = userController.updateUser(
-            existingUser = existingUser,
-            updateData = user,
-            projects = projects,
-            company = company,
-            jobPosition = jobPosition
-        ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
+        val updatedUser = if (isUserManagementAdmin()) {
+            userController.updateUser(
+                existingUser = existingUser,
+                updateData = user,
+                projects = projects,
+                company = company,
+                jobPosition = jobPosition
+            ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
+        } else if (isProjectOwner()) {
+            val projectOwnerUser = userController.findUserByKeycloakId(loggedUserId!!) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            if (!canAssignToProjects(projectOwnerUser, existingUser, projects ?: emptyList())) {
+                return@withCoroutineScope createForbidden("Forbidden")
+            }
+            userController.assignUserToProjects(
+                user = existingUser,
+                newProjects = projects ?: emptyList(),
+            )
+            UserFullRepresentation(
+                userRepresentation = userController.findKeycloakUser(existingUser.keycloakId)!!,
+                userEntity = existingUser
+            )
+        } else {
+            return@withCoroutineScope createForbidden("Forbidden")
+        }
+
         createOk(userTranslator.translate(updatedUser))
     }
 
@@ -155,5 +174,33 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         }
         userController.deleteUser(user)
         createNoContent()
+    }
+
+    /**
+     * Checks if project owner can assign user to projects.
+     * It can assign users to the projects that he/she is project owner of.
+     * He cannot un-assing user from the projects that he/she is not project owner of.
+     *
+     * @param updatingUser user who is updating the user
+     * @param updatableUser user who is being updated
+     * @param newUserProjects new projects that user is being assigned to
+     * @return true if project owner can assign user to projects, false otherwise
+     */
+    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatableUser: UserEntity, newUserProjects: List<ProjectEntity>): Boolean {
+        val currentUserProjects = userController.listUserProjects(updatableUser).map { it.project }
+        val projectOwnerProjects = userController.listUserProjects(updatingUser).map { it.project }
+
+        val projectsToAdd = newUserProjects.filter { !currentUserProjects.contains(it) }
+        val projectsToRemove = currentUserProjects.filter { !newUserProjects.contains(it) }
+
+        if (projectsToRemove.any { !projectOwnerProjects.contains(it) }) {
+            return false
+        }
+
+        if (projectsToAdd.any { !projectOwnerProjects.contains(it) }) {
+            return false
+        }
+
+        return true
     }
 }
