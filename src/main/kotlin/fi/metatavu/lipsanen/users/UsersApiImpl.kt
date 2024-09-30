@@ -102,7 +102,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
             val userProjects = userController.listUserProjects(foundUser).map { it.project.id }
             val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
-            if (userId != logggedInUserId && !isInSameProject) {
+            if (foundUser.keycloakId != logggedInUserId && !isInSameProject) {
                 return@withCoroutineScope createNotFound("Unauthorized")
             }
         }
