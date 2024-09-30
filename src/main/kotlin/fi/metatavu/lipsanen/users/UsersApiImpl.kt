@@ -100,7 +100,8 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
         if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
-            val userProjects = userController.listUserProjects(foundUser).map { it.project.id }
+            val currentUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val userProjects = userController.listUserProjects(currentUser).map { it.project.id }
             val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
             if (foundUser.keycloakId != logggedInUserId && !isInSameProject) {
                 return@withCoroutineScope createNotFound("Unauthorized")

@@ -73,7 +73,7 @@ class UserTestIT: AbstractFunctionalTest() {
         val project1 = it.admin.project.create("project 1").id
         val project2 = it.admin.project.create("project 2").id
 
-        val user1 = it.admin.user.create("user1", UserRole.USER)
+        val user1 = it.admin.user.create("user1", UserRole.USER, projectId = project1)
         it.getUser("user1@example.com").project.listProjects()
 
         //Check that user with login history has some last login info
