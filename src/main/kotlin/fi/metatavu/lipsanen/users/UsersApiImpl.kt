@@ -96,14 +96,14 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = withCoroutineScope {
-        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
+        val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
         if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
-            val currentUser = userController.findUser(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val currentUser = userController.findUser(loggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
             val userProjects = userController.listUserProjects(currentUser).map { it.project.id }
             val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
-            if (foundUser.id != logggedInUserId && !isInSameProject) {
+            if (foundUser.id != loggedInUserId && !isInSameProject) {
                 return@withCoroutineScope createNotFound("Unauthorized")
             }
         }
@@ -119,7 +119,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateUser(userId: UUID, user: User): Uni<Response> = withCoroutineScope {
-        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
+        val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val existingUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
         val projects = user.projectIds?.map {
             projectController.findProject(it) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, it))
@@ -140,7 +140,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
                 jobPosition = jobPosition
             ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
         } else if (isProjectOwner()) {
-            val projectOwnerUser = userController.findUser(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val projectOwnerUser = userController.findUser(loggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
             if (!canAssignToProjects(projectOwnerUser, existingUser, projects?.map { it.id } ?: emptyList())) {
                 return@withCoroutineScope createForbidden("Forbidden")
             }
