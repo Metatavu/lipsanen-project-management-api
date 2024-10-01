@@ -202,10 +202,13 @@ class UserTestBuilderResource (
      * @param expectedStatus expected status
      */
     fun assertListFailStatus(
-        expectedStatus: Int
+        expectedStatus: Int,
+        projectId: UUID? = null,
     ) {
         try {
-            api.listUsers()
+            api.listUsers(
+                projectId = projectId
+            )
             fail(String.format("Expected list to fail with status %d", expectedStatus))
         } catch (e: ClientException) {
             Assertions.assertEquals(expectedStatus.toLong(), e.statusCode.toLong())

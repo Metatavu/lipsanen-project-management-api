@@ -93,7 +93,7 @@ class UserController {
      */
     suspend fun listUsers(
         company: CompanyEntity?,
-        projectFilter: ProjectEntity?,
+        projectFilter: List<ProjectEntity>?,
         jobPosition: JobPositionEntity?,
         keycloakId: UUID?,
         first: Int?,
@@ -176,7 +176,12 @@ class UserController {
                 email = user.email
             ).firstOrNull() ?: return null
 
-            assignRoles(keycloakUser, user.roles)
+            val assignableRoles = if (user.roles.isNullOrEmpty()) {
+                listOf(UserRole.USER)
+            } else {
+                user.roles
+            }
+            assignRoles(keycloakUser, assignableRoles)
 
             val userEntity = userRepository.create(
                 id = UUID.randomUUID(),
@@ -198,7 +203,7 @@ class UserController {
             if (environment.orElse(null) != "test") {
                 keycloakAdminClient.getUserApi().realmUsersIdExecuteActionsEmailPut(
                     realm = keycloakAdminClient.getRealm(),
-                    id = keycloakUser.id!!,
+                    id = keycloakUser.id,
                     requestBody = arrayOf("UPDATE_PASSWORD"),
                     lifespan = null
                 )
@@ -287,7 +292,7 @@ class UserController {
     }
 
     /**
-     * Updates a user (but not its email)
+     * Updates a user completely (but not its email)
      *
      * @param existingUser existing user
      * @param updateData user

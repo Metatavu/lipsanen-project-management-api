@@ -62,7 +62,7 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
         companyEntity: CompanyEntity? = null,
         keycloakId: UUID?,
         jobPosition: JobPositionEntity? = null,
-        project: ProjectEntity? = null,
+        project: List<ProjectEntity>? = null,
         firstResult: Int? = null,
         maxResults: Int? = null
     ): Pair<List<UserEntity>, Long> {
@@ -71,8 +71,8 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
 
         if (project != null) {
             sb.append(" JOIN UserToProjectEntity utp ON u.id = utp.user.id")
-            sb.append(" WHERE utp.project = :project ")
-            parameters.and("project", project)
+            sb.append(" WHERE utp.project in :projects ")
+            parameters.and("projects", project)
         }
 
         if (companyEntity != null) {

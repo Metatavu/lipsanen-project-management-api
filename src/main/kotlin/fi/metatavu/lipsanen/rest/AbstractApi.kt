@@ -46,6 +46,15 @@ abstract class AbstractApi {
     }
 
     /**
+     * Checks if user is user management admin
+     *
+     * @return if user is user management admin
+     */
+    protected fun isUserManagementAdmin(): Boolean {
+        return identity.hasRole(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    }
+
+    /**
      * Checks if user is project owner
      *
      * @return if user is project owner
@@ -309,10 +318,10 @@ abstract class AbstractApi {
         project: ProjectEntity,
         userId: UUID
     ): Pair<ProjectEntity?, Response?> {
-        if (!isAdmin() && !projectController.hasAccessToProject(project, userId)) {
-            return null to createForbidden(NO_PROJECT_RIGHTS)
+        if (isAdmin() || projectController.hasAccessToProject(project, userId)) {
+            return project to null
         }
-        return project to null
+        return null to createForbidden(NO_PROJECT_RIGHTS)
     }
 
     /**

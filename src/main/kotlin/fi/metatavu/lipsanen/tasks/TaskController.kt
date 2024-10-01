@@ -11,8 +11,8 @@ import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.tasks.connections.TaskConnectionController
-import fi.metatavu.lipsanen.tasks.proposals.ChangeProposalController
-import fi.metatavu.lipsanen.tasks.proposals.ChangeProposalEntity
+import fi.metatavu.lipsanen.proposals.ChangeProposalController
+import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.panache.common.Parameters
@@ -73,7 +73,7 @@ class TaskController {
      * @return list of tasks
      */
     suspend fun list(
-        projectFilter: Array<ProjectEntity>,
+        projectFilter: Array<ProjectEntity>?,
         milestoneFilter: MilestoneEntity?,
         first: Int?,
         max: Int?
@@ -81,11 +81,13 @@ class TaskController {
         val query = StringBuilder()
         val parameters = Parameters()
 
-        query.append("milestone.project in :projects")
-        parameters.and("projects", projectFilter.toList())
+        if (projectFilter != null) {
+            query.append("milestone.project in :projects")
+            parameters.and("projects", projectFilter.toList())
+        }
 
         if (milestoneFilter != null) {
-            query.append(" and milestone = :milestone")
+            query.append(if (query.isNotEmpty()) " and " else " ").append("milestone = :milestone")
             parameters.and("milestone", milestoneFilter)
         }
 
@@ -180,6 +182,7 @@ class TaskController {
         }
 
         extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
+        updateMilestoneReadiness(milestone)
         return taskEntity
     }
 
@@ -259,13 +262,17 @@ class TaskController {
         mainUpdatedTask.name = newTask.name
         mainUpdatedTask.userRole = newTask.userRole ?: UserRole.USER
         mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
-        mainUpdatedTask.estimatedReadiness = newTask.estimatedReadiness
+        mainUpdatedTask.estimatedReadiness = if (newTask.status == TaskStatus.DONE) 100 else newTask.estimatedReadiness
         mainUpdatedTask.jobPosition = jobPosition
         mainUpdatedTask.dependentUser = dependentUser
         mainUpdatedTask.lastModifierId = userId
 
         extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
-        return taskEntityRepository.persistSuspending(mainUpdatedTask)
+        val updated = taskEntityRepository.persistSuspending(mainUpdatedTask)
+
+        // Update milestone readiness after task update
+        updateMilestoneReadiness(milestone)
+        return updated
     }
 
     /**
@@ -416,6 +423,22 @@ class TaskController {
     }
 
     /**
+     * Updates milestone readiness after task update
+     *
+     * @param milestone milestone
+     */
+    private suspend fun updateMilestoneReadiness(milestone: MilestoneEntity) {
+        val tasks = list(milestone)
+        val totalReadiness = tasks.sumOf { it.estimatedReadiness ?: 0 }
+        val tasksCount = tasks.size
+        val readiness = if (tasksCount > 0 ) {
+            totalReadiness / tasksCount
+        } else 0
+        milestone.estimatedReadiness = readiness
+        milestoneRepository.persistSuspending(milestone)
+    }
+
+    /**
      * Creates notifications of task assignments
      *
      * @param task task
@@ -474,6 +497,7 @@ class TaskController {
             taskCommentController.deleteTaskComment(it)
         }
         taskEntityRepository.deleteSuspending(foundTask)
+        updateMilestoneReadiness(foundTask.milestone)
     }
 
     /**

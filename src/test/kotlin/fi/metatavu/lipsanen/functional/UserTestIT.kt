@@ -33,7 +33,7 @@ class UserTestIT: AbstractFunctionalTest() {
         val company = it.admin.company.create().id
         val jobPosition1 = it.admin.jobPosition.create(JobPosition("architect"))
 
-        it.admin.user.create("user1", UserRole.USER, project1, company, jobPosition1.id)
+        val user1 = it.admin.user.create("user1", UserRole.USER, project1, company, jobPosition1.id)
         it.admin.user.create("user2", UserRole.USER, project1)
         it.admin.user.create("user3", UserRole.USER, project2, company)
         it.admin.user.create("user4", UserRole.USER)
@@ -58,16 +58,39 @@ class UserTestIT: AbstractFunctionalTest() {
 
         val jobPositionUsers = it.admin.user.listUsers(jobPositionId = jobPosition1.id)
         assertEquals(1, jobPositionUsers.size)
+
+        val projectUsersListedByUser = it.getUser(user1.email).user.listUsers(projectId = project1)
+        assertEquals(2, projectUsersListedByUser.size)
+
+        val companyUsersListedByUser = it.getUser(user1.email).user.listUsers(companyId = company)
+        assertEquals(1, companyUsersListedByUser.size)
+
+        it.getUser(user1.email).user.assertListFailStatus(403, projectId = project2)
     }
 
     @Test
     fun testFindUser() = createTestBuilder().use {
-        val user1 = it.admin.user.create("user1", UserRole.USER)
+        val project1 = it.admin.project.create("project 1").id
+        val project2 = it.admin.project.create("project 2").id
+
+        val user1 = it.admin.user.create("user1", UserRole.USER, projectId = project1)
         it.getUser("user1@example.com").project.listProjects()
 
         //Check that user with login history has some last login info
         val foundUser2 = it.admin.user.findUser(user1.id!!)
         assertNotNull(foundUser2.lastLoggedIn)
+
+        // Test that user can find itself
+        val foundUser = it.getUser(user1.email).user.findUser(user1.id)
+        assertNotNull(foundUser)
+
+        val user2 = it.admin.user.create("user2", UserRole.USER, projectId = project1)
+        val user3 = it.admin.user.create("user3", UserRole.USER, projectId = project2)
+        // User 1 can find user 2 only since they share the project
+        val foundSameProjectUser = it.getUser(user1.email).user.findUser(user2.id!!)
+        assertNotNull(foundSameProjectUser)
+        // User 1 cannot find user 3 since they do not share the project
+        it.getUser(user1.email).user.assertFindFailStatus(404, user3.id!!)
     }
 
     @Test
@@ -92,7 +115,7 @@ class UserTestIT: AbstractFunctionalTest() {
     }
 
     @Test
-    fun testUpdateUser() = createTestBuilder().use {
+    fun testAdminUpdateUser() = createTestBuilder().use {
         val position = it.admin.jobPosition.create("a")
         val position2 = it.admin.jobPosition.create("b")
         val project = it.admin.project.create()
@@ -130,6 +153,27 @@ class UserTestIT: AbstractFunctionalTest() {
 
         // cannot update with invalid project id
         it.admin.user.assertUpdateFailStatus(404, createdUser.id, updatedUserData.copy(projectIds = arrayOf(UUID.randomUUID())))
+    }
+
+    @Test
+    fun testProjectOwnerUpdateUser() = createTestBuilder().use { tb ->
+        val project = tb.admin.project.create()
+        val project2 = tb.admin.project.create(Project("Project 2", status = ProjectStatus.PLANNING))
+        val project3 = tb.admin.project.create(Project("Project 3", status = ProjectStatus.PLANNING))
+
+        val project2Owner = tb.admin.user.create("projectOwner", UserRole.PROJECT_OWNER, project2.id!!)
+
+        val userProject1 = tb.admin.user.create("userProject1", UserRole.USER, project.id!!)
+
+        // project owner cannot unassign users from projects he has no access to
+        tb.getUser(project2Owner.email).user.assertUpdateFailStatus(403, userProject1.id!!, userProject1.copy(projectIds = arrayOf()))
+        // project owner cannot assign users to projects he has no access to
+        tb.getUser(project2Owner.email).user.assertUpdateFailStatus(403, userProject1.id, userProject1.copy(projectIds = arrayOf(project3.id!!)))
+        // project owner can assign and unassign users to projects he has access to
+        var updatedUser = tb.getUser(project2Owner.email).user.updateUser(userProject1.id, userProject1.copy(projectIds = arrayOf(project.id, project2.id)))
+        assertEquals(2, updatedUser.projectIds!!.size)
+        updatedUser = tb.getUser(project2Owner.email).user.updateUser(userProject1.id, userProject1.copy(projectIds = arrayOf(project.id)))
+        assertEquals(1, updatedUser.projectIds!!.size)
     }
 
     @Test

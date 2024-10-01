@@ -49,12 +49,23 @@ class UsersApiImpl: UsersApi, AbstractApi() {
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+        val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
         } else null
+
         val projectFilter = if (projectId != null) {
-            projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
-        } else null
+            val project = projectController.findProject(projectId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, projectId))
+            getProjectAccessRights(projectId, userId).second?.let { return@withCoroutineScope it }
+            listOf(project)
+        } else {
+            if (isAdmin() || isUserManagementAdmin() || isProjectOwner()) {
+                null
+            } else {
+                val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+                userController.listUserProjects(user).map { it.project }
+            }
+        }
 
         val jobPosition = if (jobPositionId != null) {
             jobPositionController.findJobPosition(jobPositionId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(JOB_POSITION, jobPositionId))
@@ -84,8 +95,19 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     }
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
-    override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+    override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = withCoroutineScope {
+        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
+
+        if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
+            val currentUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val userProjects = userController.listUserProjects(currentUser).map { it.project.id }
+            val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
+            if (foundUser.keycloakId != logggedInUserId && !isInSameProject) {
+                return@withCoroutineScope createNotFound("Unauthorized")
+            }
+        }
+
         val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
         createOk(userTranslator.translate(
             UserFullRepresentation(
@@ -94,9 +116,10 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         ), includeRoles))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
-    override fun updateUser(userId: UUID, user: User): Uni<Response> =withCoroutineScope {
+    override fun updateUser(userId: UUID, user: User): Uni<Response> = withCoroutineScope {
+        val logggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val existingUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
         val projects = user.projectIds?.map {
             projectController.findProject(it) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(PROJECT, it))
@@ -108,13 +131,31 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             } else null
         } else existingUser.jobPosition
 
-        val updatedUser = userController.updateUser(
-            existingUser = existingUser,
-            updateData = user,
-            projects = projects,
-            company = company,
-            jobPosition = jobPosition
-        ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
+        val updatedUser = if (isUserManagementAdmin()) {
+            userController.updateUser(
+                existingUser = existingUser,
+                updateData = user,
+                projects = projects,
+                company = company,
+                jobPosition = jobPosition
+            ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
+        } else if (isProjectOwner()) {
+            val projectOwnerUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            if (!canAssignToProjects(projectOwnerUser, existingUser, projects?.map { it.id } ?: emptyList())) {
+                return@withCoroutineScope createForbidden("Forbidden")
+            }
+            userController.assignUserToProjects(
+                user = existingUser,
+                newProjects = projects ?: emptyList(),
+            )
+            UserFullRepresentation(
+                userRepresentation = userController.findKeycloakUser(existingUser.keycloakId)!!,
+                userEntity = existingUser
+            )
+        } else {
+            return@withCoroutineScope createForbidden("Forbidden")
+        }
+
         createOk(userTranslator.translate(updatedUser))
     }
 
@@ -133,5 +174,33 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         }
         userController.deleteUser(user)
         createNoContent()
+    }
+
+    /**
+     * Checks if project owner can assign user to projects.
+     * It can assign users to the projects that he/she is project owner of.
+     * He cannot un-assign user from the projects that he/she is not project owner of.
+     *
+     * @param updatingUser user who is updating the user
+     * @param updatedUser user who is being updated
+     * @param newUserProjectIds new projects that user is being assigned to
+     * @return true if project owner can assign user to projects, false otherwise
+     */
+    private suspend fun canAssignToProjects(updatingUser: UserEntity, updatedUser: UserEntity, newUserProjectIds: List<UUID>): Boolean {
+        val currentUserProjectIds = userController.listUserProjects(updatedUser).map { it.project.id }
+        val projectOwnerProjectIds = userController.listUserProjects(updatingUser).map { it.project.id }
+
+        val projectsToAddIds = newUserProjectIds.filter { !currentUserProjectIds.contains(it) }
+        val projectsToRemoveIds = currentUserProjectIds.filter { !newUserProjectIds.contains(it) }
+
+        if (projectsToRemoveIds.any { !projectOwnerProjectIds.contains(it) }) {
+            return false
+        }
+
+        if (projectsToAddIds.any { !projectOwnerProjectIds.contains(it) }) {
+            return false
+        }
+
+        return true
     }
 }
