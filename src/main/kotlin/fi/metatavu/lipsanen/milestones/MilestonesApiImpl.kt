@@ -110,9 +110,13 @@ class MilestonesApiImpl : ProjectMilestonesApi, AbstractApi() {
             val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val ( projectMilestone, response ) = getProjectMilestoneAccessRights(projectId, milestoneId, userId)
             response?.let { return@withCoroutineScope response}
-            val ( foundMilestone, _ ) = projectMilestone!!
 
-            milestoneController.delete(foundMilestone)
+            val milestone = projectMilestone!!.first
+            if (taskController.list(milestone).isNotEmpty()) {
+                return@withCoroutineScope createBadRequest("Milestone has tasks and cannot be deleted")
+            }
+            
+            milestoneController.delete(milestone)
             createNoContent()
         }
 
