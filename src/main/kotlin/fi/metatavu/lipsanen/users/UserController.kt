@@ -5,8 +5,10 @@ import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.companies.CompanyEntity
 import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
+import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.tasks.comments.TaskCommentUserRepository
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectEntity
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import io.quarkus.hibernate.reactive.panache.Panache
@@ -43,6 +45,12 @@ class UserController {
 
     @Inject
     lateinit var userToProjectRepository: UserToProjectRepository
+
+    @Inject
+    lateinit var notificationEventsController: NotificationEventsController
+
+    @Inject
+    lateinit var taskCommentUserRepository: TaskCommentUserRepository
 
     @Inject
     lateinit var logger: Logger
@@ -86,7 +94,6 @@ class UserController {
      * @param company company
      * @param projectFilter project
      * @param jobPosition job position
-     * @param keycloakId keycloak user id
      * @param first first result
      * @param max max results
      * @return users
@@ -95,7 +102,6 @@ class UserController {
         company: CompanyEntity?,
         projectFilter: List<ProjectEntity>?,
         jobPosition: JobPositionEntity?,
-        keycloakId: UUID?,
         first: Int?,
         max: Int?
     ): Pair<List<UserFullRepresentation>, Long> {
@@ -103,13 +109,12 @@ class UserController {
             companyEntity = company,
             project = projectFilter,
             jobPosition = jobPosition,
-            keycloakId = keycloakId,
             firstResult =  first,
             maxResults = max
         )
         var totalCount = entitiesCount
         val userReprensentations = userEntities.map {
-            val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.keycloakId.toString()))
+            val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.id.toString()))
             if (userRepresentation?.username == keycloakAdminUser) {
                 totalCount -= 1
             }
@@ -135,7 +140,7 @@ class UserController {
      * @return array of users
      */
     suspend fun listUserEntities(companyEntity: CompanyEntity? = null, jobPosition: JobPositionEntity? = null): Pair<List<UserEntity>, Long> {
-        return userRepository.list(companyEntity, null, jobPosition, null, null)
+        return userRepository.list(companyEntity, jobPosition, null, null)
     }
 
     /**
@@ -184,8 +189,7 @@ class UserController {
             assignRoles(keycloakUser, assignableRoles)
 
             val userEntity = userRepository.create(
-                id = UUID.randomUUID(),
-                keycloakId = UUID.fromString(keycloakUser.id),
+                id = UUID.fromString(keycloakUser.id),
                 company = company,
                 jobPosition = jobPosition
             )
@@ -211,7 +215,7 @@ class UserController {
 
             UserFullRepresentation(
                 userEntity = userEntity,
-                userRepresentation = findKeycloakUser(userEntity.keycloakId)!!
+                userRepresentation = findKeycloakUser(userEntity.id)!!
             )
         }.getOrElse {
             Panache.currentTransaction().awaitSuspending().markForRollback()
@@ -264,26 +268,16 @@ class UserController {
     }
 
     /**
-     * Finds a user by keycloak id
-     *
-     * @param keycloakId user id
-     * @return found user or null if not found
-     */
-    suspend fun findUserByKeycloakId(keycloakId: UUID): UserEntity? {
-        return userRepository.findByKeycloakId(keycloakId)
-    }
-
-    /**
      * Finds a user by id
      *
-     * @param keycloakId user id
+     * @param id user id
      * @return found user or null if not found
      */
-    suspend fun findKeycloakUser(keycloakId: UUID): UserRepresentation? {
+    suspend fun findKeycloakUser(id: UUID): UserRepresentation? {
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdGet(
                 realm = keycloakAdminClient.getRealm(),
-                id = keycloakId.toString()
+                id = id.toString()
             )
         } catch (e: Exception) {
             logger.error("Failed to find user", e)
@@ -307,7 +301,7 @@ class UserController {
         projects: List<ProjectEntity>?,
         jobPosition: JobPositionEntity?
     ): UserFullRepresentation? {
-        val currentKeycloakRepresentation = findKeycloakUser(existingUser.keycloakId) ?: return null
+        val currentKeycloakRepresentation = findKeycloakUser(existingUser.id) ?: return null
         val updatedRepresentation = currentKeycloakRepresentation.copy(
             firstName = updateData.firstName,
             lastName = updateData.lastName,
@@ -316,7 +310,7 @@ class UserController {
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdPut(
                 realm = keycloakAdminClient.getRealm(),
-                id = existingUser.keycloakId.toString(),
+                id = existingUser.id.toString(),
                 userRepresentation = updatedRepresentation
             )
 
@@ -329,7 +323,7 @@ class UserController {
 
             assignUserToProjects(existingUser, projects ?: emptyList())
             UserFullRepresentation(
-                userRepresentation = findKeycloakUser(existingUser.keycloakId)!!,
+                userRepresentation = findKeycloakUser(existingUser.id)!!,
                 userEntity = existingUser
             )
         } catch (e: Exception) {
@@ -376,8 +370,9 @@ class UserController {
             roleRepresentation = rolesToAssign.toTypedArray()
         )
     }
+
     /**
-     * Deletes a user
+     * Deletes a user and dependencies
      *
      * @param userEntity user entity
      */
@@ -385,10 +380,16 @@ class UserController {
         try {
             keycloakAdminClient.getUserApi().realmUsersIdDelete(
                 realm = keycloakAdminClient.getRealm(),
-                id = userEntity.keycloakId.toString()
+                id = userEntity.id.toString()
             )
             userToProjectRepository.list(userEntity).forEach {
                 userToProjectRepository.deleteSuspending(it)
+            }
+            notificationEventsController.list(receiver = userEntity).first.forEach {
+                notificationEventsController.delete(it)
+            }
+            taskCommentUserRepository.list(userEntity).forEach {
+                taskCommentUserRepository.deleteSuspending(it)
             }
             userRepository.deleteSuspending(userEntity)
         } catch (e: Exception) {

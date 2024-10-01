@@ -23,6 +23,16 @@ class TaskCommentUserRepository : AbstractRepository<TaskCommentUser, UUID>() {
     }
 
     /**
+     * Lists task comment users
+     *
+     * @param user user
+     * @return list of task comment users
+     */
+    suspend fun list(user: UserEntity): List<TaskCommentUser> {
+        return list("user", user).awaitSuspending()
+    }
+
+    /**
      * Creates task comment to user connection
      *
      * @param randomUUID random UUID

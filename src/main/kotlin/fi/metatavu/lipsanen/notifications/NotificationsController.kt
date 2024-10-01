@@ -113,7 +113,7 @@ class NotificationsController {
         )
 
         val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }
-        val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUserByKeycloakId(it) }
+        val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUser(it) }
 
         val notificationReceivers = (adminEntities + receivers).distinctBy { it.id }
         notificationReceivers.forEach { receiver ->

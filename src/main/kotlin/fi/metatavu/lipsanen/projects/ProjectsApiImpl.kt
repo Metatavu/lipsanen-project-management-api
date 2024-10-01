@@ -44,7 +44,7 @@ class ProjectsApiImpl : ProjectsApi, AbstractApi() {
         val (projects, count) = if (isAdmin()) {
              projectController.listProjects(first, max)
         } else {
-            val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
+            val user = userController.findUser(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
             projectController.listProjectsForUser(user, first, max)
         }
         return@withCoroutineScope createOk(projects.map { projectTranslator.translate(it) }, count)

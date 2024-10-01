@@ -34,7 +34,6 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
         val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
         return User(
             id = entity.userEntity.id,
-            keycloakId = UUID.fromString(userRepresentation.id),
             email = userRepresentation.email ?: "",
             firstName = userRepresentation.firstName ?: "",
             lastName = userRepresentation.lastName ?: "",
@@ -55,7 +54,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
      */
     suspend fun translate(entity: UserFullRepresentation, includeRoles: Boolean?): User {
         return if (includeRoles == true) {
-            val roles = userController.getUserRealmRoles(entity.userEntity.keycloakId).mapNotNull {
+            val roles = userController.getUserRealmRoles(entity.userEntity.id).mapNotNull {
                 when (it.name) {
                     "admin" -> UserRole.ADMIN
                     "user" -> UserRole.USER

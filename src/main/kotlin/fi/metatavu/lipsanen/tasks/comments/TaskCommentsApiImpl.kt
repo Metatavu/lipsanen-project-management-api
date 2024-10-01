@@ -74,7 +74,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
             val user = userController.findUser(referencedUserId) ?: return@withCoroutineScope createBadRequest(
                 "Referenced user $referencedUserId does not exist"
             )
-            if (!projectController.hasAccessToProject(task.milestone.project, user.keycloakId)) {
+            if (!projectController.hasAccessToProject(task.milestone.project, user.id)) {
                 return@withCoroutineScope createBadRequest("Referenced user $referencedUserId has no access to the project")
             }
         }
@@ -128,7 +128,7 @@ class TaskCommentsApiImpl : TaskCommentsApi, AbstractApi() {
             val user = userController.findUser(referencedUserId) ?: return@withCoroutineScope createBadRequest(
                 "Referenced user $referencedUserId does not exist"
             )
-            if (!projectController.hasAccessToProject(task.milestone.project, user.keycloakId)) {
+            if (!projectController.hasAccessToProject(task.milestone.project, user.id)) {
                 return@withCoroutineScope createBadRequest("Referenced user $referencedUserId is not an assignee of the task")
             }
         }

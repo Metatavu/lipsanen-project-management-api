@@ -48,7 +48,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     lateinit var vertx: Vertx
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
-    override fun listUsers(companyId: UUID?, keycloakId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
+    override fun listUsers(companyId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val companyFilter = if (companyId != null) {
             companyController.find(companyId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(COMPANY, companyId))
@@ -62,7 +62,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             if (isAdmin() || isUserManagementAdmin() || isProjectOwner()) {
                 null
             } else {
-                val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+                val user = userController.findUser(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
                 userController.listUserProjects(user).map { it.project }
             }
         }
@@ -71,7 +71,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             jobPositionController.findJobPosition(jobPositionId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(JOB_POSITION, jobPositionId))
         } else null
 
-        val ( users, count ) = userController.listUsers(companyFilter, projectFilter, jobPosition, keycloakId, first, max)
+        val ( users, count ) = userController.listUsers(companyFilter, projectFilter, jobPosition, first, max)
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count)
     }
 
@@ -100,15 +100,15 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
         if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
-            val currentUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val currentUser = userController.findUser(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
             val userProjects = userController.listUserProjects(currentUser).map { it.project.id }
             val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
-            if (foundUser.keycloakId != logggedInUserId && !isInSameProject) {
+            if (foundUser.id != logggedInUserId && !isInSameProject) {
                 return@withCoroutineScope createNotFound("Unauthorized")
             }
         }
 
-        val foundUserRepresentation = userController.findKeycloakUser(foundUser.keycloakId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+        val foundUserRepresentation = userController.findKeycloakUser(foundUser.id) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
         createOk(userTranslator.translate(
             UserFullRepresentation(
             userEntity = foundUser,
@@ -140,7 +140,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
                 jobPosition = jobPosition
             ) ?: return@withCoroutineScope createInternalServerError("Failed to update user")
         } else if (isProjectOwner()) {
-            val projectOwnerUser = userController.findUserByKeycloakId(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
+            val projectOwnerUser = userController.findUser(logggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
             if (!canAssignToProjects(projectOwnerUser, existingUser, projects?.map { it.id } ?: emptyList())) {
                 return@withCoroutineScope createForbidden("Forbidden")
             }
@@ -149,7 +149,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
                 newProjects = projects ?: emptyList(),
             )
             UserFullRepresentation(
-                userRepresentation = userController.findKeycloakUser(existingUser.keycloakId)!!,
+                userRepresentation = userController.findKeycloakUser(existingUser.id)!!,
                 userEntity = existingUser
             )
         } else {
