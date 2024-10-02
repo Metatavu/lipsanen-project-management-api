@@ -5,7 +5,6 @@ import fi.metatavu.lipsanen.persistence.AbstractRepository
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
 import io.quarkus.panache.common.Parameters
-import io.smallrye.mutiny.coroutines.awaitSuspending
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.*
 
@@ -19,39 +18,25 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
      * Creates a new user
      *
      * @param id user id
-     * @param keycloakId keycloak id
      * @param company company
      * @return created user
      */
     suspend fun create(
         id: UUID,
-        keycloakId: UUID,
         company: CompanyEntity?,
         jobPosition: JobPositionEntity?
     ): UserEntity {
         val userEntity = UserEntity()
         userEntity.id = id
-        userEntity.keycloakId = keycloakId
         userEntity.company = company
         userEntity.jobPosition = jobPosition
         return persistSuspending(userEntity)
     }
 
     /**
-     * Finds user by keycloak id
-     *
-     * @param keycloakId keycloak id
-     * @return user
-     */
-    suspend fun findByKeycloakId(keycloakId: UUID): UserEntity? {
-        return find("keycloakId", keycloakId).firstResult<UserEntity>().awaitSuspending()
-    }
-
-    /**
      * Lists users
      *
      * @param companyEntity company entity
-     * @param keycloakId keycloak id
      * @param jobPosition job position
      * @param project project
      * @param firstResult first result
@@ -60,7 +45,6 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
      */
     suspend fun list(
         companyEntity: CompanyEntity? = null,
-        keycloakId: UUID?,
         jobPosition: JobPositionEntity? = null,
         project: List<ProjectEntity>? = null,
         firstResult: Int? = null,
@@ -85,12 +69,6 @@ class UserRepository: AbstractRepository<UserEntity, UUID>(){
             addWhere(sb)
             sb.append(" u.jobPosition = :jobPosition ")
             parameters.and("jobPosition", jobPosition)
-        }
-
-        if (keycloakId != null) {
-            addWhere(sb)
-            sb.append(" u.keycloakId = :keycloakId ")
-            parameters.and("keycloakId", keycloakId)
         }
 
         return applyFirstMaxToQuery(

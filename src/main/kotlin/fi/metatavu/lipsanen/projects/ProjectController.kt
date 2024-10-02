@@ -180,7 +180,7 @@ class ProjectController {
      * @return true if user has access to the project; false otherwise
      */
     suspend fun hasAccessToProject(project: ProjectEntity, keycloakUserId: UUID): Boolean {
-        val userEntity = userController.findUserByKeycloakId(keycloakUserId) ?: return false
+        val userEntity = userController.findUser(keycloakUserId) ?: return false
         val projects = userToProjectRepository.list(userEntity, project)
         return projects != null
     }

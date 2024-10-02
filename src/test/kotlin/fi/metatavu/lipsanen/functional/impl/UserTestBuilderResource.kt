@@ -80,7 +80,7 @@ class UserTestBuilderResource (
      * @param companyId company id
      * @param projectId project id
      * @param jobPositionId job position id
-     * @param keycloakId keycloak id
+     * @param id keycloak id
      * @param first first
      * @param max max
      * @return list of users
@@ -89,11 +89,10 @@ class UserTestBuilderResource (
         companyId: UUID? = null,
         projectId: UUID? = null,
         jobPositionId: UUID? = null,
-        keycloakId: UUID? = null,
         first: Int? = null,
         max: Int? = null
     ): Array<User> {
-        return api.listUsers(companyId = companyId, projectId = projectId, jobPositionId = jobPositionId, keycloakId = keycloakId, first = first, max = max)
+        return api.listUsers(companyId = companyId, projectId = projectId, jobPositionId = jobPositionId, first = first, max = max)
     }
 
     /**

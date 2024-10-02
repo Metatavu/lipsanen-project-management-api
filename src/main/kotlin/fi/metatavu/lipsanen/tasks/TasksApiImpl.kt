@@ -86,7 +86,7 @@ class TasksApiImpl : TasksApi, AbstractApi() {
                 if (isAdmin()) {
                     null
                 } else {
-                    val userEntity = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
+                    val userEntity = userController.findUser(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
                     userController.listUserProjects(userEntity).map { it.project }.toTypedArray()
                 }
             }

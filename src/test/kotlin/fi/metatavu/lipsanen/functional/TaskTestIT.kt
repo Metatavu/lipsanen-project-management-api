@@ -66,10 +66,8 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
         assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
 
-        val creator = tb.admin.user.listUsers(keycloakId = task.metadata!!.creatorId!!)
-        assertEquals(1, creator.size)
-        assertEquals(admin.id, creator[0].id)
-        assertEquals(admin.keycloakId, creator[0].keycloakId)
+        val creator = tb.admin.user.findUser(task.metadata!!.creatorId!!)
+        assertEquals(admin.id, creator.id)
     }
 
     @Test

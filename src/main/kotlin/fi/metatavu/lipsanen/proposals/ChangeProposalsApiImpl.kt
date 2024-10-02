@@ -64,7 +64,7 @@ class ChangeProposalsApiImpl : ChangeProposalsApi, AbstractApi() {
             if (isAdmin()) {
                 null
             } else {
-                val user = userController.findUserByKeycloakId(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
+                val user = userController.findUser(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find a user")
                 projectController.listProjectsForUser(user).first
             }
         }

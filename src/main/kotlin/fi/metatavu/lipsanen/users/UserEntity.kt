@@ -19,9 +19,6 @@ class UserEntity {
     @Id
     lateinit var id: UUID
 
-    @Column(nullable = false)
-    lateinit var keycloakId: UUID
-
     @ManyToOne
     var company: CompanyEntity? = null
 

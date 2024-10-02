@@ -51,7 +51,7 @@ class TocomanController {
      */
     suspend fun importProjects(file: File, userId: UUID): ProjectEntity? {
         return try {
-            val user = userController.findUserByKeycloakId(userId) ?: throw Exception("User not found")
+            val user = userController.findUser(userId) ?: throw Exception("User not found")
             val projects = xmlMapper.readValue(
                 file.readBytes(),
                 object: com.fasterxml.jackson.core.type.TypeReference<Projects>() {}

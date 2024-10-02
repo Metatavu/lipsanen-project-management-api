@@ -28,7 +28,7 @@ class UserTestIT: AbstractFunctionalTest() {
 
     @Test
     fun testListUsers() = createTestBuilder().use {
-        val project1 = it.admin.project.create("project1").id
+       val project1 = it.admin.project.create("project1").id
         val project2 = it.admin.project.create("project2").id
         val company = it.admin.company.create().id
         val jobPosition1 = it.admin.jobPosition.create(JobPosition("architect"))
@@ -47,7 +47,7 @@ class UserTestIT: AbstractFunctionalTest() {
         val pagedUsers2 = it.admin.user.listUsers(first = 2, max = 10)
         assertEquals(2, pagedUsers2.size)
 
-        val companyUsers = it.admin.user.listUsers(companyId = company)
+       val companyUsers = it.admin.user.listUsers(companyId = company)
         assertEquals(2, companyUsers.size)
 
         val projecUsers = it.admin.user.listUsers(projectId = project2)

@@ -388,4 +388,38 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="user_keycloak_as_id" author="katja danilova">
+        <sql>
+            <!-- drop foreign keys -->
+            ALTER TABLE usertoproject DROP FOREIGN KEY FK_USERPROJECT_USER_ID;
+            ALTER TABLE task_assignee DROP FOREIGN KEY FK_TASK_ASSIGNEE_USER_ID;
+            ALTER TABLE notificationevent DROP FOREIGN KEY FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID;
+            ALTER TABLE taskcommentuser DROP FOREIGN KEY FK_TASK_COMMENT_USER_ID;
+            ALTER TABLE task DROP FOREIGN KEY FK_TASK_DEPENDENT_USER_ID;
+
+            <!-- replace foreign keys with keycloak id values -->
+            UPDATE task_assignee SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE notificationevent SET receiver_id = (SELECT keycloakid FROM user WHERE id = receiver_id);
+            UPDATE taskcommentuser SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE usertoproject SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE task SET dependentuser_id = (SELECT keycloakid FROM user WHERE id = dependentuser_id);
+
+            <!-- replace user id with keycloak id-->
+            ALTER TABLE user ADD COLUMN new_id BINARY(16);
+            UPDATE user SET new_id = keycloakid;
+            ALTER TABLE user DROP COLUMN id;
+            ALTER TABLE user CHANGE COLUMN new_id id BINARY(16) NOT NULL;
+            ALTER TABLE user ADD PRIMARY KEY (id);
+            ALTER TABLE user DROP COLUMN keycloakid;
+
+            <!-- recreate foreign keys -->
+            ALTER TABLE task_assignee ADD CONSTRAINT FK_TASK_ASSIGNEE_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE notificationevent ADD CONSTRAINT FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID FOREIGN KEY (receiver_id) REFERENCES user(id);
+            ALTER TABLE taskcommentuser ADD CONSTRAINT FK_TASK_COMMENT_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE usertoproject ADD CONSTRAINT FK_USERPROJECT_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE task ADD CONSTRAINT FK_TASK_DEPENDENT_USER_ID FOREIGN KEY (dependentuser_id) REFERENCES user(id);
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>

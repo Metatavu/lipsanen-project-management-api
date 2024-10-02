@@ -324,7 +324,7 @@ class TaskController {
         newAssignees.forEach { newAssigneeId ->
             if (assignedUserIds.none { it == newAssigneeId }) {
                 val user = userController.findUser(newAssigneeId) ?: throw UserNotFoundException(newAssigneeId)
-                if (!projectController.hasAccessToProject(existingTask.milestone.project, user.keycloakId)) {
+                if (!projectController.hasAccessToProject(existingTask.milestone.project, user.id)) {
                     userController.assignUserToProjects(user, listOf(existingTask.milestone.project))
                 }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
@@ -668,7 +668,7 @@ class TaskController {
         val user = userController.findUser(userId)
             ?: throw UserNotFoundException(userId)
 
-        if (!projectController.hasAccessToProject(project, user.keycloakId)) {
+        if (!projectController.hasAccessToProject(project, user.id)) {
             logger.info("Assigning user ${user.id} to project ${project.id} because of the task assignment")
             userController.assignUserToProjects(
                 user = user,

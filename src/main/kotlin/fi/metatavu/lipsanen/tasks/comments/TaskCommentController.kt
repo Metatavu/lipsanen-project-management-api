@@ -148,7 +148,7 @@ class TaskCommentController {
      */
     private suspend fun notifyTaskComments(task: TaskEntity, comment: TaskCommentEntity, mentionedUsers: List<UserEntity>, creatorId: UUID) {
         val taskAssignees = taskAssigneeRepository.listByTask(task).map { it.user }
-        val commentCreator = userController.findUserByKeycloakId(creatorId)
+        val commentCreator = userController.findUser(creatorId)
 
         notificationsController.createAndNotify(
             message = "New comment has been added to task ${task.name}",

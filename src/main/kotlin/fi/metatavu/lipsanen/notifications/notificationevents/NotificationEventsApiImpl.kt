@@ -50,7 +50,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
     ): Uni<Response> = withCoroutineScope {
         val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val requestedUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
-        if (requestedUser.keycloakId != loggedInUserId && !isAdmin()) {
+        if (requestedUser.id != loggedInUserId && !isAdmin()) {
             return@withCoroutineScope createBadRequest("User id does not match logged in user id")
         }
 
@@ -83,7 +83,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@withCoroutineScope createNotFound("Notification event not found")
-            if (!isAdmin() && notificationEvent.receiver.keycloakId != loggedInUserId) {
+            if (!isAdmin() && notificationEvent.receiver.id != loggedInUserId) {
                 return@withCoroutineScope createForbidden("User does not have access to notification event")
             }
 
@@ -99,7 +99,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
         val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
         val notificationEventEntity = notificationEventController.find(notificationEventId)
             ?: return@withCoroutineScope createNotFound("Notification event not found")
-        if (!isAdmin() && notificationEventEntity.receiver.keycloakId != loggedInUserId) {
+        if (!isAdmin() && notificationEventEntity.receiver.id != loggedInUserId) {
             return@withCoroutineScope createForbidden("User does not have access to notification event")
         }
 
@@ -118,7 +118,7 @@ class NotificationEventsApiImpl : NotificationEventsApi, AbstractApi() {
             val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized(UNAUTHORIZED)
             val notificationEvent = notificationEventController.find(notificationEventId)
                 ?: return@withCoroutineScope createNotFound("Notification event not found")
-            if (!isAdmin() && notificationEvent.receiver.keycloakId != loggedInUserId) {
+            if (!isAdmin() && notificationEvent.receiver.id != loggedInUserId) {
                 return@withCoroutineScope createForbidden("User does not have access to notification event")
             }
 
