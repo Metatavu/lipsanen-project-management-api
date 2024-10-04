@@ -422,4 +422,10 @@
         </sql>
     </changeSet>
 
+    <changeSet id="project_estimated_start_end" author="katja danilova">
+        <addColumn tableName="project">
+            <column name="estimatedstartdate" type="date"/>
+            <column name="estimatedenddate" type="date"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
