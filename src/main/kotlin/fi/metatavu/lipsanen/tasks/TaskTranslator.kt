@@ -16,9 +16,6 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
     lateinit var metadataTranslator: MetadataTranslator
 
     @Inject
-    lateinit var taskAttachmentRepository: TaskAttachmentRepository
-
-    @Inject
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     override suspend fun translate(entity: TaskEntity): Task {
@@ -33,7 +30,6 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             userRole = entity.userRole,
             estimatedDuration = entity.estimatedDuration,
             estimatedReadiness = entity.estimatedReadiness,
-            attachmentUrls = taskAttachmentRepository.listByTask(entity).map { it.attachmentUrl },
             assigneeIds = taskAssigneeRepository.listByTask(entity).map { it.user.id },
             dependentUserId = entity.dependentUser?.id,
             metadata = metadataTranslator.translate(entity)

@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.tasks
 
 import fi.metatavu.lipsanen.api.model.*
+import fi.metatavu.lipsanen.attachments.AttachmentController
 import fi.metatavu.lipsanen.exceptions.TaskOutsideMilestoneException
 import fi.metatavu.lipsanen.exceptions.UserNotFoundException
 import fi.metatavu.lipsanen.milestones.MilestoneEntity
@@ -9,10 +10,9 @@ import fi.metatavu.lipsanen.notifications.NotificationsController
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.proposals.ChangeProposalController
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentController
 import fi.metatavu.lipsanen.tasks.connections.TaskConnectionController
-import fi.metatavu.lipsanen.proposals.ChangeProposalController
-import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
 import fi.metatavu.lipsanen.users.UserController
 import fi.metatavu.lipsanen.users.UserEntity
 import io.quarkus.panache.common.Parameters
@@ -43,9 +43,6 @@ class TaskController {
     lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
-    lateinit var taskAttachmentRepository: TaskAttachmentRepository
-
-    @Inject
     lateinit var notificationsController: NotificationsController
 
     @Inject
@@ -62,6 +59,9 @@ class TaskController {
 
     @Inject
     lateinit var milestoneRepository: MilestoneRepository
+
+    @Inject
+    lateinit var attachmentController: AttachmentController
 
     /**
      * Lists tasks
@@ -172,15 +172,6 @@ class TaskController {
             user
         } ?: emptyList()
         notifyTaskAssignments(taskEntity, assignees, userId)
-
-        task.attachmentUrls?.forEach { attachmentUrl ->
-            taskAttachmentRepository.create(
-                id = UUID.randomUUID(),
-                task = taskEntity,
-                attachmentUrl = attachmentUrl
-            )
-        }
-
         extendMilestoneToTask(taskEntity.startDate, taskEntity.endDate, milestone)
         updateMilestoneReadiness(milestone)
         return taskEntity
@@ -251,7 +242,6 @@ class TaskController {
         val dependentUser = newTask.dependentUserId?.let { getVerifyUserIsInProject(milestone.project, it) }
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
-        updateAttachments(existingTask, newTask)
         if (existingTask.status != newTask.status) {
             notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
@@ -273,30 +263,6 @@ class TaskController {
         // Update milestone readiness after task update
         updateMilestoneReadiness(milestone)
         return updated
-    }
-
-    /**
-     * Updates task attachments
-     *
-     * @param existingTask existing task
-     * @param newTask new task
-     */
-    suspend fun updateAttachments(
-        existingTask: TaskEntity,
-        newTask: Task
-    ) {
-        val existingAttachments = taskAttachmentRepository.listByTask(existingTask)
-        val newAttachments = newTask.attachmentUrls ?: emptyList()
-        existingAttachments.forEach { existingAttachment ->
-            if (existingAttachment.attachmentUrl !in newAttachments) {
-                taskAttachmentRepository.deleteSuspending(existingAttachment)
-            }
-        }
-        newAttachments.forEach { newAttachmentUrl ->
-            if (existingAttachments.none { it.attachmentUrl == newAttachmentUrl }) {
-                taskAttachmentRepository.create(UUID.randomUUID(), existingTask, newAttachmentUrl)
-            }
-        }
     }
 
     /**
@@ -490,8 +456,8 @@ class TaskController {
         taskAssigneeRepository.listByTask(foundTask).forEach {
             taskAssigneeRepository.deleteSuspending(it)
         }
-        taskAttachmentRepository.listByTask(foundTask).forEach {
-            taskAttachmentRepository.deleteSuspending(it)
+        attachmentController.list(project = null, task = foundTask).forEach {
+            attachmentController.delete(it)
         }
         taskCommentController.listTaskComments(foundTask).first.forEach {
             taskCommentController.deleteTaskComment(it)

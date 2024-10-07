@@ -5,6 +5,7 @@ import fi.metatavu.lipsanen.milestones.MilestoneController
 import fi.metatavu.lipsanen.milestones.MilestoneEntity
 import fi.metatavu.lipsanen.projects.ProjectController
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.users.UserController
 import io.quarkus.security.identity.SecurityIdentity
 import io.smallrye.mutiny.Uni
 import io.smallrye.mutiny.coroutines.asUni
@@ -373,6 +374,7 @@ private class VertxCoroutineDispatcher(private val vertxContext: io.vertx.core.C
         const val CHANGE_PROPOSAL = "Change proposal"
         const val TASK_COMMENT = "Task comment"
         const val JOB_POSITION = "Job position"
+        const val ATTACHMENT = "Attachment"
 
         const val NO_PROJECT_RIGHTS = "User does not have access to project"
         const val WRONG_PROJECT_STAGE = "Project is not in planning stage"

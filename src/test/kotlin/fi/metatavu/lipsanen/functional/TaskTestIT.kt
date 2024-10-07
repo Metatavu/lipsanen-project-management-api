@@ -45,9 +45,7 @@ class TaskTestIT : AbstractFunctionalTest() {
             assigneeIds = arrayOf(testUser1.id!!, testUser2.id!!),
             dependentUserId = testUser3.id!!,
             estimatedDuration = 1.5f,
-            estimatedReadiness = 10,
-            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
-
+            estimatedReadiness = 10
         )
 
         val task = tb.getUser("admin1@example.com").task.create(task = taskData)
@@ -64,7 +62,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.userRole, task.userRole)
         assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
-        assertEquals(taskData.attachmentUrls!!.toList(), task.attachmentUrls!!.toList())
 
         val creator = tb.admin.user.findUser(task.metadata!!.creatorId!!)
         assertEquals(admin.id, creator.id)
@@ -243,7 +240,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             userRole = UserRole.USER,
             estimatedDuration = 1.5f,
             estimatedReadiness = 10,
-            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment2"),
             milestoneId = milestone.id!!
         ))
         val taskUpdateData = task.copy(
@@ -256,7 +252,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             userRole = UserRole.ADMIN,
             estimatedDuration = 2.0f,
             estimatedReadiness = 20,
-            attachmentUrls = arrayOf("https://example.com/attachment1", "https://example.com/attachment3")
         )
         val updatedTask = tb.admin.task.update(taskId = task.id!!, taskUpdateData)
 
@@ -272,8 +267,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.userRole, updatedTask.userRole)
         assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
         assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
-        assertEquals(2, updatedTask.attachmentUrls?.size)
-        assertEquals(taskUpdateData.attachmentUrls!!.toList(), updatedTask.attachmentUrls!!.toList())
 
         // verify that the end of the milestone extended to the new task length
         val foundMilestone = tb.admin.milestone.findProjectMilestone(projectId = project.id, projectMilestoneId = milestone.id)
