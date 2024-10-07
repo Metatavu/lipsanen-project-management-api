@@ -4,6 +4,7 @@ import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.persistence.Metadata
 import jakarta.persistence.*
 import jakarta.validation.constraints.NotEmpty
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -26,6 +27,12 @@ class ProjectEntity : Metadata() {
 
     @Column
     var tocomanId: Int? = null
+
+    @Column
+    var estimatedStartDate: LocalDate? = null
+
+    @Column
+    var estimatedEndDate: LocalDate? = null
 
     override lateinit var creatorId: UUID
 
