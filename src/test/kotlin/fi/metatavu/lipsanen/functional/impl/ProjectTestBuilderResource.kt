@@ -50,7 +50,7 @@ class ProjectTestBuilderResource(
     }
 
     fun create(): Project {
-        return create(Project("Test project", status = ProjectStatus.PLANNING))
+        return create(Project("Test project", estimatedStartDate = "2000-01-01", estimatedEndDate = "2030-01-01", status = ProjectStatus.PLANNING))
     }
 
     fun findProject(projectId: UUID): Project {

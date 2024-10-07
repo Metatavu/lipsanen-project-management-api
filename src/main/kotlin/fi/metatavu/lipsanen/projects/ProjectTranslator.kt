@@ -1,7 +1,6 @@
 package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.lipsanen.api.model.Project
-import fi.metatavu.lipsanen.api.model.ProjectStatus
 import fi.metatavu.lipsanen.rest.AbstractTranslator
 import fi.metatavu.lipsanen.rest.MetadataTranslator
 import jakarta.enterprise.context.ApplicationScoped
@@ -22,6 +21,8 @@ class ProjectTranslator : AbstractTranslator<ProjectEntity, Project>() {
             name = entity.name,
             tocomanId = entity.tocomanId,
             status = entity.status,
+            estimatedStartDate = entity.estimatedStartDate,
+            estimatedEndDate = entity.estimatedEndDate,
             metadata = metadataTranslator.translate(entity)
         )
     }

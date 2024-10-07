@@ -77,6 +77,8 @@ class ProjectController {
             id = UUID.randomUUID(),
             name = project.name,
             tocomanId = project.tocomanId,
+            estimatedStartDate = project.estimatedStartDate,
+            estimatedEndDate = project.estimatedEndDate,
             creatorId = creatorId
         )
     }
@@ -94,7 +96,9 @@ class ProjectController {
             id = UUID.randomUUID(),
             name = name,
             tocomanId = tocomanId,
-            creatorId = creatorId,
+            estimatedStartDate = null,
+            estimatedEndDate = null,
+            creatorId = creatorId
         )
     }
 
@@ -140,6 +144,8 @@ class ProjectController {
         existingProject.name = project.name
         existingProject.status = project.status
         existingProject.tocomanId = project.tocomanId
+        existingProject.estimatedStartDate = project.estimatedStartDate
+        existingProject.estimatedEndDate = project.estimatedEndDate
         existingProject.lastModifierId = userId
         return projectRepository.persistSuspending(existingProject)
     }

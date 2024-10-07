@@ -113,10 +113,18 @@ class ProjectTestIT : AbstractFunctionalTest() {
     fun updateProject() = createTestBuilder().use { tb ->
         val project = tb.admin.project.create()
         val newProjectStatus = ProjectStatus.PLANNING
-        val updatedProject = tb.admin.project.updateProject(project.id!!, Project("Updated project", status = newProjectStatus))
+        val updateData = project.copy(
+            name = "Updated project",
+            status = newProjectStatus,
+            estimatedStartDate = "2022-01-01",
+            estimatedEndDate = "2022-12-31"
+        )
+        val updatedProject = tb.admin.project.updateProject(project.id!!, updateData)
         assertNotNull(updatedProject)
         assertEquals("Updated project", updatedProject.name)
         assertEquals(newProjectStatus, updatedProject.status)
+        assertEquals("2022-01-01", updatedProject.estimatedStartDate)
+        assertEquals("2022-12-31", updatedProject.estimatedEndDate)
         tb.user.project.assertUpdateFail(403, project.id, updatedProject)
     }
 
