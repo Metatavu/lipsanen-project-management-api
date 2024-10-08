@@ -33,6 +33,7 @@ class TestBuilderAuthentication(
     val notificationEvent = NotificationEventsTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
     val taskComment = TaskCommentTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
     val jobPosition = JobPositionsTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
+    val attachment = AttachmentTestBuilderResource(testBuilder, accessTokenProvider, createClient(accessTokenProvider))
 
     override fun createClient(authProvider: AccessTokenProvider): ApiClient {
         val result = ApiClient(ApiTestSettings.apiBasePath)

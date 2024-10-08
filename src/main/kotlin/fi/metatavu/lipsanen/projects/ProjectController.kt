@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.projects
 
 import fi.metatavu.lipsanen.api.model.Project
 import fi.metatavu.lipsanen.api.model.ProjectStatus
+import fi.metatavu.lipsanen.attachments.AttachmentController
 import fi.metatavu.lipsanen.milestones.MilestoneController
 import fi.metatavu.lipsanen.projects.themes.ProjectThemeController
 import fi.metatavu.lipsanen.users.UserController
@@ -32,6 +33,9 @@ class ProjectController {
 
     @Inject
     lateinit var userToProjectRepository: UserToProjectRepository
+
+    @Inject
+    lateinit var attachmentController: AttachmentController
 
     /**
      * Lists all projects
@@ -166,6 +170,9 @@ class ProjectController {
      * @param projectEntity project entity
      */
     suspend fun deleteProject(projectEntity: ProjectEntity) {
+        attachmentController.list(projectEntity, null).forEach {
+            attachmentController.delete(it)
+        }
         userToProjectRepository.list(projectEntity).forEach {
             userToProjectRepository.deleteSuspending(it)
         }

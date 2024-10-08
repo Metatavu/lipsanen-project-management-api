@@ -421,6 +421,43 @@
             ALTER TABLE task ADD CONSTRAINT FK_TASK_DEPENDENT_USER_ID FOREIGN KEY (dependentuser_id) REFERENCES user(id);
         </sql>
     </changeSet>
+    
+    <changeSet id="attachments_remake" author="katja danilova">
+        <createTable tableName="attachment">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="url" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attachmenttype" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_ATTACHMENT_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_ATTACHMENT_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="creatorid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lastmodifierid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createdat" type="datetime(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifiedat" type="datetime(6)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <dropTable tableName="task_attachment"/>
+    </changeSet>
 
     <changeSet id="project_estimated_start_end" author="katja danilova">
         <addColumn tableName="project">
