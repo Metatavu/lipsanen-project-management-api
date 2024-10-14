@@ -112,16 +112,15 @@ class UserController {
             firstResult =  first,
             maxResults = max
         )
-        var totalCount = entitiesCount
-        val userReprensentations = userEntities.map {
-            val userRepresentation = keycloakAdminClient.findUserById(UUID.fromString(it.id.toString()))
-            if (userRepresentation?.username == keycloakAdminUser) {
-                totalCount -= 1
-            }
+        val userRepresentations = userEntities.map {
+            val userRepresentation =
+                keycloakAdminClient.findUserById(UUID.fromString(it.id.toString()))
 
             if (userRepresentation == null) {
+                logger.error("User ${it.id} not found in keycloak")
                 return@map null
             }
+
 
             UserFullRepresentation(
                 userEntity = it,
@@ -129,7 +128,7 @@ class UserController {
             )
         }.filterNotNull()
 
-        return userReprensentations to totalCount
+        return userRepresentations to entitiesCount
     }
 
     /**
