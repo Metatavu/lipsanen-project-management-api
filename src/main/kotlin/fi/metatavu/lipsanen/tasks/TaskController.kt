@@ -413,7 +413,6 @@ class TaskController {
      */
     private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
-            message = "User has been assigned to task ${task.name}",
             type = NotificationType.TASK_ASSIGNED,
             taskEntity = task,
             receivers = assignees,
@@ -430,7 +429,6 @@ class TaskController {
      */
     private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
-            message = "Status changed to ${task.status}",
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
             receivers = assignees,
