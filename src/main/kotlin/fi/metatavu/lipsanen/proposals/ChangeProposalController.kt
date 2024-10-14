@@ -162,7 +162,6 @@ class ChangeProposalController {
         foundProposal.lastModifierId = userId
 
         if (foundProposal.status != changeProposal.status) {
-            notifyProposalUpdateStatus(foundProposal, userId, changeProposal.status)
             when (changeProposal.status) {
                 ChangeProposalStatus.APPROVED -> {
                     foundProposal.status = changeProposal.status
@@ -177,6 +176,7 @@ class ChangeProposalController {
                     // cannot change status to pending
                 }
             }
+            notifyProposalUpdateStatus(foundProposal, userId)
         }
         return persist(foundProposal)
     }
@@ -186,17 +186,15 @@ class ChangeProposalController {
      *
      * @param proposal proposal
      * @param userId user id
-     * @param newStatus new status
      */
     private suspend fun notifyProposalUpdateStatus(
         proposal: ChangeProposalEntity,
         userId: UUID,
-        newStatus: ChangeProposalStatus
     ) {
         notificationsController.createAndNotify(
-            message = "Change proposal status changed to $newStatus",
             type = NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED,
             taskEntity = proposal.task,
+            changeProposal = proposal,
             receivers = taskAssigneeRepository.listByTask(proposal.task).map { it.user }
                 .plus(userController.findUser(proposal.creatorId)).filterNotNull().distinctBy { it.id },
             creatorId = userId
@@ -214,9 +212,9 @@ class ChangeProposalController {
         userId: UUID
     ) {
         notificationsController.createAndNotify(
-            message = "Change proposal created",
             type = NotificationType.CHANGE_PROPOSAL_CREATED,
             taskEntity = proposal.task,
+            changeProposal = proposal,
             receivers = taskAssigneeRepository.listByTask(proposal.task).map { it.user }
                 .plus(userController.findUser(proposal.creatorId)).filterNotNull().distinctBy { it.id },
             creatorId = userId
@@ -259,6 +257,7 @@ class ChangeProposalController {
      * @param proposal proposal
      */
     suspend fun delete(proposal: ChangeProposalEntity) {
+        notificationsController.list(changeProposal = proposal).forEach { notificationsController.delete(it) }
         proposalRepository.deleteSuspending(proposal)
     }
 

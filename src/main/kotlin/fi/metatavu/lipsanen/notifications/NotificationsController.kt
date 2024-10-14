@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
+import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
 import fi.metatavu.lipsanen.tasks.TaskEntity
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
@@ -85,31 +86,41 @@ class NotificationsController {
     }
 
     /**
+     * Lists notifications for a change proposal
+     *
+     * @param changeProposal change proposal
+     * @return list of notifications
+     */
+    suspend fun list(changeProposal: ChangeProposalEntity): MutableList<NotificationEntity> {
+        return notificationRepository.list("changeProposal", changeProposal).awaitSuspending()
+    }
+
+    /**
      *Creates a new notification and sends the notification events to the needed receivers
      * (e.g. admins + custom receivers)
      *
-     * @param message notification message
      * @param type notification type
      * @param taskEntity task
      * @param comment task comment
+     * @param changeProposal change proposal
      * @param receivers receivers
      * @param creatorId creator id
      * @return created notification
      */
     suspend fun createAndNotify(
-        message: String,
         type: NotificationType,
         taskEntity: TaskEntity,
         receivers: List<UserEntity> = emptyList(),
         comment: TaskCommentEntity? = null,
+        changeProposal: ChangeProposalEntity? = null,
         creatorId: UUID,
     ): NotificationEntity {
         val notification = notificationRepository.create(
             id = UUID.randomUUID(),
             type = type,
-            message = message,
             task = taskEntity,
-            comment = comment
+            comment = comment,
+            changeProposalEntity = changeProposal
         )
 
         val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }

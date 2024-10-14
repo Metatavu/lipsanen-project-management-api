@@ -151,7 +151,6 @@ class TaskCommentController {
         val commentCreator = userController.findUser(creatorId)
 
         notificationsController.createAndNotify(
-            message = "New comment has been added to task ${task.name}",
             type = NotificationType.COMMENT_LEFT,
             taskEntity = task,
             comment = comment,

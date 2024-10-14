@@ -243,7 +243,7 @@ class TaskController {
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
         if (existingTask.status != newTask.status) {
-            notifyTaskStatusChange(task = existingTask, statusUpdate = newTask.status, assignees = taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId = userId)
+            notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
 
         val updatedTasks = getUpdatedTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
@@ -413,7 +413,6 @@ class TaskController {
      */
     private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
-            message = "User has been assigned to task ${task.name}",
             type = NotificationType.TASK_ASSIGNED,
             taskEntity = task,
             receivers = assignees,
@@ -425,18 +424,11 @@ class TaskController {
      * Creates notifications of task status updates
      *
      * @param task task
-     * @param statusUpdate new status
      * @param assignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskStatusChange(
-        task: TaskEntity,
-        statusUpdate: TaskStatus,
-        assignees: List<UserEntity>,
-        userId: UUID
-    ) {
+    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
-            message = "Status changed to $statusUpdate",
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
             receivers = assignees,

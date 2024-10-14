@@ -1,11 +1,10 @@
 package fi.metatavu.lipsanen.functional
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import fi.metatavu.lipsanen.api.model.TaskAssignedNotificationData
 import fi.metatavu.lipsanen.functional.resources.KeycloakResource
 import fi.metatavu.lipsanen.functional.settings.DefaultTestProfile
-import fi.metatavu.lipsanen.test.client.models.NotificationType
-import fi.metatavu.lipsanen.test.client.models.Task
-import fi.metatavu.lipsanen.test.client.models.TaskStatus
-import fi.metatavu.lipsanen.test.client.models.UserRole
+import fi.metatavu.lipsanen.test.client.models.*
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
@@ -54,11 +53,12 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
         assertEquals(1, notificationEvents.size)
         val notificationEvent = notificationEvents.first()
-        assertEquals(task1.id, notificationEvent.notification.taskId)
+        val notificationDataParsed = parseNotificationData(notificationEvent.notification) as TaskAssignedNotificationData
+        assertEquals(task1.id, notificationDataParsed.taskId)
+        assertEquals(task1.name, notificationDataParsed.taskName)
         assertEquals(fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED, notificationEvent.notification.type)
         assertEquals(false, notificationEvent.read)
         assertEquals(testUser, notificationEvent.receiverId)
-        assertNotNull(notificationEvent.notification.message)
 
         val notificationEventsForAdmin = tb.admin.notificationEvent.list(
             userId = adminUser.id!!,
@@ -107,14 +107,16 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             projectId = project1.id
         )
         assertEquals(2, notificationEvents.size)
-        val taskUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_STATUS_CHANGED }
-        assertEquals(task1.id, taskUpdated!!.notification.taskId)
+        val taskUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_STATUS_CHANGED }!!
+        val notificationDataParsed = parseNotificationData(taskUpdated.notification) as TaskStatusChangesNotificationData
         assertEquals(false, taskUpdated.read)
         assertEquals(testUser, taskUpdated.receiverId)
-        assertNotNull(taskUpdated.notification.message)
+        assertEquals(task1.id, notificationDataParsed.taskId)
+        assertEquals(task1.name, notificationDataParsed.taskName)
+        assertEquals(TaskStatus.IN_PROGRESS, notificationDataParsed.newStatus)
 
         // Cleanup
-        notificationEvents.forEach { tb.admin.notification.delete(it.notification.id!!) }
+        notificationEvents.forEach { tb.admin.notification.addClosable(it.notification) }
     }
 
     /**
@@ -148,21 +150,24 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
         assertEquals(3, notificationEvents.size)
         // test that assignee received all the notifications
-        val proposalCreated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_CREATED }
-        assertEquals(task1.id, proposalCreated!!.notification.taskId)
-        assertEquals(false, proposalCreated.read)
+        val proposalCreated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_CREATED }!!
+        val proposalCreatedDataParsed = parseNotificationData(proposalCreated.notification) as ChangeProposalCreatedNotificationData
         assertEquals(testUser, proposalCreated.receiverId)
-        assertNotNull(proposalCreated.notification.message)
-        val proposalUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED }
-        assertEquals(task1.id, proposalUpdated!!.notification.taskId)
+        assertEquals(false, proposalCreated.read)
+        assertEquals(task1.id, proposalCreatedDataParsed.taskId)
+        assertEquals(changeProposal.id, proposalCreatedDataParsed.changeProposalId)
+
+        val proposalUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED }!!
+        val proposalUpdatedDataParsed = parseNotificationData(proposalCreated.notification) as ChangeProposalCreatedNotificationData
         assertEquals(false, proposalUpdated.read)
         assertEquals(testUser, proposalUpdated.receiverId)
-        assertNotNull(proposalUpdated.notification.message)
+        assertEquals(task1.id, proposalUpdatedDataParsed.taskId)
+        assertEquals(changeProposal.id, proposalUpdatedDataParsed.changeProposalId)
         val taskAssigned = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
         assertNotNull(taskAssigned)
 
         // Cleanup
-        notificationEvents.forEach { tb.admin.notification.delete(it.notification.id!!) }
+        notificationEvents.forEach { tb.admin.notification.addClosable(it.notification) }
     }
 
     /**
@@ -222,7 +227,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
 
         // Cleanup
-        notificationEvents.forEach { tb.admin.notification.delete(it.notification.id!!) }
+        notificationEvents.forEach { tb.admin.notification.addClosable(it.notification) }
     }
 
     /**
@@ -263,11 +268,11 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
 
         // user 1 leaves a comment mentioning user 2
-        tb.getUser("user1@example.com").taskComment.create(
+        val comment = tb.getUser("user1@example.com").taskComment.create(
             taskId = task.id!!,
-            taskComment = fi.metatavu.lipsanen.test.client.models.TaskComment(
+            taskComment = TaskComment(
                 comment = "Comment",
-                referencedUsers = arrayOf(user2.id!!),
+                referencedUsers = arrayOf(user2.id),
                 taskId = task.id
             )
         )
@@ -280,7 +285,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertTrue(userNotifications.any { it.notification.type == NotificationType.TASK_ASSIGNED })
 
         val adminNotifications = tb.admin.notificationEvent.list(
-            userId = admin1.id!!,
+            userId = admin1.id,
             projectId = project1.id
         )
         assertEquals(2, adminNotifications.size)
@@ -288,13 +293,40 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertTrue(adminNotifications.any { it.notification.type == NotificationType.TASK_ASSIGNED })
 
         val user1Notifications = tb.admin.notificationEvent.list(
-            userId = admin1.id!!,
+            userId = admin1.id,
             projectId = project1.id
         )
         assertEquals(2, user1Notifications.size)
         assertTrue(user1Notifications.any { it.notification.type == NotificationType.TASK_ASSIGNED })
         assertTrue(user1Notifications.any { it.notification.type == NotificationType.COMMENT_LEFT })
 
+        // Test that the comment notification data is correct
+        val taskCommentLeftNotification = adminNotifications.find { it.notification.type == NotificationType.COMMENT_LEFT }!!
+        val notificationDataParsed = parseNotificationData(taskCommentLeftNotification.notification) as CommentLeftNotificationData
+        assertEquals(task.id, notificationDataParsed.taskId)
+        assertEquals("Comment", notificationDataParsed.comment)
+        assertEquals(task.name, notificationDataParsed.taskName)
+        assertEquals(comment.id, notificationDataParsed.commentId)
+    }
+
+    /**
+     * Parses notification data
+     *
+     * @param notification notification
+     * @return parsed calss
+     */
+    fun parseNotificationData(notification: Notification): Any {
+        val typeReference = when (notification.type) {
+            NotificationType.TASK_ASSIGNED -> object: com.fasterxml.jackson.core.type.TypeReference<TaskAssignedNotificationData>() {}
+            NotificationType.TASK_STATUS_CHANGED -> object: com.fasterxml.jackson.core.type.TypeReference<TaskStatusChangesNotificationData>() {}
+            NotificationType.CHANGE_PROPOSAL_CREATED -> object: com.fasterxml.jackson.core.type.TypeReference<ChangeProposalCreatedNotificationData>() {}
+            NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED -> object: com.fasterxml.jackson.core.type.TypeReference<ChangeProposalStatusChangedNotificationData>() {}
+            NotificationType.COMMENT_LEFT -> object: com.fasterxml.jackson.core.type.TypeReference<CommentLeftNotificationData>() {}
+        }
+        return jacksonObjectMapper().readValue(
+            jacksonObjectMapper().writeValueAsString(notification.notificationData),
+            typeReference
+        )
     }
 
 }
