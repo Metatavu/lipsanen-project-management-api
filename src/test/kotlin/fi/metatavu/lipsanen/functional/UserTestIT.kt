@@ -148,6 +148,12 @@ class UserTestIT: AbstractFunctionalTest() {
         assertEquals(updatedUserData.roles!![0], foundUser.roles!![0])
         assertEquals(updatedUserData.jobPositionId, foundUser.jobPositionId)
 
+        // Check that null values are not updated
+        val updateData2 = updatedUserData.copy(projectIds = null, roles = null)
+        val afterSecondUpdate = it.admin.user.updateUser(createdUser.id, updateData2)
+        assertEquals(foundUser.projectIds[0], afterSecondUpdate.projectIds!![0])
+        assertEquals(foundUser.roles[0], afterSecondUpdate.roles!![0])
+
         it.admin.user.assertUpdateFailStatus(404, UUID.randomUUID(), updatedUserData)
         it.user.user.assertUpdateFailStatus(403, createdUser.id, updatedUserData)
 

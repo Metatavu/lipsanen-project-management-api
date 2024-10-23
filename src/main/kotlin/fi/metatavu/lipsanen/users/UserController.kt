@@ -303,8 +303,7 @@ class UserController {
         val currentKeycloakRepresentation = findKeycloakUser(existingUser.id) ?: return null
         val updatedRepresentation = currentKeycloakRepresentation.copy(
             firstName = updateData.firstName,
-            lastName = updateData.lastName,
-            realmRoles = updateData.roles?.map { translateRole(it) }?.toTypedArray(),
+            lastName = updateData.lastName
         )
         return try {
             keycloakAdminClient.getUserApi().realmUsersIdPut(
@@ -317,10 +316,9 @@ class UserController {
             existingUser.jobPosition = jobPosition
             userRepository.persistSuspending(existingUser)
 
-            // Assign user to selected roles
             assignRoles(currentKeycloakRepresentation, updateData.roles)
+            assignUserToProjects(existingUser, projects)
 
-            assignUserToProjects(existingUser, projects ?: emptyList())
             UserFullRepresentation(
                 userRepresentation = findKeycloakUser(existingUser.id)!!,
                 userEntity = existingUser
@@ -441,8 +439,11 @@ class UserController {
      */
     suspend fun assignUserToProjects(
         user: UserEntity,
-        newProjects: List<ProjectEntity>
+        newProjects: List<ProjectEntity>?
     ) {
+        if (newProjects == null) {
+            return
+        }
         val currentProject = userToProjectRepository.list(user)
 
         currentProject.forEach { project ->
