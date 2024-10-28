@@ -2,6 +2,7 @@ package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.NotificationType
 import fi.metatavu.lipsanen.persistence.Metadata
+import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
 import fi.metatavu.lipsanen.tasks.TaskEntity
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import jakarta.persistence.*
@@ -17,9 +18,6 @@ class NotificationEntity: Metadata() {
     @Id
     lateinit var id: UUID
 
-    @Column(nullable = false)
-    lateinit var message: String
-
     @Enumerated(EnumType.STRING)
     lateinit var type: NotificationType
 
@@ -28,6 +26,9 @@ class NotificationEntity: Metadata() {
 
     @ManyToOne
     var comment: TaskCommentEntity? = null
+
+    @ManyToOne
+    var changeProposal: ChangeProposalEntity? = null
 
     override lateinit var creatorId: UUID
 
