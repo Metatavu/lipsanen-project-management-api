@@ -465,4 +465,14 @@
             <column name="estimatedenddate" type="date"/>
         </addColumn>
     </changeSet>
+
+    <changeSet id="notificatons_universal_form" author="katja danilova">
+        <dropNotNullConstraint tableName="notification" columnName="message" columnDataType="varchar(512)"/>
+        <dropColumn tableName="notification" columnName="message" />
+        <addColumn tableName="notification">
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
