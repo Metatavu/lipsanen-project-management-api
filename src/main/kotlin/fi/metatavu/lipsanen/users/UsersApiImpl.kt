@@ -156,7 +156,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             return@withCoroutineScope createForbidden("Forbidden")
         }
 
-        createOk(userTranslator.translate(updatedUser))
+        createOk(userTranslator.translate(updatedUser, includeRoles = true))
     }
 
     @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
