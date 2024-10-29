@@ -153,8 +153,8 @@ class TaskCommentController {
         notificationsController.createAndNotify(
             type = NotificationType.COMMENT_LEFT,
             taskEntity = task,
-            comment = comment,
             receivers = mentionedUsers.plus(taskAssignees).minus(commentCreator).filterNotNull().distinctBy { it.id },
+            comment = comment,
             creatorId = creatorId
         )
     }

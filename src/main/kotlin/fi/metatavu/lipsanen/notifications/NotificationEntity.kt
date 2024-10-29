@@ -13,22 +13,20 @@ import java.util.*
  */
 @Table(name = "notification")
 @Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 class NotificationEntity: Metadata() {
 
     @Id
     lateinit var id: UUID
 
-    @Enumerated(EnumType.STRING)
-    lateinit var type: NotificationType
-
     @ManyToOne
-    var task: TaskEntity? = null
+    lateinit var task: TaskEntity
 
-    @ManyToOne
-    var comment: TaskCommentEntity? = null
+    @Column(nullable = false)
+    lateinit var taskName: String
 
-    @ManyToOne
-    var changeProposal: ChangeProposalEntity? = null
+    @Transient
+    lateinit var notificationType: NotificationType
 
     override lateinit var creatorId: UUID
 

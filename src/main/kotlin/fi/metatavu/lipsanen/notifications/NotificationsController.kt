@@ -1,8 +1,11 @@
 package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.NotificationType
+import fi.metatavu.lipsanen.api.model.TaskStatus
+import fi.metatavu.lipsanen.notifications.notificationTypes.*
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.proposals.ChangeProposalEntity
+import fi.metatavu.lipsanen.tasks.TaskAssigneeRepository
 import fi.metatavu.lipsanen.tasks.TaskEntity
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentEntity
 import fi.metatavu.lipsanen.users.UserController
@@ -37,6 +40,24 @@ class NotificationsController {
 
     @Inject
     lateinit var usersController: UserController
+
+    @Inject
+    lateinit var changeProposalCreatedNotificationRepository: ChangeProposalCreatedNotificationRepository
+
+    @Inject
+    lateinit var changeProposalStatusChangedNotificationRepository: ChangeProposalStatusChangedNotificationRepository
+
+    @Inject
+    lateinit var commentLeftNotificationRepository: CommentLeftNotificationRepository
+
+    @Inject
+    lateinit var taskAssignedNotificationRepository: TaskAssignedNotificationRepository
+
+    @Inject
+    lateinit var taskStatusChangedNotificationRepository: TaskStatusChangedNotificationRepository
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
 
     @Inject
     lateinit var vertx: Vertx
@@ -87,12 +108,15 @@ class NotificationsController {
 
     /**
      * Lists notifications for a change proposal
+     * Since changeProposal is a field in 2 implementations of NotificationEntity 2 separate queries are needed
      *
      * @param changeProposal change proposal
      * @return list of notifications
      */
-    suspend fun list(changeProposal: ChangeProposalEntity): MutableList<NotificationEntity> {
-        return notificationRepository.list("changeProposal", changeProposal).awaitSuspending()
+    suspend fun list(changeProposal: ChangeProposalEntity): List<NotificationEntity> {
+        val statusChanged = changeProposalStatusChangedNotificationRepository.list(changeProposal)
+        val created = changeProposalCreatedNotificationRepository.list(changeProposal)
+        return (statusChanged + created).toList()
     }
 
     /**
@@ -110,18 +134,52 @@ class NotificationsController {
     suspend fun createAndNotify(
         type: NotificationType,
         taskEntity: TaskEntity,
+        newTaskStatus: TaskStatus ? = null,
         receivers: List<UserEntity> = emptyList(),
         comment: TaskCommentEntity? = null,
         changeProposal: ChangeProposalEntity? = null,
         creatorId: UUID,
     ): NotificationEntity {
-        val notification = notificationRepository.create(
-            id = UUID.randomUUID(),
-            type = type,
-            task = taskEntity,
-            comment = comment,
-            changeProposalEntity = changeProposal
-        )
+        val notification = when (type) {
+            NotificationType.TASK_ASSIGNED -> taskAssignedNotificationRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                taskName = taskEntity.name,
+                assigneeIds = taskAssigneeRepository.listByTask(taskEntity).map { it.user.id }.joinToString(","),
+                userId = creatorId
+            )
+            NotificationType.COMMENT_LEFT -> commentLeftNotificationRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                taskName = taskEntity.name,
+                comment = comment!!,
+                commentText = comment.comment,
+                userId = creatorId
+            )
+
+            NotificationType.TASK_STATUS_CHANGED -> taskStatusChangedNotificationRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                taskName = taskEntity.name,
+                status = newTaskStatus!!,
+                userId = creatorId
+            )
+            NotificationType.CHANGE_PROPOSAL_CREATED -> changeProposalCreatedNotificationRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                taskName = taskEntity.name,
+                changeProposal = changeProposal!!,
+                userId = creatorId
+            )
+            NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED -> changeProposalStatusChangedNotificationRepository.create(
+                id = UUID.randomUUID(),
+                task = taskEntity,
+                taskName = taskEntity.name,
+                changeProposal = changeProposal!!,
+                status = changeProposal.status,
+                userId = creatorId
+            )
+        }
 
         val adminKeycloakIds = usersController.getAdmins().map { UUID.fromString(it.id) }
         val adminEntities = adminKeycloakIds.mapNotNull { usersController.findUser(it) }
