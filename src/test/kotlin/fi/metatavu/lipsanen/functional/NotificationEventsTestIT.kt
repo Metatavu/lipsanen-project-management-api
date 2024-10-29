@@ -56,6 +56,9 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         val notificationDataParsed = parseNotificationData(notificationEvent.notification) as TaskAssignedNotificationData
         assertEquals(task1.id, notificationDataParsed.taskId)
         assertEquals(task1.name, notificationDataParsed.taskName)
+        assertTrue(notificationDataParsed.assigneeIds.contains(testUser))
+        assertTrue(notificationDataParsed.assigneeIds.contains(testUser1))
+
         assertEquals(fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED, notificationEvent.notification.type)
         assertEquals(false, notificationEvent.read)
         assertEquals(testUser, notificationEvent.receiverId)
@@ -115,6 +118,14 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals(task1.name, notificationDataParsed.taskName)
         assertEquals(TaskStatus.IN_PROGRESS, notificationDataParsed.newStatus)
 
+        // Delete task
+        tb.admin.task.delete(task1.id)
+        val notificationsAfterRemoval = tb.admin.notificationEvent.list(
+            userId = testUser,
+            projectId = project1.id
+        )
+        assertEquals(0, notificationsAfterRemoval.size)
+
         // Cleanup
         notificationEvents.forEach { tb.admin.notification.addClosable(it.notification) }
     }
@@ -165,6 +176,14 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals(changeProposal.id, proposalUpdatedDataParsed.changeProposalId)
         val taskAssigned = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
         assertNotNull(taskAssigned)
+
+        // Delete change proposal
+        tb.admin.changeProposal.deleteProposal(changeProposal.id)
+        val notificationsAfterRemoval = tb.admin.notificationEvent.list(
+            userId = testUser,
+            projectId = project1.id
+        )
+        assertEquals(1, notificationsAfterRemoval.size)
 
         // Cleanup
         notificationEvents.forEach { tb.admin.notification.addClosable(it.notification) }
@@ -307,6 +326,15 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals("Comment", notificationDataParsed.comment)
         assertEquals(task.name, notificationDataParsed.taskName)
         assertEquals(comment.id, notificationDataParsed.commentId)
+
+        // Delete comment
+        tb.admin.taskComment.deleteTaskComment(task.id, comment.id!!)
+        val adminNotificationsAfterCommentRemoval = tb.admin.notificationEvent.list(
+            userId = admin1.id,
+            projectId = project1.id
+        )
+        assertNull(adminNotificationsAfterCommentRemoval.find { it.notification.type == NotificationType.COMMENT_LEFT })
+
     }
 
     /**

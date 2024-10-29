@@ -475,4 +475,72 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="notifications_remake" author="katja danilova">
+        <delete tableName="notificationevent"/>
+        <delete tableName="notification"/>
+
+        <dropForeignKeyConstraint baseTableName="notification" constraintName="FK_NOTIFICATION_PROPOSAL_ID"/>
+        <dropForeignKeyConstraint baseTableName="notification" constraintName="FK_NOTIFICATION_COMMENT_ID"/>
+        <dropColumn tableName="notification" columnName="changeproposal_id"/>
+        <dropColumn tableName="notification" columnName="comment_id"/>
+        <dropColumn tableName="notification" columnName="type"/>
+
+        <addColumn tableName="notification">
+            <column name="taskname" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        
+        <createTable tableName="changeproposalcreatednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_CHANGEPROPOSALCREATED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSALCREATED_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="changeproposalstatuschangednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_CHANGEPROPOSALSTATUSCHANGED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSALSTATUSCHANGED_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+            <column name="status" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="commentleftnotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_COMMENTLEFT_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="comment_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_COMMENTLEFT_NOTIFICATION_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+            <column name="commenttext" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="taskassignednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_TASKASSIGNED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="assigneeids" type="longtext">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="taskstatuschangednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_TASKSTATUSCHANGED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="status" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
 </databaseChangeLog>

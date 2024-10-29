@@ -243,7 +243,7 @@ class TaskController {
 
         updateAssignees(existingTask, newTask.assigneeIds, userId)
         if (existingTask.status != newTask.status) {
-            notifyTaskStatusChange(existingTask, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
+            notifyTaskStatusChange(existingTask, newTask.status, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         }
 
         val updatedTasks = getUpdatedTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
@@ -427,10 +427,16 @@ class TaskController {
      * @param assignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskStatusChange(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
+    private suspend fun notifyTaskStatusChange(
+        task: TaskEntity,
+        newTaskStatus: TaskStatus,
+        assignees: List<UserEntity>,
+        userId: UUID
+    ) {
         notificationsController.createAndNotify(
             type = NotificationType.TASK_STATUS_CHANGED,
             taskEntity = task,
+            newTaskStatus = newTaskStatus,
             receivers = assignees,
             creatorId = userId
         )

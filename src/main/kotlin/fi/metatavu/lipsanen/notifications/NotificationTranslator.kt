@@ -1,8 +1,10 @@
 package fi.metatavu.lipsanen.notifications
 
 import fi.metatavu.lipsanen.api.model.*
+import fi.metatavu.lipsanen.notifications.notificationTypes.TaskStatusChangedNotificationData
 import fi.metatavu.lipsanen.rest.AbstractTranslator
 import jakarta.enterprise.context.ApplicationScoped
+import java.util.*
 
 /**
  * Translator for notifications
@@ -13,7 +15,7 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
     override suspend fun translate(entity: NotificationEntity): Notification {
         return Notification(
             id = entity.id,
-            type = entity.type,
+            type = entity.notificationType,
             notificationData = getNotificationData(entity)
         )
     }
@@ -25,42 +27,51 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
      * @return data
      */
     fun getNotificationData(entity: NotificationEntity): Any {
-        when (entity.type) {
-            NotificationType.TASK_ASSIGNED -> {
+        when (entity) {
+            is fi.metatavu.lipsanen.notifications.notificationTypes.TaskAssignedNotificationData -> {
                 return TaskAssignedNotificationData(
-                    taskId = entity.task!!.id,
-                    taskName = entity.task!!.name
+                    taskId = entity.task.id,
+                    taskName = entity.taskName,
+                    assigneeIds = entity.assigneeIds.split(",").map { UUID.fromString(it) }
                 )
             }
-            NotificationType.TASK_STATUS_CHANGED -> {
+
+            is TaskStatusChangedNotificationData -> {
                 return TaskStatusChangesNotificationData(
-                    taskId = entity.task!!.id,
-                    taskName = entity.task!!.name,
-                    newStatus = entity.task!!.status
+                    taskId = entity.task.id,
+                    taskName = entity.taskName,
+                    newStatus = entity.status
                 )
             }
-            NotificationType.CHANGE_PROPOSAL_CREATED -> {
+
+            is fi.metatavu.lipsanen.notifications.notificationTypes.ChangeProposalCreatedNotificationData -> {
                 return ChangeProposalCreatedNotificationData(
                     changeProposalId = entity.changeProposal!!.id,
-                    taskId = entity.changeProposal!!.task!!.id,
-                    taskName = entity.changeProposal!!.task!!.name,
+                    taskId = entity.task.id,
+                    taskName = entity.taskName,
                 )
             }
-            NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED -> {
+
+            is fi.metatavu.lipsanen.notifications.notificationTypes.ChangeProposalStatusChangedNotificationData -> {
                 return ChangeProposalStatusChangedNotificationData(
                     changeProposalId = entity.changeProposal!!.id,
-                    taskId = entity.changeProposal!!.task!!.id,
-                    taskName = entity.changeProposal!!.task!!.name,
-                    newStatus = entity.changeProposal!!.status
+                    taskId = entity.task.id,
+                    taskName = entity.taskName,
+                    newStatus = entity.status
                 )
             }
-            NotificationType.COMMENT_LEFT -> {
+
+            is fi.metatavu.lipsanen.notifications.notificationTypes.CommentLeftNotificationData -> {
                 return CommentLeftNotificationData(
-                    taskId = entity.task!!.id,
-                    taskName = entity.task!!.name,
-                    commentId = entity.comment!!.id,
-                    comment = entity.comment!!.comment
+                    taskId = entity.task.id,
+                    taskName = entity.taskName,
+                    commentId = entity.comment.id,
+                    comment = entity.commentText
                 )
+            }
+
+            else -> {
+                return Any()
             }
         }
     }
