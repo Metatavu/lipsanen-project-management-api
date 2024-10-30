@@ -34,6 +34,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
 
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
         val testUser1 = tb.admin.user.create("test1", UserRole.USER).id!!
+        val testUser2 = tb.admin.user.create("test2", UserRole.USER).id!!
 
         val adminUser = tb.admin.user.create("admin0", UserRole.ADMIN)
         val task1 = tb.admin.task.create(task =
@@ -69,6 +70,32 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
         assertEquals(1, notificationEventsForAdmin.size)
         assertEquals(adminUser.id, notificationEventsForAdmin[0].receiverId)
+
+        // Update the task for different assignees and check that only new assignees got the notification
+        val updatedTask = tb.admin.task.update(
+            taskId = task1.id!!,
+            task = task1.copy(name = "updated", assigneeIds = arrayOf(testUser2, testUser1))
+        )
+        // Old assignee should not get the notification
+        tb.admin.notificationEvent.list(
+            projectId = project1.id,
+            userId = testUser1
+        ).let {
+            val notifications = it.filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+            assertEquals(1, notifications.size)
+            assertEquals(2, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+            assertEquals(task1.name, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).taskName)
+        }
+        // New assignee should get the notification
+        tb.admin.notificationEvent.list(
+            projectId = project1.id,
+            userId = testUser2
+        ).let {
+            val notifications = it.filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+            assertEquals(1, notifications.size)
+            assertEquals(2, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+            assertEquals(updatedTask.name, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).taskName)
+        }
 
         // Test fails of access rights checks and not found
         tb.user.notificationEvent.assertListFailStatus(400, userId = testUser)
