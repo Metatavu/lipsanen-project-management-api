@@ -241,11 +241,6 @@ class TaskController {
 
         val dependentUser = newTask.dependentUserId?.let { getVerifyUserIsInProject(milestone.project, it) }
 
-        updateAssignees(existingTask, newTask.assigneeIds, userId)
-        if (existingTask.status != newTask.status) {
-            notifyTaskStatusChange(existingTask, newTask.status, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
-        }
-
         val updatedTasks = getUpdatedTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
         val mainUpdatedTask = updatedTasks.find { it.id == existingTask.id } ?: existingTask
         mainUpdatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
@@ -259,6 +254,10 @@ class TaskController {
 
         extendMilestoneToTask(mainUpdatedTask.startDate, mainUpdatedTask.endDate, milestone)
         val updated = taskEntityRepository.persistSuspending(mainUpdatedTask)
+
+        // Send notifications
+        if (existingTask.status != newTask.status) notifyTaskStatusChange(mainUpdatedTask, newTask.status, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
+        updateAssignees(mainUpdatedTask, newTask.assigneeIds, userId)
 
         // Update milestone readiness after task update
         updateMilestoneReadiness(milestone)
@@ -282,6 +281,8 @@ class TaskController {
         val assignedUserIds = assignedUsers.map { it.user.id }
         val newAssignees = newAssigneeIds ?: emptyList()
 
+        val newlyAssignedUsers = mutableListOf<UserEntity>()
+
         assignedUsers.forEach { existingAssignee ->
             if (existingAssignee.user.id !in newAssignees) {
                 taskAssigneeRepository.deleteSuspending(existingAssignee)
@@ -294,9 +295,11 @@ class TaskController {
                     userController.assignUserToProjects(user, listOf(existingTask.milestone.project))
                 }
                 taskAssigneeRepository.create(UUID.randomUUID(), existingTask, user)
-                notifyTaskAssignments(existingTask, listOf(user), userId)
+                newlyAssignedUsers.add(user)
             }
         }
+
+        notifyTaskAssignments(existingTask, newlyAssignedUsers, userId)
     }
 
     /**
@@ -408,14 +411,14 @@ class TaskController {
      * Creates notifications of task assignments
      *
      * @param task task
-     * @param assignees task assignees
+     * @param receivers task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskAssignments(task: TaskEntity, assignees: List<UserEntity>, userId: UUID) {
+    private suspend fun notifyTaskAssignments(task: TaskEntity, receivers: List<UserEntity>, userId: UUID) {
         notificationsController.createAndNotify(
             type = NotificationType.TASK_ASSIGNED,
             taskEntity = task,
-            receivers = assignees,
+            receivers = receivers,
             creatorId = userId
         )
     }
