@@ -239,8 +239,8 @@ class TaskController {
             milestone.endDate = newTask.endDate
         }
 
+        val statusUpdated = if (existingTask.status != newTask.status) true else false
         val dependentUser = newTask.dependentUserId?.let { getVerifyUserIsInProject(milestone.project, it) }
-
         val updatedTasks = getUpdatedTaskDates(existingTask, newTask.startDate, newTask.endDate, milestone)
         val mainUpdatedTask = updatedTasks.find { it.id == existingTask.id } ?: existingTask
         mainUpdatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
@@ -256,8 +256,10 @@ class TaskController {
         val updated = taskEntityRepository.persistSuspending(mainUpdatedTask)
 
         // Send notifications
-        if (existingTask.status != newTask.status) notifyTaskStatusChange(mainUpdatedTask, newTask.status, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
         updateAssignees(mainUpdatedTask, newTask.assigneeIds, userId)
+        if (statusUpdated) {
+            notifyTaskStatusChange(mainUpdatedTask, newTask.status, taskAssigneeRepository.listByTask(existingTask).map { it.user }, userId)
+        }
 
         // Update milestone readiness after task update
         updateMilestoneReadiness(milestone)
