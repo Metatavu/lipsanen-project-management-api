@@ -139,15 +139,21 @@ class NotificationsController {
         comment: TaskCommentEntity? = null,
         changeProposal: ChangeProposalEntity? = null,
         creatorId: UUID,
-    ): NotificationEntity {
+    ): NotificationEntity? {
         val notification = when (type) {
-            NotificationType.TASK_ASSIGNED -> taskAssignedNotificationRepository.create(
-                id = UUID.randomUUID(),
-                task = taskEntity,
-                taskName = taskEntity.name,
-                assigneeIds = taskAssigneeRepository.listByTask(taskEntity).map { it.user.id }.joinToString(","),
-                userId = creatorId
-            )
+            NotificationType.TASK_ASSIGNED -> {
+                val taskAssignees = taskAssigneeRepository.listByTask(taskEntity)
+                if (taskAssignees.isEmpty()) {
+                    return null
+                }
+                taskAssignedNotificationRepository.create(
+                    id = UUID.randomUUID(),
+                    task = taskEntity,
+                    taskName = taskEntity.name,
+                    assigneeIds = taskAssignees.map { it.user.id }.joinToString(","),
+                    userId = creatorId
+                )
+            }
             NotificationType.COMMENT_LEFT -> commentLeftNotificationRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,

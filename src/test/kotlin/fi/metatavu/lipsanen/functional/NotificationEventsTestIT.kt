@@ -71,31 +71,44 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals(1, notificationEventsForAdmin.size)
         assertEquals(adminUser.id, notificationEventsForAdmin[0].receiverId)
 
-        // Update the task for different assignees and check that only new assignees got the notification
+        //Update the task for different assignees and check that only new assignees got the notification
         val updatedTask = tb.admin.task.update(
             taskId = task1.id!!,
             task = task1.copy(name = "updated", assigneeIds = arrayOf(testUser2, testUser1))
         )
         // Old assignee should not get the notification
-        tb.admin.notificationEvent.list(
+        val user1NotificationsTaskAssigned = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser1
-        ).let {
-            val notifications = it.filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-            assertEquals(1, notifications.size)
-            assertEquals(2, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
-            assertEquals(task1.name, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).taskName)
-        }
+        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+        assertEquals(1, user1NotificationsTaskAssigned.size)
+        assertEquals(2, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+        assertEquals(task1.name, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
         // New assignee should get the notification
-        tb.admin.notificationEvent.list(
+        val user2NotificationstTaskAssigned = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser2
-        ).let {
-            val notifications = it.filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-            assertEquals(1, notifications.size)
-            assertEquals(2, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
-            assertEquals(updatedTask.name, (parseNotificationData(notifications[0].notification) as TaskAssignedNotificationData).taskName)
-        }
+        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+        assertEquals(1, user2NotificationstTaskAssigned.size)
+        assertEquals(2, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+        assertEquals(updatedTask.name, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
+        // Admin should get the notification
+        val adminNotificationsTaskAssigned = tb.admin.notificationEvent.list(
+            projectId = project1.id,
+            userId = adminUser.id
+        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+        assertEquals(2, adminNotificationsTaskAssigned.size)
+
+        //Unassign everyone and check that no new notification is sent
+        tb.admin.task.update(
+            taskId = task1.id,
+            task = task1.copy(name = "updated", assigneeIds = emptyArray())
+        )
+        val adminNotificationsTaskAssigned2 = tb.admin.notificationEvent.list(
+            projectId = project1.id,
+            userId = adminUser.id
+        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+        assertEquals(adminNotificationsTaskAssigned.size, adminNotificationsTaskAssigned2.size)
 
         // Test fails of access rights checks and not found
         tb.user.notificationEvent.assertListFailStatus(400, userId = testUser)
