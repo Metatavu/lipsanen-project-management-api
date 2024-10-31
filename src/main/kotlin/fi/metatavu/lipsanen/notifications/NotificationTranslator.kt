@@ -32,7 +32,13 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                 return TaskAssignedNotificationData(
                     taskId = entity.task.id,
                     taskName = entity.taskName,
-                    assigneeIds = entity.assigneeIds.split(",").map { UUID.fromString(it) }
+                    assigneeIds = entity.assigneeIds.split(",").mapNotNull {
+                        try {
+                            UUID.fromString(it)
+                        } catch (ex: Exception) {
+                            null
+                        }
+                    }
                 )
             }
 

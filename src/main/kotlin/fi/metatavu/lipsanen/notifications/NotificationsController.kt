@@ -141,13 +141,15 @@ class NotificationsController {
         creatorId: UUID,
     ): NotificationEntity {
         val notification = when (type) {
-            NotificationType.TASK_ASSIGNED -> taskAssignedNotificationRepository.create(
-                id = UUID.randomUUID(),
-                task = taskEntity,
-                taskName = taskEntity.name,
-                assigneeIds = taskAssigneeRepository.listByTask(taskEntity).map { it.user.id }.joinToString(","),
-                userId = creatorId
-            )
+            NotificationType.TASK_ASSIGNED -> {
+                taskAssignedNotificationRepository.create(
+                    id = UUID.randomUUID(),
+                    task = taskEntity,
+                    taskName = taskEntity.name,
+                    assigneeIds = receivers.map { it.id }.joinToString(","), // receivers are new task assignees in this context
+                    userId = creatorId
+                )
+            }
             NotificationType.COMMENT_LEFT -> commentLeftNotificationRepository.create(
                 id = UUID.randomUUID(),
                 task = taskEntity,
