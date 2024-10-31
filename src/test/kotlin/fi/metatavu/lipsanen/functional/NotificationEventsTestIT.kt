@@ -76,7 +76,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             taskId = task1.id!!,
             task = task1.copy(name = "updated", assigneeIds = arrayOf(testUser2, testUser1))
         )
-        // Old assignee should not get the notification
+        // Old assignee should not get the notification (check if the notification is old)
         val user1NotificationsTaskAssigned = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser1
@@ -84,22 +84,23 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         assertEquals(1, user1NotificationsTaskAssigned.size)
         assertEquals(2, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
         assertEquals(task1.name, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
-        // New assignee should get the notification
+        // New assignee should get the notification about 1 user added
         val user2NotificationstTaskAssigned = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser2
         ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
         assertEquals(1, user2NotificationstTaskAssigned.size)
-        assertEquals(2, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+        assertEquals(1, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
         assertEquals(updatedTask.name, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
-        // Admin should get the notification
+        // Admin should get the notification about 1 user added
         val adminNotificationsTaskAssigned = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = adminUser.id
         ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
         assertEquals(2, adminNotificationsTaskAssigned.size)
+        assertEquals(1, (parseNotificationData(adminNotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
 
-        //Unassign everyone and check that no new notification is sent
+        //Unassign everyone and check that no new notification is sent to admin
         tb.admin.task.update(
             taskId = task1.id,
             task = task1.copy(name = "updated", assigneeIds = emptyArray())
