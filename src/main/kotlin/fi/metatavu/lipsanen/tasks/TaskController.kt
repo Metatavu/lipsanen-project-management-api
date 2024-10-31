@@ -301,7 +301,9 @@ class TaskController {
             }
         }
 
-        notifyTaskAssignments(existingTask, newlyAssignedUsers, userId)
+        if (newlyAssignedUsers.isNotEmpty()) {
+            notifyTaskAssignments(existingTask, newlyAssignedUsers, userId)
+        }
     }
 
     /**
