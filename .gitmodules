@@ -1,0 +1,6 @@
+[submodule "lipsanen-project-management-spec"]
+	path = lipsanen-project-management-spec
+	url = https://github.com/Metatavu/lipsanen-project-management-spec.git
+[submodule "quarkus-invalid-param-test"]
+	path = quarkus-invalid-param-test
+	url = https://github.com/Metatavu/quarkus-invalid-param-test.git

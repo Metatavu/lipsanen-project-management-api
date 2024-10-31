@@ -1,0 +1,546 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="projects" author="katja danilova">
+        <createTable tableName="project">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tocomanid" type="integer"/>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="project_groups" author="katja danilova">
+        <addUniqueConstraint tableName="project" columnNames="name"/>
+        <addColumn tableName="project">
+            <column name="keycloakgroupid" type="binary(16)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="companies" author="katja danilova">
+        <createTable tableName="company">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="projectthemes" author="katja danilova">
+        <createTable tableName="projecttheme">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="logourl" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="themeColor" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_PROJECTHTEME_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="project_status" author="daniil smirnov">
+        <addColumn tableName="project">
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <!-- Update project status to a default one if no status is present -->
+        <sql>UPDATE project SET status ='INITIATION'</sql>
+    </changeSet>
+
+    <changeSet id="milestones" author="katja danilova">
+        <createTable tableName="milestone">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_MILESTONE_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startdate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enddate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="tasks" author="katja danilova">
+        <createTable tableName="task">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="milestone_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_MILESTONE_ID" referencedColumnNames="id" referencedTableName="milestone"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startdate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enddate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+
+        <createTable tableName="taskconnection">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="source_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASKCONNECTION_SOURCETASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="target_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASKCONNECTION_TARGETTASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="type" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="proposals" author="katja.danilova">
+        <createTable tableName="changeproposal">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSAL_TASK_ID" referencedColumnNames="id"
+                             referencedTableName="task"/>
+            </column>
+            <column name="reason" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="text" />
+            <column name="status" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startdate" type="date"/>
+            <column name="enddate" type="date"/>
+
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="milestone_original_dates" author="daniil smirnov">
+        <addColumn tableName="milestone">
+            <column name="originalstartdate" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="originalenddate" type="date">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <!-- Update milestone original dates to a default value -->
+        <sql>UPDATE milestone SET originalstartdate = startdate, originalenddate = enddate</sql>
+    </changeSet>
+
+    <changeSet id="taskparams" author="daniil smirnov">
+        <addColumn tableName="task">
+            <column name="userrole" type="varchar(191)"/>
+            <column name="estimatedduration" type="varchar(191)"/>
+            <column name="estimatedreadiness" type="varchar(191)"/>
+        </addColumn>
+
+        <createTable tableName="task_assignee">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_ASSIGNEE_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="assigneeid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="task_attachment">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_ATTACHMENT_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="attachmenturl" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="notifications" author="katja danilova">
+        <createTable tableName="notification">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="message" type="varchar(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+        <createTable tableName="notificationevent">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="notification_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_NOTIFICATIONEVENT_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="receiverid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="readstatus" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="readiness_type_modification" author="josh dallos">
+        <dropColumn tableName="task" columnName="estimatedduration"/>
+        <dropColumn tableName="task" columnName="estimatedreadiness"/>
+        <addColumn tableName="task">
+            <column name="estimatedduration" type="float"/>
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+        <addColumn tableName="milestone">
+            <column name="estimatedreadiness" type="integer"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="comments" author="katja danilova">
+        <createTable tableName="taskcomment">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_COMMENT_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="comment" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+        <createTable tableName="taskcommentuser">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="taskcomment_id" type="binary(16)">
+                <constraints foreignKeyName="FK_COMMENTUSER_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+            <column name="userid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="comment_notifications" author="katja danilova">
+        <addColumn tableName="notification">
+            <column name="comment_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="user minimal entity, replace keycloak is references with the new table" author="katja danilova">
+        <createTable tableName="user">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="keycloakid" type="binary(16)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+
+        <addColumn tableName="task_assignee">
+            <column name="user_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_ASSIGNEE_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+        <dropColumn tableName="task_assignee" columnName="assigneeid"/>
+
+        <addColumn tableName="notificationevent">
+            <column name="receiver_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+        <dropColumn tableName="notificationevent" columnName="receiverid"/>
+
+        <addColumn tableName="taskcommentuser">
+            <column name="user_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_TASK_COMMENT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+        <dropColumn tableName="taskcommentuser" columnName="userid"/>
+    </changeSet>
+
+    <changeSet id="user to project, company connection" author="katja danilova">
+        <createTable tableName="usertoproject">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_USERPROJECT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_USERPROJECT_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+        </createTable>
+        <dropColumn tableName="project" columnName="keycloakgroupid"/>
+
+        <addColumn tableName="user">
+            <column name="company_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_USER_COMPANY_ID" referencedColumnNames="id" referencedTableName="company"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="job positions" author="katja danilova">
+        <createTable tableName="job_position">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(191)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="color" type="varchar(191)"/>
+            <column name="iconname" type="varchar(191)"/>
+            <column name="creatorid" type="binary(16)"/>
+            <column name="lastmodifierid" type="binary(16)"/>
+            <column name="createdat" type="datetime(6)"/>
+            <column name="modifiedat" type="datetime(6)"/>
+        </createTable>
+
+        <addColumn tableName="user">
+            <column name="jobPosition_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_USER_JOB_POSITION_ID" referencedColumnNames="id" referencedTableName="job_position"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="task">
+            <column name="jobPosition_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_TASK_JOB_POSITION_ID" referencedColumnNames="id" referencedTableName="job_position"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="dependent user to task" author="Lauri Lukkarinen">
+        <addColumn tableName="task">
+            <column name="dependentuser_id" type="binary(16)">
+                <constraints nullable="true" foreignKeyName="FK_TASK_DEPENDENT_USER_ID" referencedColumnNames="id" referencedTableName="user"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="user_keycloak_as_id" author="katja danilova">
+        <sql>
+            <!-- drop foreign keys -->
+            ALTER TABLE usertoproject DROP FOREIGN KEY FK_USERPROJECT_USER_ID;
+            ALTER TABLE task_assignee DROP FOREIGN KEY FK_TASK_ASSIGNEE_USER_ID;
+            ALTER TABLE notificationevent DROP FOREIGN KEY FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID;
+            ALTER TABLE taskcommentuser DROP FOREIGN KEY FK_TASK_COMMENT_USER_ID;
+            ALTER TABLE task DROP FOREIGN KEY FK_TASK_DEPENDENT_USER_ID;
+
+            <!-- replace foreign keys with keycloak id values -->
+            UPDATE task_assignee SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE notificationevent SET receiver_id = (SELECT keycloakid FROM user WHERE id = receiver_id);
+            UPDATE taskcommentuser SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE usertoproject SET user_id = (SELECT keycloakid FROM user WHERE id = user_id);
+            UPDATE task SET dependentuser_id = (SELECT keycloakid FROM user WHERE id = dependentuser_id);
+
+            <!-- replace user id with keycloak id-->
+            ALTER TABLE user ADD COLUMN new_id BINARY(16);
+            UPDATE user SET new_id = keycloakid;
+            ALTER TABLE user DROP COLUMN id;
+            ALTER TABLE user CHANGE COLUMN new_id id BINARY(16) NOT NULL;
+            ALTER TABLE user ADD PRIMARY KEY (id);
+            ALTER TABLE user DROP COLUMN keycloakid;
+
+            <!-- recreate foreign keys -->
+            ALTER TABLE task_assignee ADD CONSTRAINT FK_TASK_ASSIGNEE_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE notificationevent ADD CONSTRAINT FK_NOTIFICATIONEVENT_ASSIGNEE_USER_ID FOREIGN KEY (receiver_id) REFERENCES user(id);
+            ALTER TABLE taskcommentuser ADD CONSTRAINT FK_TASK_COMMENT_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE usertoproject ADD CONSTRAINT FK_USERPROJECT_USER_ID FOREIGN KEY (user_id) REFERENCES user(id);
+            ALTER TABLE task ADD CONSTRAINT FK_TASK_DEPENDENT_USER_ID FOREIGN KEY (dependentuser_id) REFERENCES user(id);
+        </sql>
+    </changeSet>
+    
+    <changeSet id="attachments_remake" author="katja danilova">
+        <createTable tableName="attachment">
+            <column name="id" type="binary(16)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="url" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attachmenttype" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_ATTACHMENT_PROJECT_ID" referencedColumnNames="id" referencedTableName="project"/>
+            </column>
+            <column name="task_id" type="binary(16)">
+                <constraints foreignKeyName="FK_ATTACHMENT_TASK_ID" referencedColumnNames="id" referencedTableName="task"/>
+            </column>
+            <column name="creatorid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lastmodifierid" type="binary(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createdat" type="datetime(6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifiedat" type="datetime(6)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <dropTable tableName="task_attachment"/>
+    </changeSet>
+
+    <changeSet id="project_estimated_start_end" author="katja danilova">
+        <addColumn tableName="project">
+            <column name="estimatedstartdate" type="date"/>
+            <column name="estimatedenddate" type="date"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="notificatons_universal_form" author="katja danilova">
+        <dropNotNullConstraint tableName="notification" columnName="message" columnDataType="varchar(512)"/>
+        <dropColumn tableName="notification" columnName="message" />
+        <addColumn tableName="notification">
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints foreignKeyName="FK_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="notifications_remake" author="katja danilova">
+        <delete tableName="notificationevent"/>
+        <delete tableName="notification"/>
+
+        <dropForeignKeyConstraint baseTableName="notification" constraintName="FK_NOTIFICATION_PROPOSAL_ID"/>
+        <dropForeignKeyConstraint baseTableName="notification" constraintName="FK_NOTIFICATION_COMMENT_ID"/>
+        <dropColumn tableName="notification" columnName="changeproposal_id"/>
+        <dropColumn tableName="notification" columnName="comment_id"/>
+        <dropColumn tableName="notification" columnName="type"/>
+
+        <addColumn tableName="notification">
+            <column name="taskname" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        
+        <createTable tableName="changeproposalcreatednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_CHANGEPROPOSALCREATED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSALCREATED_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="changeproposalstatuschangednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_CHANGEPROPOSALSTATUSCHANGED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="changeproposal_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_CHANGEPROPOSALSTATUSCHANGED_NOTIFICATION_PROPOSAL_ID" referencedColumnNames="id" referencedTableName="changeproposal"/>
+            </column>
+            <column name="status" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="commentleftnotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_COMMENTLEFT_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="comment_id" type="binary(16)">
+                <constraints nullable="false" foreignKeyName="FK_COMMENTLEFT_NOTIFICATION_COMMENT_ID" referencedColumnNames="id" referencedTableName="taskcomment"/>
+            </column>
+            <column name="commenttext" type="text">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="taskassignednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_TASKASSIGNED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="assigneeids" type="longtext">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="taskstatuschangednotification">
+            <column name="id" type="binary(16)">
+                <constraints nullable="false" primaryKey="true" foreignKeyName="FK_TASKSTATUSCHANGED_NOTIFICATION_ID" referencedColumnNames="id" referencedTableName="notification"/>
+            </column>
+            <column name="status" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
