@@ -47,7 +47,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     @Inject
     lateinit var vertx: Vertx
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun listUsers(companyId: UUID?, projectId: UUID?, jobPositionId: UUID?, first: Int?, max: Int?, includeRoles: Boolean?): Uni<Response> =withCoroutineScope {
         val userId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val companyFilter = if (companyId != null) {
@@ -59,7 +59,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             getProjectAccessRights(projectId, userId).second?.let { return@withCoroutineScope it }
             listOf(project)
         } else {
-            if (isAdmin() || isUserManagementAdmin() || isProjectOwner()) {
+            if (isAdmin() || isProjectOwner()) {
                 null
             } else {
                 val user = userController.findUser(userId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
@@ -75,7 +75,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         createOk(users.map { userTranslator.translate(it, includeRoles) }, count)
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun createUser(user: User): Uni<Response> =withCoroutineScope {
         val existingUsers = userController.countUserByEmail(user.email)
@@ -94,12 +94,12 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         createOk(userTranslator.translate(createdUser))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.USER.NAME, UserRole.PROJECT_OWNER.NAME, UserRole.ADMIN.NAME)
     override fun findUser(userId: UUID, includeRoles: Boolean?): Uni<Response> = withCoroutineScope {
         val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
         val foundUser = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
-        if (!isUserManagementAdmin() && !isAdmin() && !isProjectOwner()) {
+        if (!isAdmin() && !isProjectOwner()) {
             val currentUser = userController.findUser(loggedInUserId) ?: return@withCoroutineScope createInternalServerError("Failed to find user")
             val userProjects = userController.listUserProjects(currentUser).map { it.project.id }
             val isInSameProject = userController.listUserProjects(foundUser).map { it.project.id }.intersect(userProjects.toSet()).isNotEmpty()
@@ -116,7 +116,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         ), includeRoles))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME, UserRole.PROJECT_OWNER.NAME)
     @WithTransaction
     override fun updateUser(userId: UUID, user: User): Uni<Response> = withCoroutineScope {
         val loggedInUserId = loggedUserId ?: return@withCoroutineScope createUnauthorized("Unauthorized")
@@ -131,7 +131,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
             } else null
         } else existingUser.jobPosition
 
-        val updatedUser = if (isUserManagementAdmin()) {
+        val updatedUser = if (isAdmin()) {
             userController.updateUser(
                 existingUser = existingUser,
                 updateData = user,
@@ -159,7 +159,7 @@ class UsersApiImpl: UsersApi, AbstractApi() {
         createOk(userTranslator.translate(updatedUser, includeRoles = true))
     }
 
-    @RolesAllowed(UserRole.USER_MANAGEMENT_ADMIN.NAME)
+    @RolesAllowed(UserRole.ADMIN.NAME)
     @WithTransaction
     override fun deleteUser(userId: UUID): Uni<Response> =withCoroutineScope {
         val user = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))

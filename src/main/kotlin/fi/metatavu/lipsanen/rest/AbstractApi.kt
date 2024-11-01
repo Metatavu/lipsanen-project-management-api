@@ -47,15 +47,6 @@ abstract class AbstractApi {
     }
 
     /**
-     * Checks if user is user management admin
-     *
-     * @return if user is user management admin
-     */
-    protected fun isUserManagementAdmin(): Boolean {
-        return identity.hasRole(UserRole.USER_MANAGEMENT_ADMIN.NAME)
-    }
-
-    /**
      * Checks if user is project owner
      *
      * @return if user is project owner
