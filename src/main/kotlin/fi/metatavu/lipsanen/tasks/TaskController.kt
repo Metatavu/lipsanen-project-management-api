@@ -413,14 +413,17 @@ class TaskController {
      * Creates notifications of task assignments
      *
      * @param task task
-     * @param receivers task assignees
+     * @param newTaskAssignees task assignees
      * @param userId modifier id
      */
-    private suspend fun notifyTaskAssignments(task: TaskEntity, receivers: List<UserEntity>, userId: UUID) {
+    private suspend fun notifyTaskAssignments(task: TaskEntity, newTaskAssignees: List<UserEntity>, userId: UUID) {
+        if (newTaskAssignees.isEmpty()) {
+            return
+        }
         notificationsController.createAndNotify(
             type = NotificationType.TASK_ASSIGNED,
             taskEntity = task,
-            receivers = receivers,
+            receivers = newTaskAssignees,
             creatorId = userId
         )
     }
