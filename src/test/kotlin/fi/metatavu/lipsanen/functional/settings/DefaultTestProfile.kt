@@ -11,8 +11,7 @@ class DefaultTestProfile: QuarkusTestProfile {
         return mapOf(
             "environment" to "test",
             "cron.notifications.cleanup" to "0 0 0 * * ?",
-            "notifications.cleanup.delay.days" to "15",
-            "lipsanen.keycloak.defaultRole" to "default-roles-lipsanen-user-management"
+            "notifications.cleanup.delay.days" to "15"
         )
     }
 }
@@ -22,8 +21,7 @@ class NonTestEnvProfile: QuarkusTestProfile {
     override fun getConfigOverrides(): Map<String, String> {
         return mapOf(
             "cron.notifications.cleanup" to "0 0 0 * * ?",
-            "notifications.cleanup.delay.days" to "15",
-            "lipsanen.keycloak.defaultRole" to "default-roles-lipsanen-user-management"
+            "notifications.cleanup.delay.days" to "15"
         )
     }
 }

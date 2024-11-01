@@ -32,6 +32,7 @@ class KeycloakResource : QuarkusTestResourceLifecycleManager {
         config["lipsanen.keycloak.admin.user"] = "admin-api"
         config["lipsanen.keycloak.admin.password"] = "test"
 
+        config["lipsanen.keycloak.defaultRole"] = "default-roles-lipsanen-user-management"
         config["lipsanen.smtp.http.test-host"] = smtp.host
         config["lipsanen.smtp.http.test-port"] = smtp.getMappedPort(8025).toString()
         return config
