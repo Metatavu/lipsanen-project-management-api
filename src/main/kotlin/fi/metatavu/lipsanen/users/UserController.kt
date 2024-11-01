@@ -24,9 +24,7 @@ import java.util.*
  *
  * User's assignment logic:
  * ROLES defined the roles of the user within the project (currently ADMIN, USER)
- * GROUPS define the groups the user belongs to (projects)
  * COMPANY_ID attribute defines the company the user belongs to,
- * ROLES+GROUPS are used for access rights checks.
  */
 @ApplicationScoped
 class UserController {
@@ -34,8 +32,8 @@ class UserController {
     @ConfigProperty(name = "environment")
     lateinit var environment: Optional<String>
 
-    @ConfigProperty(name = "lipsanen.keycloak.admin.user")
-    lateinit var keycloakAdminUser: String
+    @ConfigProperty(name = "lipsanen.keycloak.defaultRole")
+    lateinit var defaultRoleName: String
 
     @Inject
     lateinit var keycloakAdminClient: KeycloakAdminClient
@@ -340,6 +338,12 @@ class UserController {
             //nothing is being updated if roles are null
             return
         }
+        // always make sure default role is assigned
+        val defaultRole = keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
+            roleName = defaultRoleName,
+            realm = keycloakAdminClient.getRealm()
+        )
+
         val userRoles = roles.map {
             keycloakAdminClient.getRoleContainerApi().realmRolesRoleNameGet(
                 roleName = translateRole(it),
@@ -353,6 +357,7 @@ class UserController {
 
         val rolesToUnassign = assignedRoles?.filter { role -> userRoles.find { it.name == role.name } == null }
         val rolesToAssign = userRoles.filter { role -> assignedRoles?.find { it.name == role.name } == null }
+        val rolesToAssignWithDefault = rolesToAssign + defaultRole
 
         keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmDelete(
             id = userRepresentation.id.toString(),
@@ -360,11 +365,10 @@ class UserController {
             roleRepresentation = rolesToUnassign?.toTypedArray()
         )
 
-
         keycloakAdminClient.getRoleMapperApi().realmUsersIdRoleMappingsRealmPost(
             id = userRepresentation.id.toString(),
             realm = keycloakAdminClient.getRealm(),
-            roleRepresentation = rolesToAssign.toTypedArray()
+            roleRepresentation = rolesToAssignWithDefault.toTypedArray()
         )
     }
 
