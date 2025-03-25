@@ -337,11 +337,11 @@ class TaskController {
     /**
      * Persists a task
      *
-     * @param startsFirst task to persist
+     * @param taskEntity task to persist
      * @return persisted task
      */
-    suspend fun persist(startsFirst: TaskEntity): TaskEntity {
-        return taskEntityRepository.persistSuspending(startsFirst)
+    suspend fun persist(taskEntity: TaskEntity): TaskEntity {
+        return taskEntityRepository.persistSuspending(taskEntity)
     }
 
     /**

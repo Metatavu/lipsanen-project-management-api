@@ -164,14 +164,6 @@ class UsersApiImpl: UsersApi, AbstractApi() {
     override fun deleteUser(userId: UUID): Uni<Response> =withCoroutineScope {
         val user = userController.findUser(userId) ?: return@withCoroutineScope createNotFound(createNotFoundMessage(USER, userId))
 
-        val tasksInProgressWithUserAsAssignee = taskAssigneeRepository.listByAssignee(user = user).map { it.task }.filter { it.status == TaskStatus.IN_PROGRESS }
-        if (tasksInProgressWithUserAsAssignee.isNotEmpty()) {
-            return@withCoroutineScope createConflict("User is assigned to tasks that are in progress: ${tasksInProgressWithUserAsAssignee.joinToString { it.id.toString() }}")
-        }
-        val tasksInProgressWithUserAsDependent = taskController.list(dependentUser = user).filter { it.status == TaskStatus.IN_PROGRESS }
-        if (tasksInProgressWithUserAsDependent.isNotEmpty()) {
-            return@withCoroutineScope createConflict("User is dependent in tasks that are in progress: ${tasksInProgressWithUserAsDependent.joinToString { it.id.toString() }}")
-        }
         userController.deleteUser(user)
         createNoContent()
     }
