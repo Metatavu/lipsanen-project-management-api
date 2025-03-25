@@ -1,6 +1,7 @@
 package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.*
+import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.companies.CompanyEntity
@@ -8,6 +9,8 @@ import fi.metatavu.lipsanen.keycloak.KeycloakAdminClient
 import fi.metatavu.lipsanen.notifications.notificationevents.NotificationEventsController
 import fi.metatavu.lipsanen.positions.JobPositionEntity
 import fi.metatavu.lipsanen.projects.ProjectEntity
+import fi.metatavu.lipsanen.tasks.TaskAssigneeRepository
+import fi.metatavu.lipsanen.tasks.TaskController
 import fi.metatavu.lipsanen.tasks.comments.TaskCommentUserRepository
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectEntity
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
@@ -49,6 +52,12 @@ class UserController {
 
     @Inject
     lateinit var taskCommentUserRepository: TaskCommentUserRepository
+
+    @Inject
+    lateinit var taskAssigneeRepository: TaskAssigneeRepository
+
+    @Inject
+    lateinit var taskController: TaskController
 
     @Inject
     lateinit var logger: Logger
@@ -383,6 +392,14 @@ class UserController {
                 realm = keycloakAdminClient.getRealm(),
                 id = userEntity.id.toString()
             )
+            taskAssigneeRepository.listByAssignee(user = userEntity).forEach {
+                taskAssigneeRepository.deleteSuspending(it)
+            }
+            taskController.list(dependentUser = userEntity).forEach {
+                it.dependentUser = null
+                taskController.persist(it)
+            }
+
             userToProjectRepository.list(userEntity).forEach {
                 userToProjectRepository.deleteSuspending(it)
             }
