@@ -65,6 +65,13 @@ class TaskTestIT : AbstractFunctionalTest() {
 
         val creator = tb.admin.user.findUser(task.metadata!!.creatorId!!)
         assertEquals(admin.id, creator.id)
+
+        // when deleting the user the task is unassigned
+        tb.admin.user.deleteUser(testUser3.id)
+        tb.admin.user.deleteUser(testUser1.id)
+        val foundTask = tb.admin.task.find(task.id!!)
+        assertEquals(1, foundTask.assigneeIds!!.size)
+        assertNull(foundTask.dependentUserId)
     }
 
     @Test
@@ -273,12 +280,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(milestone.startDate, foundMilestone.startDate)
         assertEquals(taskUpdateData.endDate, foundMilestone.endDate)
 
-        // Verify that the users as assignees in the task cannot be removed
-        tb.admin.user.assertDeleteFailStatus(409, testUser2Id)
-        tb.admin.user.assertDeleteFailStatus(409, testUser3Id)
-
-        // Verify that the user as dependent in the task cannot be removed
-        tb.admin.user.assertDeleteFailStatus(409, testUser4Id)
     }
 
     /*
