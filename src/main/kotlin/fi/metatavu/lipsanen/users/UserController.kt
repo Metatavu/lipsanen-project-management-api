@@ -1,7 +1,6 @@
 package fi.metatavu.lipsanen.users
 
 import fi.metatavu.keycloak.adminclient.models.*
-import fi.metatavu.lipsanen.api.model.TaskStatus
 import fi.metatavu.lipsanen.api.model.User
 import fi.metatavu.lipsanen.api.model.UserRole
 import fi.metatavu.lipsanen.companies.CompanyEntity
@@ -20,6 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
+import java.time.OffsetDateTime
 import java.util.*
 
 /**
@@ -434,18 +434,23 @@ class UserController {
     }
 
     /**
-     * Gets user's last login event
+     * Gets user's last login time
      *
      * @param userId user id
-     * @return last login event or null if not found
+     * @return last login time or null if not found
      */
-    suspend fun getLastLogin(userId: UUID): EventRepresentation? {
+    suspend fun getLastLogin(userId: UUID): OffsetDateTime? {
         return try {
-            keycloakAdminClient.getRealmAdminApi().realmEventsGet(
+            val user = keycloakAdminClient.getUserApi().realmUsersIdGet(
                 realm = keycloakAdminClient.getRealm(),
-                type = arrayOf("LOGIN"),
-                user = userId.toString(),
-            ).sortedByDescending { it.time }.firstOrNull()
+                id = userId.toString()
+            )
+
+            val lastLogin = user.attributes?.get("lastLogin")?.firstOrNull()
+
+            return lastLogin?.let {
+                OffsetDateTime.parse(it)
+            }
         } catch (e: Exception) {
             logger.error("Failed to get user's last login", e)
             null

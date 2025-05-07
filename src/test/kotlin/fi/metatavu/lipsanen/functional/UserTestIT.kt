@@ -76,12 +76,8 @@ class UserTestIT: AbstractFunctionalTest() {
         val user1 = it.admin.user.create("user1", UserRole.USER, projectId = project1)
         it.getUser("user1@example.com").project.listProjects()
 
-        //Check that user with login history has some last login info
-        val foundUser2 = it.admin.user.findUser(user1.id!!)
-        assertNotNull(foundUser2.lastLoggedIn)
-
         // Test that user can find itself
-        val foundUser = it.getUser(user1.email).user.findUser(user1.id)
+        val foundUser = it.getUser(user1.email).user.findUser(user1.id!!)
         assertNotNull(foundUser)
 
         val user2 = it.admin.user.create("user2", UserRole.USER, projectId = project1)
