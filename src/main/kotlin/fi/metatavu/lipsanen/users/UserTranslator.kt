@@ -8,9 +8,6 @@ import fi.metatavu.lipsanen.rest.AbstractTranslator
 import fi.metatavu.lipsanen.users.userstoprojects.UserToProjectRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.*
 
 /**
@@ -31,7 +28,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
     override suspend fun translate(entity: UserFullRepresentation): User {
         val userRepresentation = entity.userRepresentation
         val projects = userToProjectRepository.list(entity.userEntity)
-        val lastEvent = userController.getLastLogin(UUID.fromString(userRepresentation.id))
+
         return User(
             id = entity.userEntity.id,
             email = userRepresentation.email ?: "",
@@ -39,7 +36,7 @@ class UserTranslator : AbstractTranslator<UserFullRepresentation, User>() {
             lastName = userRepresentation.lastName ?: "",
             jobPositionId = entity.userEntity.jobPosition?.id,
             companyId = entity.userEntity.company?.id,
-            lastLoggedIn = if (lastEvent?.time == null) null else OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastEvent.time), ZoneOffset.UTC),
+            lastLoggedIn = userController.getLastLogin(UUID.fromString(userRepresentation.id)),
             projectIds = projects.map { it.project.id },
             roles = null
         )
