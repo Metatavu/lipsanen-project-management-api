@@ -44,7 +44,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             milestoneId = milestone.id!!,
             assigneeIds = arrayOf(testUser1.id!!, testUser2.id!!),
             dependentUserId = testUser3.id!!,
-            estimatedDuration = 1.5f,
             estimatedReadiness = 10
         )
 
@@ -60,7 +59,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskData.assigneeIds!!.toSet(), task.assigneeIds!!.toSet())
         assertEquals(taskData.dependentUserId, task.dependentUserId)
         assertEquals(taskData.userRole, task.userRole)
-        assertEquals(taskData.estimatedDuration, task.estimatedDuration)
         assertEquals(taskData.estimatedReadiness, task.estimatedReadiness)
 
         val creator = tb.admin.user.findUser(task.metadata!!.creatorId!!)
@@ -245,7 +243,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             assigneeIds = arrayOf(testUser1Id, testUser2Id),
             dependentUserId = testUser3Id,
             userRole = UserRole.USER,
-            estimatedDuration = 1.5f,
             estimatedReadiness = 10,
             milestoneId = milestone.id!!
         ))
@@ -257,7 +254,6 @@ class TaskTestIT : AbstractFunctionalTest() {
             assigneeIds = arrayOf(testUser2Id, testUser3Id),
             dependentUserId = testUser4Id,
             userRole = UserRole.ADMIN,
-            estimatedDuration = 2.0f,
             estimatedReadiness = 20,
         )
         val updatedTask = tb.admin.task.update(taskId = task.id!!, taskUpdateData)
@@ -272,7 +268,6 @@ class TaskTestIT : AbstractFunctionalTest() {
         assertEquals(taskUpdateData.assigneeIds!!.toSet(), updatedTask.assigneeIds!!.toSet())
         assertEquals(taskUpdateData.dependentUserId, updatedTask.dependentUserId)
         assertEquals(taskUpdateData.userRole, updatedTask.userRole)
-        assertEquals(taskUpdateData.estimatedDuration, updatedTask.estimatedDuration)
         assertEquals(taskUpdateData.estimatedReadiness, updatedTask.estimatedReadiness)
 
         // verify that the end of the milestone extended to the new task length

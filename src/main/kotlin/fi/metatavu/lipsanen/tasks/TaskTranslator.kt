@@ -28,7 +28,6 @@ class TaskTranslator : AbstractTranslator<TaskEntity, Task>() {
             jobPositionId = entity.jobPosition?.id,
             status = entity.status,
             userRole = entity.userRole,
-            estimatedDuration = entity.estimatedDuration,
             estimatedReadiness = entity.estimatedReadiness,
             assigneeIds = taskAssigneeRepository.listByTask(entity).map { it.user.id },
             dependentUserId = entity.dependentUser?.id,

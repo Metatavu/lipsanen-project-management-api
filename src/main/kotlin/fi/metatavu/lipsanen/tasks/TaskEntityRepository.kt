@@ -36,7 +36,6 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         endDate: LocalDate,
         milestone: MilestoneEntity,
         status: TaskStatus,
-        estimatedDuration: Float?,
         estimatedReadiness: Int?,
         userRole: UserRole?,
         jobPosition: JobPositionEntity?,
@@ -54,7 +53,6 @@ class TaskEntityRepository : AbstractRepository<TaskEntity, UUID>() {
         taskEntity.jobPosition = jobPosition
         taskEntity.dependentUser = dependentUser
         taskEntity.status = status
-        taskEntity.estimatedDuration = estimatedDuration
         taskEntity.estimatedReadiness = estimatedReadiness
         taskEntity.creatorId = creatorId
         taskEntity.lastModifierId = lastModifierId

@@ -543,4 +543,7 @@
             </column>
         </createTable>
     </changeSet>
+    <changeSet id="remove_estimatedduration_from_task" author="josh dallos">
+        <dropColumn tableName="task" columnName="estimatedduration"/>
+    </changeSet>
 </databaseChangeLog>
