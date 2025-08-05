@@ -45,9 +45,6 @@ class TaskEntity : Metadata() {
     var userRole: UserRole? = null
 
     @Column(nullable = true)
-    var estimatedDuration: Float? = null
-
-    @Column(nullable = true)
     var estimatedReadiness: Int? = null
 
     override lateinit var creatorId: UUID
