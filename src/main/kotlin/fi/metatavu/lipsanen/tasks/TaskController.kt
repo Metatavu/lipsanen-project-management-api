@@ -156,7 +156,6 @@ class TaskController {
             dependentUser = dependentUser,
             userRole = task.userRole,
             status = TaskStatus.NOT_STARTED,
-            estimatedDuration = task.estimatedDuration,
             estimatedReadiness = task.estimatedReadiness,
             creatorId = userId,
             lastModifierId = userId
@@ -246,7 +245,6 @@ class TaskController {
         mainUpdatedTask.status = newTask.status    // Checks if task status can be updated are done in TasksApiImpl
         mainUpdatedTask.name = newTask.name
         mainUpdatedTask.userRole = newTask.userRole ?: UserRole.USER
-        mainUpdatedTask.estimatedDuration = newTask.estimatedDuration
         mainUpdatedTask.estimatedReadiness = if (newTask.status == TaskStatus.DONE) 100 else newTask.estimatedReadiness
         mainUpdatedTask.jobPosition = jobPosition
         mainUpdatedTask.dependentUser = dependentUser
