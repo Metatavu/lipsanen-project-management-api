@@ -32,10 +32,14 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                 return TaskAssignedNotificationData(
                     taskId = entity.task.id,
                     taskName = entity.taskName,
+                    milestoneId = entity.task.milestone.id,
+                    milestoneName = entity.task.milestone.name,
+                    projectId = entity.task.milestone.project.id,
+                    projectName = entity.task.milestone.project.name,
                     assigneeIds = entity.assigneeIds.split(",").mapNotNull {
                         try {
                             UUID.fromString(it)
-                        } catch (ex: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
                     }
@@ -46,7 +50,11 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                 return TaskStatusChangesNotificationData(
                     taskId = entity.task.id,
                     taskName = entity.taskName,
-                    newStatus = entity.status
+                    newStatus = entity.status,
+                    milestoneId = entity.task.milestone.id,
+                    milestoneName = entity.task.milestone.name,
+                    projectId = entity.task.milestone.project.id,
+                    projectName = entity.task.milestone.project.name
                 )
             }
 
@@ -55,6 +63,10 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                     changeProposalId = entity.changeProposal!!.id,
                     taskId = entity.task.id,
                     taskName = entity.taskName,
+                    milestoneId = entity.task.milestone.id,
+                    milestoneName = entity.task.milestone.name,
+                    projectId = entity.task.milestone.project.id,
+                    projectName = entity.task.milestone.project.name
                 )
             }
 
@@ -63,7 +75,11 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                     changeProposalId = entity.changeProposal!!.id,
                     taskId = entity.task.id,
                     taskName = entity.taskName,
-                    newStatus = entity.status
+                    newStatus = entity.status,
+                    milestoneId = entity.task.milestone.id,
+                    milestoneName = entity.task.milestone.name,
+                    projectId = entity.task.milestone.project.id,
+                    projectName = entity.task.milestone.project.name
                 )
             }
 
@@ -72,7 +88,11 @@ class NotificationTranslator : AbstractTranslator<NotificationEntity, Notificati
                     taskId = entity.task.id,
                     taskName = entity.taskName,
                     commentId = entity.comment.id,
-                    comment = entity.commentText
+                    comment = entity.commentText,
+                    milestoneId = entity.task.milestone.id,
+                    milestoneName = entity.task.milestone.name,
+                    projectId = entity.task.milestone.project.id,
+                    projectName = entity.task.milestone.project.name
                 )
             }
 
