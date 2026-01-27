@@ -31,12 +31,11 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
     fun createNotificationsTaskAssignedTest() = createTestBuilder().use { tb ->
         val project1 = tb.admin.project.create()
         val milestone1 = tb.admin.milestone.create(projectId = project1.id!!)
-
         val testUser = tb.admin.user.create("test0", UserRole.USER).id!!
         val testUser1 = tb.admin.user.create("test1", UserRole.USER).id!!
         val testUser2 = tb.admin.user.create("test2", UserRole.USER).id!!
-
         val adminUser = tb.admin.user.create("admin0", UserRole.ADMIN)
+
         val task1 = tb.admin.task.create(task =
             Task(
                 name = "Task 1",
@@ -52,15 +51,22 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             userId = testUser,
             projectId = project1.id
         )
+
         assertEquals(1, notificationEvents.size)
+
         val notificationEvent = notificationEvents.first()
         val notificationDataParsed = parseNotificationData(notificationEvent.notification) as TaskAssignedNotificationData
+
         assertEquals(task1.id, notificationDataParsed.taskId)
         assertEquals(task1.name, notificationDataParsed.taskName)
+        assertEquals(milestone1.id, notificationDataParsed.milestoneId)
+        assertEquals(milestone1.name, notificationDataParsed.milestoneName)
+        assertEquals(project1.id, notificationDataParsed.projectId)
+        assertEquals(project1.name, notificationDataParsed.projectName)
         assertTrue(notificationDataParsed.assigneeIds.contains(testUser))
         assertTrue(notificationDataParsed.assigneeIds.contains(testUser1))
 
-        assertEquals(fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED, notificationEvent.notification.type)
+        assertEquals(NotificationType.TASK_ASSIGNED, notificationEvent.notification.type)
         assertEquals(false, notificationEvent.read)
         assertEquals(testUser, notificationEvent.receiverId)
 
@@ -68,6 +74,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             userId = adminUser.id!!,
             projectId = project1.id
         )
+
         assertEquals(1, notificationEventsForAdmin.size)
         assertEquals(adminUser.id, notificationEventsForAdmin[0].receiverId)
 
@@ -76,40 +83,67 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             taskId = task1.id!!,
             task = task1.copy(name = "updated", assigneeIds = arrayOf(testUser2, testUser1))
         )
+
         // Old assignee should not get the notification (check if the notification is old)
-        val user1NotificationsTaskAssigned = tb.admin.notificationEvent.list(
+        val user1TaskAssignedNotifications = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser1
-        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-        assertEquals(1, user1NotificationsTaskAssigned.size)
-        assertEquals(2, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
-        assertEquals(task1.name, (parseNotificationData(user1NotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
+        ).filter { it.notification.type == NotificationType.TASK_ASSIGNED }
+
+        assertEquals(1, user1TaskAssignedNotifications.size)
+
+        val user1TaskAssignedNotificationData = parseNotificationData(user1TaskAssignedNotifications[0].notification) as TaskAssignedNotificationData
+
+        assertEquals(2, user1TaskAssignedNotificationData.assigneeIds.size)
+        assertEquals(task1.id, user1TaskAssignedNotificationData.taskId)
+        assertEquals(task1.name, user1TaskAssignedNotificationData.taskName)
+        assertEquals(milestone1.id, user1TaskAssignedNotificationData.milestoneId)
+        assertEquals(milestone1.name, user1TaskAssignedNotificationData.milestoneName)
+        assertEquals(project1.id, user1TaskAssignedNotificationData.projectId)
+        assertEquals(project1.name, user1TaskAssignedNotificationData.projectName)
+
         // New assignee should get the notification about 1 user added
-        val user2NotificationstTaskAssigned = tb.admin.notificationEvent.list(
+        val user2TaskAssignedNotifications = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = testUser2
-        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-        assertEquals(1, user2NotificationstTaskAssigned.size)
-        assertEquals(1, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
-        assertEquals(updatedTask.name, (parseNotificationData(user2NotificationstTaskAssigned[0].notification) as TaskAssignedNotificationData).taskName)
+        ).filter { it.notification.type == NotificationType.TASK_ASSIGNED }
+
+        assertEquals(1, user2TaskAssignedNotifications.size)
+
+        val user2TaskAssignedNotificationData = parseNotificationData(user2TaskAssignedNotifications[0].notification) as TaskAssignedNotificationData
+
+        assertEquals(1, user2TaskAssignedNotificationData.assigneeIds.size)
+        assertEquals(updatedTask.id, user2TaskAssignedNotificationData.taskId)
+        assertEquals(updatedTask.name, user2TaskAssignedNotificationData.taskName)
+        assertEquals(milestone1.id, user2TaskAssignedNotificationData.milestoneId)
+        assertEquals(milestone1.name, user2TaskAssignedNotificationData.milestoneName)
+        assertEquals(project1.id, user2TaskAssignedNotificationData.projectId)
+        assertEquals(project1.name, user2TaskAssignedNotificationData.projectName)
+
         // Admin should get the notification about 1 user added
-        val adminNotificationsTaskAssigned = tb.admin.notificationEvent.list(
+        val adminTaskAssignedNotifications = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = adminUser.id
-        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-        assertEquals(2, adminNotificationsTaskAssigned.size)
-        assertEquals(1, (parseNotificationData(adminNotificationsTaskAssigned[0].notification) as TaskAssignedNotificationData).assigneeIds.size)
+        ).filter { it.notification.type == NotificationType.TASK_ASSIGNED }
+
+        assertEquals(2, adminTaskAssignedNotifications.size)
+
+        val adminTaskAssignedNotificationData = parseNotificationData(adminTaskAssignedNotifications[0].notification) as TaskAssignedNotificationData
+
+        assertEquals(1, adminTaskAssignedNotificationData.assigneeIds.size)
 
         //Unassign everyone and check that no new notification is sent to admin
         tb.admin.task.update(
             taskId = task1.id,
             task = task1.copy(name = "updated", assigneeIds = emptyArray())
         )
+
         val adminNotificationsTaskAssigned2 = tb.admin.notificationEvent.list(
             projectId = project1.id,
             userId = adminUser.id
-        ).filter { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
-        assertEquals(adminNotificationsTaskAssigned.size, adminNotificationsTaskAssigned2.size)
+        ).filter { it.notification.type == NotificationType.TASK_ASSIGNED }
+
+        assertEquals(adminTaskAssignedNotifications.size, adminNotificationsTaskAssigned2.size)
 
         // Test fails of access rights checks and not found
         tb.user.notificationEvent.assertListFailStatus(400, userId = testUser)
@@ -151,7 +185,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             projectId = project1.id
         )
         assertEquals(2, notificationEvents.size)
-        val taskUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_STATUS_CHANGED }!!
+        val taskUpdated = notificationEvents.find { it.notification.type == NotificationType.TASK_STATUS_CHANGED }!!
         val notificationDataParsed = parseNotificationData(taskUpdated.notification) as TaskStatusChangesNotificationData
         assertEquals(false, taskUpdated.read)
         assertEquals(testUser, taskUpdated.receiverId)
@@ -193,7 +227,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )!!
         tb.admin.changeProposal.updateChangeProposal(
             changeProposalId = changeProposal.id!!,
-            changeProposal = changeProposal.copy(status = fi.metatavu.lipsanen.test.client.models.ChangeProposalStatus.REJECTED)
+            changeProposal = changeProposal.copy(status = ChangeProposalStatus.REJECTED)
         )
 
         val notificationEvents = tb.admin.notificationEvent.list(
@@ -202,20 +236,20 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
         )
         assertEquals(3, notificationEvents.size)
         // test that assignee received all the notifications
-        val proposalCreated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_CREATED }!!
+        val proposalCreated = notificationEvents.find { it.notification.type == NotificationType.CHANGE_PROPOSAL_CREATED }!!
         val proposalCreatedDataParsed = parseNotificationData(proposalCreated.notification) as ChangeProposalCreatedNotificationData
         assertEquals(testUser, proposalCreated.receiverId)
         assertEquals(false, proposalCreated.read)
         assertEquals(task1.id, proposalCreatedDataParsed.taskId)
         assertEquals(changeProposal.id, proposalCreatedDataParsed.changeProposalId)
 
-        val proposalUpdated = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED }!!
+        val proposalUpdated = notificationEvents.find { it.notification.type == NotificationType.CHANGE_PROPOSAL_STATUS_CHANGED }!!
         val proposalUpdatedDataParsed = parseNotificationData(proposalCreated.notification) as ChangeProposalCreatedNotificationData
         assertEquals(false, proposalUpdated.read)
         assertEquals(testUser, proposalUpdated.receiverId)
         assertEquals(task1.id, proposalUpdatedDataParsed.taskId)
         assertEquals(changeProposal.id, proposalUpdatedDataParsed.changeProposalId)
-        val taskAssigned = notificationEvents.find { it.notification.type == fi.metatavu.lipsanen.test.client.models.NotificationType.TASK_ASSIGNED }
+        val taskAssigned = notificationEvents.find { it.notification.type == NotificationType.TASK_ASSIGNED }
         assertNotNull(taskAssigned)
 
         // Delete change proposal
@@ -333,7 +367,7 @@ class NotificationEventsTestIT : AbstractFunctionalTest() {
             taskComment = TaskComment(
                 comment = "Comment",
                 referencedUsers = arrayOf(user2.id),
-                taskId = task.id
+                taskId = task.id,
             )
         )
 
